@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "==> Generating sync code from async"
+scripts/unasync
+
+echo "==> Fixing code style with ruff"
+uv run ruff check --fix src tests
+
+echo "==> Formatting with ruff"
+uv run ruff format src tests
