@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/kap-sh/zapros/compare/zapros-v0.2.1...zapros-v0.2.2) (2026-03-14)
+
+
+### Documentation
+
+* fix the github link ([896d993](https://github.com/kap-sh/zapros/commit/896d993eac8cae667bd82dc71b3a151681f06cc2))
+
 ## [0.2.1](https://github.com/kap-sh/zapros/compare/zapros-v0.2.0...zapros-v0.2.1) (2026-03-14)
 
 
