@@ -2,9 +2,7 @@ import gzip
 
 import pytest
 
-pytest.importorskip(
-    "pyreqwest", reason="pyreqwest is not supported for python 3.10 and below"
-)
+pytest.importorskip("pyreqwest", reason="pyreqwest is not supported for python 3.10 and below")
 from inline_snapshot import snapshot
 from pyreqwest.client import SyncClientBuilder
 
@@ -66,9 +64,7 @@ user-agent: python-zapros\r
 """)
 
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "121"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
 
 
 def test_json_body(
@@ -95,9 +91,7 @@ user-agent: python-zapros\r
 {"key":"value","num":42}\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "198"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "198"})
 
 
 def test_json_nested(
@@ -127,9 +121,7 @@ user-agent: python-zapros\r
 {"user":{"name":"alice","age":30},"tags":["a","b"]}\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "225"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "225"})
 
 
 def test_form_body(
@@ -156,9 +148,7 @@ user-agent: python-zapros\r
 username=alice&password=secret\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "221"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "221"})
 
 
 def test_form_url_encoding(
@@ -182,9 +172,7 @@ user-agent: python-zapros\r
 message=hello+world\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "210"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "210"})
 
 
 @pytest.mark.xfail(reason="TODO: https://github.com/MarkusSintonen/pyreqwest/issues/24")
@@ -226,9 +214,7 @@ file content\r
 --test-boundary--\r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "475"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "475"})
 
 
 @pytest.mark.xfail(reason="TODO: https://github.com/MarkusSintonen/pyreqwest/issues/24")
@@ -280,9 +266,7 @@ Content-Type: image/png\r
 --boundary-abc--\r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "590"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "590"})
 
 
 def test_bytes_body(
@@ -305,9 +289,7 @@ user-agent: python-zapros\r
 raw binary data\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "157"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "157"})
 
 
 def test_query_params(
@@ -331,9 +313,7 @@ user-agent: python-zapros\r
 \r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "136"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "136"})
 
 
 def test_custom_headers(
@@ -359,9 +339,7 @@ x-custom-header: my-value\r
 \r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "180"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "180"})
 
 
 def test_put_method(
@@ -385,9 +363,7 @@ user-agent: python-zapros\r
 {"name":"updated"}\
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "191"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "191"})
 
 
 def test_delete_method(
@@ -408,9 +384,7 @@ user-agent: python-zapros\r
 \r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "124"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "124"})
 
 
 def test_response_status(
@@ -422,9 +396,7 @@ def test_response_status(
             f"{mock_server.url}/echo",
         )
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot(
-            {"content-length": "121"}
-        )
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
 
 
 def test_stream_context_manager(
@@ -445,9 +417,7 @@ host: 127.0.0.1\r
 user-agent: python-zapros\r
 \r
 """)
-            assert lowercase_headers(dict(response.headers)) == snapshot(
-                {"content-length": "121"}
-            )
+            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
 
 
 def test_stream_iter_bytes(
@@ -466,9 +436,7 @@ def test_stream_iter_bytes(
                 b"GET /echo HTTP/1.1\r\naccept: */*\r\naccept-encoding: zstd, br, gzip, deflate\r\nhost: 127.0.0.1\r\nuser-agent: python-zapros\r\n\r\n"  # noqa: E501
             )
             assert response.status == snapshot(200)
-            assert lowercase_headers(dict(response.headers)) == snapshot(
-                {"content-length": "121"}
-            )
+            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
 
 
 def test_stream_json_body(
@@ -493,9 +461,7 @@ user-agent: python-zapros\r
 {"stream":true}\
 """)
             assert response.status == snapshot(200)
-            assert lowercase_headers(dict(response.headers)) == snapshot(
-                {"content-length": "189"}
-            )
+            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "189"})
 
 
 def test_gzip_raw_bytes_unchanged(
@@ -507,9 +473,7 @@ def test_gzip_raw_bytes_unchanged(
     original = b"hello from the server"
     compressed = gzip.compress(original)
 
-    mock_builder.on("GET", "/data").with_body(compressed).with_header(
-        "Content-Encoding", "gzip"
-    )
+    mock_builder.on("GET", "/data").with_body(compressed).with_header("Content-Encoding", "gzip")
 
     with Client(handler=handler) as client:
         with client.stream(
