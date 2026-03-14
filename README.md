@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/public/red-spider.png" alt="Zapros Logo" width="200">
+  <img src="https://raw.githubusercontent.com/kap-sh/zapros/refs/heads/main/docs/public/red-spider-side.png" alt="Zapros Logo" width="200">
 
   # Zapros
 
