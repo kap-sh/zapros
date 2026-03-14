@@ -16,14 +16,20 @@ from ._async_base import (
 from ._exc_map import map_connect_exceptions, map_read_exceptions
 
 if TYPE_CHECKING:
+    import sys
     from contextlib import AbstractAsyncContextManager
 
-    from pyreqwest.client import (
-        ClientBuilder,
-    )
-    from pyreqwest.response import (
-        Response as PyreqwestResponse,
-    )
+    if sys.version_info >= (3, 11):
+        from pyreqwest.client import (
+            ClientBuilder,
+        )
+        from pyreqwest.response import (
+            Response as PyreqwestResponse,
+        )
+    else:
+        if not TYPE_CHECKING:
+            ClientBuilder = None
+            PyreqwestResponse = None
 else:
     try:
         from pyreqwest.client import (

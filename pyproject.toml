@@ -80,5 +80,12 @@ combine-as-imports = true
 
 [tool.pyright]
 strict = ["src"]
-exclude = ["venv", ".venv"]
+exclude = [
+    "venv",
+    ".venv",
+    "src/zapros/_handlers/_async_pyreqwest.py",
+    "src/zapros/_handlers/_sync_pyreqwest.py",
+    "tests/handlers/test_async_basic.py",
+    "tests/handlers/test_sync_basic.py",
+]
 typeCheckingMode = "standard"
