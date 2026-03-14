@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/kap-sh/zapros/compare/v0.1.1...v0.2.0) (2026-03-14)
+
+
+### Features
+
+* initial release ([35b7dc5](https://github.com/kap-sh/zapros/commit/35b7dc5b931c1dbea788e1076652847543c31acb))
+
 ## 0.1.0 (2026-03-13)
 
 
