@@ -91,6 +91,6 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [{ icon: "github", link: "https://github.com/kap/zapros" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/kap-sh/zapros" }],
   },
 });

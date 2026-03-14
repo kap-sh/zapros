@@ -5,7 +5,7 @@ outline: deep
 # Overview
 
 ::: warning
-Zapros is a newborn project and may contain bugs. Please report any issues you encounter on [GitHub](https://github.com/kap/zapros/issues).
+Zapros is a newborn project and may contain bugs. Please report any issues you encounter on [GitHub](https://github.com/kap-sh/zapros/issues).
 :::
 
 Zapros is a **modern and extensible** Python HTTP client. It implements HTTP semantics as defined in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) and ships a rich ecosystem of plugins to make developers' lives easier.

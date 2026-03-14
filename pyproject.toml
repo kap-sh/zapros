@@ -27,8 +27,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://zapros.dev"
 Documentation = "https://zapros.dev"
-Repository = "https://github.com/kap/zapros"
-Issues = "https://github.com/kap/zapros/issues"
+Repository = "https://github.com/kap-sh/zapros"
+Issues = "https://github.com/kap-sh/zapros/issues"
 
 [project.optional-dependencies]
 brotli = [
