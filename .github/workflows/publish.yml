@@ -84,3 +84,4 @@ jobs:
           projectName: zapros
           directory: docs/.vitepress/dist
           gitHubDeployment: false
+          branch: main
