@@ -947,11 +947,12 @@ wheels = [
 
 [[package]]
 name = "zapros"
-version = "0.2.1"
+version = "0.2.2"
 source = { virtual = "." }
 dependencies = [
     { name = "h11" },
     { name = "pywhatwgurl" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -988,6 +989,7 @@ requires-dist = [
     { name = "hishel", marker = "extra == 'caching'", specifier = ">=1.1.9" },
     { name = "pyreqwest", marker = "python_full_version >= '3.11' and extra == 'pyreqwest'" },
     { name = "pywhatwgurl", specifier = ">=0.1.0" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "zstandard", marker = "extra == 'zstd'", specifier = ">=0.18.0" },
 ]
 provides-extras = ["brotli", "zstd", "pyreqwest", "caching"]

@@ -10,7 +10,6 @@ from typing import (
     Iterable,
     Callable,
     Mapping,
-    Self,
     Sequence,
     Union,
     overload,
@@ -20,6 +19,7 @@ from pywhatwgurl import (
     URL,
     URLSearchParams,
 )
+from typing_extensions import Self
 
 from zapros._handlers._sync_base import (
     BaseHandler,

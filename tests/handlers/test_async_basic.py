@@ -1,6 +1,8 @@
 import gzip
 
 import pytest
+
+pytest.importorskip("pyreqwest", reason="pyreqwest is not supported for python 3.10 and below")
 from inline_snapshot import snapshot
 from pyreqwest.client import ClientBuilder
 

@@ -11,8 +11,9 @@ from typing import (
     IO,
     AsyncIterator,
     Iterator,
-    Self,
 )
+
+from typing_extensions import Self
 
 from ._models import (
     AsyncClosableStream,

@@ -9,9 +9,10 @@ from collections.abc import (
     Iterator as ABCIterator,
 )
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypeVar, override
+from typing import TYPE_CHECKING, TypeVar
 
 import h11
+from typing_extensions import override
 
 from .._errors import (
     ConnectionError,

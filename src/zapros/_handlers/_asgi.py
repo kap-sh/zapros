@@ -9,7 +9,9 @@ from collections.abc import (
     Iterator as ABCIterator,
 )
 from dataclasses import dataclass
-from typing import Any, override
+from typing import Any
+
+from typing_extensions import override
 
 from zapros._constants import (
     DEFAULT_PORTS,
