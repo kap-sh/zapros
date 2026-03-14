@@ -72,12 +72,3 @@ npm run docs:build
 ```bash
 npm run docs:preview
 ```
-
-### Documentation Deployment
-
-Documentation deployment is currently manual. After making changes to the docs:
-
-1. Build the documentation locally: `npm run docs:build`
-2. Deploy the `docs/.vitepress/dist` directory to your hosting service
-
-Configuration is in `docs/.vitepress/config.mts`.
