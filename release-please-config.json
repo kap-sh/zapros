@@ -4,6 +4,7 @@
       "release-type": "python",
       "package-name": "zapros",
       "changelog-path": "CHANGELOG.md",
+      "versioning": "always-bump-patch",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "changelog-types": [
