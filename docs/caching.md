@@ -4,10 +4,10 @@ Caching in Zapros is implemented as a [handler](/handlers) powered by [Hishel](h
 
 ## Installation
 
-The caching handler is available with the `cache` optional feature:
+The caching handler is available with the `caching` optional feature:
 
 ```bash
-pip install zapros[cache]
+pip install zapros[caching]
 ```
 
 ## Setup
