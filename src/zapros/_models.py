@@ -21,6 +21,7 @@ from typing import (
 
 from pywhatwgurl import URL, URLSearchParams
 
+from zapros._errors import AsyncSyncMismatchError
 from zapros._multidict import (
     CIMultiDict,
 )
@@ -479,15 +480,49 @@ class Response:
         return "utf-8"
 
     def json(self) -> Any:
+        """
+        Reads the response body (if it has not already been read), decodes it using
+        the response encoding, and parses it as JSON.
+
+        Returns the deserialized Python object.
+        """
         return json_module.loads(self.text())
 
     async def ajson(self) -> Any:
+        """
+        Asynchronously reads the response body (if it has not already been read),
+        decodes it using the response encoding, and parses it as JSON.
+
+        Returns the deserialized Python object.
+
+        If the body has already been consumed, this method behaves the same as `.json()`,
+        since there is no remaining content to read.
+
+        This is a convenience helper for streaming responses, allowing you to read,
+        decode, and parse the body in a single call instead of calling `.aread()`
+        and then `.json()` manually.
+        """
         return json_module.loads(await self.atext())
 
     def text(self) -> str:
+        """
+        Reads the entire response body (if it has not already been read),
+        decodes it using the response encoding, and returns it as a string.
+        """
         return self.read().decode(self.encoding)
 
     async def atext(self) -> str:
+        """
+        Asynchronously reads the entire response body (if it has not already been read),
+        decodes it using the response encoding, and returns it as a string.
+
+        If the body has already been consumed, this method behaves the same as `.text()`,
+        since there is no remaining content to read.
+
+        This is a convenience helper for streaming responses, allowing you to read and
+        decode the body in a single call instead of calling `.aread()` and then `.text()`
+        manually.
+        """
         return (await self.aread()).decode(self.encoding)
 
     def iter_text(
@@ -532,7 +567,9 @@ class Response:
             return
 
         if not isinstance(self.content, ABCIterator):
-            raise TypeError("Response body is an AsyncStream, use `async_iter_bytes` instead.")
+            raise AsyncSyncMismatchError(
+                "The stream is not synchronous, try using `async_iter_bytes` instead of `iter_bytes`."
+            )
 
         decoder = self._get_content_decoder()
         decoded_chunks: list[bytes] = []
@@ -577,7 +614,9 @@ class Response:
             return
 
         if not isinstance(self.content, ABCAsyncIterator):
-            raise TypeError("Cannot async iterate bytes from a non-AsyncStream body, use `iter_bytes` instead.")
+            raise AsyncSyncMismatchError(
+                "The stream is not asynchronous, try using `iter_bytes` instead of `async_iter_bytes`."
+            )
 
         decoder = self._get_content_decoder()
         decoded_chunks: list[bytes] = []
@@ -621,7 +660,9 @@ class Response:
             return
 
         if isinstance(self.content, ABCAsyncIterator):
-            raise TypeError("Response body is an AsyncStream, use `async_iter_raw` instead.")
+            raise AsyncSyncMismatchError(
+                "The stream is not synchronous, try using `async_iter_raw` instead of `iter_raw`."
+            )
 
         chunker = ByteChunker(chunk_size)
         for raw_chunk in self.content:
@@ -652,7 +693,9 @@ class Response:
             return
 
         if not isinstance(self.content, ABCAsyncIterator):
-            raise TypeError("Response body is not an AsyncByteStream, use `iter_raw` instead.")
+            raise AsyncSyncMismatchError(
+                "The stream is not asynchronous, try using `iter_raw` instead of `async_iter_raw`."
+            )
 
         chunker = ByteChunker(chunk_size)
         async for raw_chunk in self.content:
@@ -665,7 +708,8 @@ class Response:
 
     def read(self) -> bytes:
         if not isinstance(self.content, bytes):
-            list(self.iter_bytes())
+            for _ in self.iter_bytes():
+                ...
         return self.content  # type: ignore[return-value]
 
     async def aread(self) -> bytes:
@@ -682,7 +726,7 @@ class Response:
             return
 
         if isinstance(self.content, ABCAsyncIterator):
-            raise TypeError("Response body is an AsyncStream, use `aclose()` instead.")
+            raise AsyncSyncMismatchError("The stream is not synchronous, use `aclose()` instead.")
 
         if isinstance(self.content, ClosableStream):
             self.content.close()
@@ -696,7 +740,7 @@ class Response:
             return
 
         if not isinstance(self.content, ABCAsyncIterator):
-            raise TypeError("Response body is a Stream, use `close()` instead.")
+            raise AsyncSyncMismatchError("The stream is not asynchronous, try using `close()` instead of `aclose()`.")
 
         if isinstance(self.content, AsyncClosableStream):
             await self.content.aclose()
