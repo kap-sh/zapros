@@ -1,7 +1,13 @@
-class AsyncSyncMismatchError(Exception):
-    """Raised when an asynchronous handler is used in a synchronous context, or vice versa."""
+from __future__ import annotations
 
-    ...
+
+class AsyncSyncMismatchError(Exception):
+    """Raised when an asynchronous handler or function is used in a synchronous context, or vice versa."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            f"{message}\nSee https://zapros.dev/guide/async-sync.html#asyncsyncmismatcherror for more info."
+        )
 
 
 class ConnectionError(Exception):
@@ -54,5 +60,11 @@ class PoolTimeoutError(TimeoutError):
 
 class TooManyRedirectsError(Exception):
     """Raised when the maximum number of redirects is exceeded."""
+
+    pass
+
+
+class AuthenticationError(Exception):
+    """Base class for all authentication-related errors."""
 
     pass
