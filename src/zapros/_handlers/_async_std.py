@@ -9,7 +9,7 @@ from collections.abc import (
     Iterator as ABCIterator,
 )
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypeVar
+from typing import TypeVar
 
 import h11
 from typing_extensions import override
@@ -83,7 +83,7 @@ class AsyncConn:
         self._closed = True
         try:
             self.writer.close()
-        except Exception:
+        except BaseException:
             pass
 
     @property
@@ -204,7 +204,7 @@ class ConnPool:
 def _close_quietly(conn: AsyncConn) -> None:
     try:
         conn.close()
-    except Exception:
+    except BaseException:
         pass
 
 
@@ -286,12 +286,12 @@ class AsyncStdStream(AsyncClosableStream):
                         self._eof = True
                         try:
                             self._conn.h11.start_next_cycle()
-                        except Exception:
+                        except BaseException:
                             self._ok = False
                         await self.aclose()
                         raise StopAsyncIteration
 
-        except Exception:
+        except BaseException:
             self._ok = False
             await self.aclose()
             raise
@@ -305,7 +305,7 @@ class AsyncStdStream(AsyncClosableStream):
         if self._no_body_response and not self._eof and self._ok:
             try:
                 self._drain_no_body_end_of_message()
-            except Exception:
+            except BaseException:
                 self._ok = False
 
         reuse = (
@@ -322,9 +322,6 @@ class AsyncStdStream(AsyncClosableStream):
             self._conn,
             reuse=reuse,
         )
-
-        if TYPE_CHECKING:
-            return
 
 
 class AsyncStdNetworkHandler(AsyncBaseHandler):
@@ -394,6 +391,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     port,
                     ssl=ssl_ctx,
                     server_hostname=host if ssl_ctx else None,
+                    happy_eyeballs_delay=0.25,
+                    interleave=1,
+                    ssl_handshake_timeout=connect_timeout,
                 ),
                 connect_timeout,
             )
@@ -513,7 +513,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                         self._remaining_timeout(deadline),
                     ),
                 )
-            except Exception:
+            except BaseException:
                 await self._pool.release_reservation(key)
                 raise
 
@@ -641,7 +641,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 ),
             )
 
-        except Exception:
+        except BaseException:
             await self._pool.release(key, conn, reuse=False)
             raise
 
