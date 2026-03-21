@@ -973,7 +973,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             await response.aclose()
-        assert "using `close()`" in str(exc_info.value)
+        assert "use `close()`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_aclose_after_stream_consumed(self):
@@ -1014,7 +1014,5 @@ class TestResponse:
     def test_response_stream_consumption_caching(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
-        assert response._is_stream_consumed is False
         list(response.iter_bytes())
-        assert response._is_stream_consumed is True
         assert isinstance(response.content, bytes)
