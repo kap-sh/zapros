@@ -350,8 +350,8 @@ class Response:
         "status",
         "headers",
         "content",
+        "_stream_to_close",
         "_decoder",
-        "_is_stream_consumed",
         "context",
     )
 
@@ -411,8 +411,10 @@ class Response:
         self.status = status
         self.headers: Headers = headers if isinstance(headers, Headers) else Headers(headers) if headers else Headers()
         self.content: AsyncStream | Stream | bytes | None = content
+        self._stream_to_close: AsyncClosableStream | ClosableStream | None = (
+            content if isinstance(content, (AsyncClosableStream, ClosableStream)) else None
+        )
         self._decoder: ContentDecoder | None = None
-        self._is_stream_consumed: bool = False
         self.context: ResponseContext = context if context is not None else {}
 
         if text is not None:
@@ -436,7 +438,6 @@ class Response:
 
     def _set_static_content(self, data: bytes, *, content_type: str) -> None:
         self.content = data
-        self._is_stream_consumed = True
 
         self.headers.pop("Content-Encoding", None)
 
@@ -585,7 +586,6 @@ class Response:
 
         body = b"".join(decoded_chunks)
         self.content = body
-        self._is_stream_consumed = True
 
         chunker = ByteChunker(chunk_size)
         yield from chunker.feed(body)
@@ -632,7 +632,6 @@ class Response:
 
         body = b"".join(decoded_chunks)
         self.content = body
-        self._is_stream_consumed = True
 
         chunker = ByteChunker(chunk_size)
         for chunk in chunker.feed(body):
@@ -671,7 +670,6 @@ class Response:
         remaining = chunker.flush()
         if remaining:
             yield remaining
-        self._is_stream_consumed = True
 
     async def async_iter_raw(
         self,
@@ -704,7 +702,6 @@ class Response:
         remaining = chunker.flush()
         if remaining:
             yield remaining
-        self._is_stream_consumed = True
 
     def read(self) -> bytes:
         if not isinstance(self.content, bytes):
@@ -719,32 +716,24 @@ class Response:
         return self.content  # type: ignore[return-value]
 
     def close(self) -> None:
-        if self.content is None or self._is_stream_consumed:
+        if self._stream_to_close is None:
             return
 
-        if isinstance(self.content, bytes):
-            return
-
-        if isinstance(self.content, ABCAsyncIterator):
+        if isinstance(self._stream_to_close, AsyncClosableStream):
             raise AsyncSyncMismatchError("The stream is not synchronous, use `aclose()` instead.")
 
-        if isinstance(self.content, ClosableStream):
-            self.content.close()
-            self._is_stream_consumed = True
+        self._stream_to_close.close()
+        self._stream_to_close = None
 
     async def aclose(self) -> None:
-        if self.content is None or self._is_stream_consumed:
+        if self._stream_to_close is None:
             return
 
-        if isinstance(self.content, bytes):
-            return
+        if isinstance(self._stream_to_close, ClosableStream):
+            raise AsyncSyncMismatchError("The stream is not asynchronous, use `close()` instead.")
 
-        if not isinstance(self.content, ABCAsyncIterator):
-            raise AsyncSyncMismatchError("The stream is not asynchronous, try using `close()` instead of `aclose()`.")
-
-        if isinstance(self.content, AsyncClosableStream):
-            await self.content.aclose()
-            self._is_stream_consumed = True
+        await self._stream_to_close.aclose()
+        self._stream_to_close = None
 
     def __repr__(self) -> str:
         return f"Response(status={self.status!r})"
