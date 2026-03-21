@@ -17,6 +17,7 @@ from ._decoders import (
     DecodingError as DecodingError,
 )
 from ._errors import (
+    AsyncSyncMismatchError as AsyncSyncMismatchError,
     ConnectionError as ConnectionError,
     ConnectTimeoutError as ConnectTimeoutError,
     PoolTimeoutError as PoolTimeoutError,
@@ -67,7 +68,9 @@ from ._models import (
     ClosableStream as ClosableStream,
     Headers as Headers,
     Request as Request,
+    RequestContext as RequestContext,
     Response as Response,
+    ResponseContext as ResponseContext,
     Stream as Stream,
 )
 from ._multidict import (

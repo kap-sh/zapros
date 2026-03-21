@@ -64,7 +64,6 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 120
-extension = { mdx = "markdown", qmd = "markdown" }
 exclude = [
     "src/zapros/_handlers/_sync_base.py",
     "src/zapros/_handlers/_sync_pyreqwest.py",

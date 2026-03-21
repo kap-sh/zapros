@@ -6,8 +6,9 @@ from typing import AsyncIterator, Iterator
 import pytest
 from pywhatwgurl import URL
 
-from zapros._models import (
+from zapros import (
     AsyncClosableStream,
+    AsyncSyncMismatchError,
     ClosableStream,
     Headers,
     Request,
@@ -740,9 +741,9 @@ class TestResponse:
 
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_bytes())
-        assert "use `async_iter_bytes`" in str(exc_info.value)
+        assert "using `async_iter_bytes`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_async_iter_bytes_from_bytes(self):
@@ -793,10 +794,10 @@ class TestResponse:
     async def test_response_async_iter_bytes_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_bytes():
                 pass
-        assert "use `iter_bytes`" in str(exc_info.value)
+        assert "using `iter_bytes`" in str(exc_info.value)
 
     def test_response_iter_raw_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -824,9 +825,9 @@ class TestResponse:
 
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_raw())
-        assert "use `async_iter_raw`" in str(exc_info.value)
+        assert "using `async_iter_raw`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_async_iter_raw_from_bytes(self):
@@ -859,10 +860,10 @@ class TestResponse:
     async def test_response_async_iter_raw_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_raw():
                 pass
-        assert "use `iter_raw`" in str(exc_info.value)
+        assert "using `iter_raw`" in str(exc_info.value)
 
     def test_response_iter_text_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -930,7 +931,7 @@ class TestResponse:
 
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             response.close()
         assert "use `aclose()`" in str(exc_info.value)
 
@@ -970,9 +971,9 @@ class TestResponse:
     async def test_response_aclose_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(AsyncSyncMismatchError) as exc_info:
             await response.aclose()
-        assert "use `close()`" in str(exc_info.value)
+        assert "using `close()`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_aclose_after_stream_consumed(self):
