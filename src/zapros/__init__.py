@@ -1,4 +1,4 @@
-from pywhatwgurl import URL as URL
+from pywhatwgurl import URL as URL, URLSearchParams as URLSearchParams
 
 from zapros._handlers._cookies import (
     CookieHandler as CookieHandler,

@@ -3,7 +3,7 @@
 Pass query parameters to the `params` argument. Zapros URL-encodes the values and appends them to the URL before sending the request. Special characters and spaces are percent-encoded automatically.
 
 ```python
-from pywhatwgurl import URLSearchParams
+from zapros import URLSearchParams
 
 # plain mapping
 params={"q": "hello world", "page": "1"}

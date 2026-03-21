@@ -39,7 +39,7 @@ with Client() as client:
 Pass a mapping, a list of pairs, a `URLSearchParams`, or a raw string to `form=`. The body is encoded as `application/x-www-form-urlencoded`.
 
 ```python
-from pywhatwgurl import URLSearchParams
+from zapros import URLSearchParams
 
 # plain mapping
 form={"username": "alice", "password": "secret"}
