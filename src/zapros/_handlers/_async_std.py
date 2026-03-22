@@ -9,7 +9,7 @@ from collections.abc import (
     Iterator as ABCIterator,
 )
 from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import Protocol, TypeVar, cast
 
 import h11
 from typing_extensions import override
@@ -28,6 +28,15 @@ from ._exc_map import map_connect_exceptions, map_read_exceptions, map_write_exc
 
 PoolKey = tuple[str, str, int]  # (scheme, host, port)
 _T = TypeVar("_T")
+
+
+class PoolConnection(Protocol):
+    def close(self) -> None: ...
+
+    @property
+    def is_closed(self) -> bool: ...
+
+    def can_reuse(self) -> bool: ...
 
 
 def _encode_target(path: str, query: str) -> bytes:
@@ -83,17 +92,20 @@ class AsyncConn:
         self._closed = True
         try:
             self.writer.close()
-        except BaseException:
+        except Exception:
             pass
 
     @property
     def is_closed(self) -> bool:
         return self._closed or self.writer.is_closing()
 
+    def can_reuse(self) -> bool:
+        return not self.is_closed and self.h11.our_state is h11.IDLE and self.h11.their_state is h11.IDLE
+
 
 @dataclass
-class IdleConn:
-    conn: AsyncConn
+class IdlePoolConnection:
+    conn: PoolConnection
     last_used: float = field(default_factory=time.monotonic)
 
 
@@ -116,7 +128,7 @@ class ConnPool:
         self._max_age = max_idle_seconds
 
         self._lock = asyncio.Lock()
-        self._idle: dict[PoolKey, deque[IdleConn]] = {}
+        self._idle: dict[PoolKey, deque[IdlePoolConnection]] = {}
         self._semaphores: dict[PoolKey, asyncio.Semaphore] = {}
         self._closed = False
 
@@ -128,7 +140,7 @@ class ConnPool:
                 self._semaphores[key] = sem
             return sem
 
-    async def acquire(self, key: PoolKey) -> AsyncConn | None:
+    async def acquire(self, key: PoolKey) -> PoolConnection | None:
         """Reserve a slot and return the freshest usable idle connection, if any."""
         sem = await self._get_semaphore(key)
         await sem.acquire()
@@ -145,12 +157,7 @@ class ConnPool:
 
             while dq:
                 item = dq.pop()  # LIFO – reuse the freshest
-                if (
-                    (now - item.last_used) <= self._max_age
-                    and not item.conn.is_closed
-                    and item.conn.h11.our_state is h11.IDLE
-                    and item.conn.h11.their_state is h11.IDLE
-                ):
+                if (now - item.last_used) <= self._max_age and item.conn.can_reuse():
                     return item.conn
                 _close_quietly(item.conn)
 
@@ -164,7 +171,7 @@ class ConnPool:
     async def release(
         self,
         key: PoolKey,
-        conn: AsyncConn,
+        conn: PoolConnection,
         *,
         reuse: bool,
     ) -> None:
@@ -182,7 +189,7 @@ class ConnPool:
                     return
 
                 dq = self._idle.setdefault(key, deque())
-                dq.append(IdleConn(conn=conn))
+                dq.append(IdlePoolConnection(conn=conn))
 
                 while len(dq) > self._max_idle_per_host:
                     _close_quietly(dq.popleft().conn)
@@ -201,10 +208,10 @@ class ConnPool:
                 _close_quietly(item.conn)
 
 
-def _close_quietly(conn: AsyncConn) -> None:
+def _close_quietly(conn: PoolConnection) -> None:
     try:
         conn.close()
-    except BaseException:
+    except Exception:
         pass
 
 
@@ -286,7 +293,7 @@ class AsyncStdStream(AsyncClosableStream):
                         self._eof = True
                         try:
                             self._conn.h11.start_next_cycle()
-                        except BaseException:
+                        except Exception:
                             self._ok = False
                         await self.aclose()
                         raise StopAsyncIteration
@@ -305,17 +312,10 @@ class AsyncStdStream(AsyncClosableStream):
         if self._no_body_response and not self._eof and self._ok:
             try:
                 self._drain_no_body_end_of_message()
-            except BaseException:
+            except Exception:
                 self._ok = False
 
-        reuse = (
-            self._eof
-            and self._ok
-            and not self._must_close
-            and not self._conn.is_closed
-            and self._conn.h11.our_state is h11.IDLE
-            and self._conn.h11.their_state is h11.IDLE
-        )
+        reuse = self._eof and self._ok and not self._must_close and self._conn.can_reuse()
 
         await self._pool.release(
             self._key,
@@ -498,9 +498,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             port,
         )
 
-        conn = await self._await_with_timeout(
-            self._pool.acquire(key),
-            self._remaining_timeout(deadline),
+        conn: AsyncConn | None = cast(
+            AsyncConn | None,
+            await self._await_with_timeout(
+                self._pool.acquire(key),
+                self._remaining_timeout(deadline),
+            ),
         )
         if conn is None:
             try:
