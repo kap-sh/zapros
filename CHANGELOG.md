@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/kap-sh/zapros/compare/zapros-v0.3.0...zapros-v0.3.1) (2026-03-22)
+
+
+### Bug Fixes
+
+* **pool:** narrow down some broad type catches ([db5cb6c](https://github.com/kap-sh/zapros/commit/db5cb6c02ecb0513747be1afa273b286619f186c))
+
 ## [0.3.0](https://github.com/kap-sh/zapros/compare/zapros-v0.2.3...zapros-v0.3.0) (2026-03-21)
 
 
