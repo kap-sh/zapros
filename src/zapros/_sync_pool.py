@@ -189,43 +189,6 @@ class ConnPool:
             state.semaphore.release()
             self._release_state_ref(key, state)
 
-    def adopt(
-        self,
-        key: PoolKey,
-        conn: PoolConnection,
-    ) -> bool:
-        """
-        Adopts a connection into the pool for the given key without acquiring a slot first.
-
-        This is used when a connection is created outside the pool but should be
-        added to the pool for reuse.
-
-        Returns True if the connection was successfully adopted, False otherwise.
-        """
-        state = self._get_state(key)
-        sem = state.semaphore
-        sem.acquire()
-        slot_transferred = False
-        to_close: list[PoolConnection] = []
-
-        try:
-            kept, to_close = self._store_idle_connection(key, conn)
-            _close_many_quietly(to_close)
-
-            if not kept:
-                return False
-
-            slot_transferred = True
-            return True
-
-        finally:
-            if not slot_transferred:
-                sem.release()
-                if self._closed and conn not in to_close:
-                    _close_quietly(conn)
-
-            self._release_state_ref(key, state)
-
     def close_all(self) -> None:
         """
         Closes all idle connections in the pool and prevents new connections
