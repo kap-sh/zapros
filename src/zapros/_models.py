@@ -1,4 +1,6 @@
+import asyncio
 import json as json_module
+import socket
 from collections.abc import (
     AsyncIterator as ABCAsyncIterator,
     Iterator as ABCIterator,
@@ -90,8 +92,13 @@ class ResponseCachingContext(TypedDict, total=False):
     created_at: float
 
 
+class ResponseHandoffContext(TypedDict, total=False):
+    transport: Union[socket.socket, tuple[asyncio.StreamReader, asyncio.StreamWriter]]
+
+
 class ResponseContext(TypedDict, total=False):
     caching: ResponseCachingContext
+    handoff: ResponseHandoffContext
 
 
 Stream: TypeAlias = Union[Iterator[bytes], ClosableStream]

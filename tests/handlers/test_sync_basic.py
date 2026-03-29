@@ -566,3 +566,4 @@ def test_with_websocket_upgrade(
         )
         assert response.status == 101
         assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "0", "upgrade": "websocket"})
+        assert response.context.get("handoff", {}).get("network_stream") is not None

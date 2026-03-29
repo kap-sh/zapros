@@ -21,6 +21,7 @@ from .._models import (
     AsyncClosableStream,
     Request,
     Response,
+    ResponseHandoffContext,
 )
 from ._async_base import AsyncBaseHandler
 from ._exc_map import map_read_exceptions, map_write_exceptions
@@ -508,11 +509,15 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if status == 101:
                 # We won't be able to reuse this connection, so we can release the pool reservation now.
                 await self._pool.release_reservation(key)
-                await conn.close()
                 return Response(
                     status=status,
                     headers=resp_headers,
                     content=None,
+                    context={
+                        "handoff": ResponseHandoffContext(
+                            transport=(conn.stream.reader, conn.stream.writer),
+                        )
+                    },
                 )
 
         except BaseException:

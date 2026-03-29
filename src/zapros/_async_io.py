@@ -49,24 +49,24 @@ class AsyncStdNetworkStream(AsyncBaseNetworkStream):
         writer: asyncio.StreamWriter,
         server_hostname: str | None = None,
     ) -> None:
-        self._reader = reader
-        self._writer = writer
+        self.reader = reader
+        self.writer = writer
         self._server_hostname = server_hostname
         self._closed = False
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         with map_read_exceptions():
             if timeout is None:
-                return await self._reader.read(max_bytes)
-            return await asyncio.wait_for(self._reader.read(max_bytes), timeout)
+                return await self.reader.read(max_bytes)
+            return await asyncio.wait_for(self.reader.read(max_bytes), timeout)
 
     async def write_all(self, data: bytes, timeout: float | None = None) -> int:
         with map_write_exceptions():
-            self._writer.write(data)
+            self.writer.write(data)
             if timeout is None:
-                await self._writer.drain()
+                await self.writer.drain()
             else:
-                await asyncio.wait_for(self._writer.drain(), timeout)
+                await asyncio.wait_for(self.writer.drain(), timeout)
             return len(data)
 
     async def close(self) -> None:
@@ -74,6 +74,6 @@ class AsyncStdNetworkStream(AsyncBaseNetworkStream):
             return
         self._closed = True
         try:
-            self._writer.close()
+            self.writer.close()
         except Exception:
             pass

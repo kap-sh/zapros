@@ -33,19 +33,19 @@ def connect_tcp(
 
 class StdNetworkStream(BaseNetworkStream):
     def __init__(self, sock: socket.socket, server_hostname: str | None = None) -> None:
-        self._sock = sock
+        self.sock = sock
         self._server_hostname = server_hostname
         self._closed = False
 
     def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         with map_read_exceptions():
-            self._sock.settimeout(timeout)
-            return self._sock.recv(max_bytes)
+            self.sock.settimeout(timeout)
+            return self.sock.recv(max_bytes)
 
     def write_all(self, data: bytes, timeout: float | None = None) -> int:
         with map_write_exceptions():
-            self._sock.settimeout(timeout)
-            self._sock.sendall(data)
+            self.sock.settimeout(timeout)
+            self.sock.sendall(data)
             return len(data)
 
     def close(self) -> None:
@@ -54,10 +54,10 @@ class StdNetworkStream(BaseNetworkStream):
         self._closed = True
         try:
             try:
-                self._sock.shutdown(socket.SHUT_RDWR)
+                self.sock.shutdown(socket.SHUT_RDWR)
             except Exception:
                 pass
-            self._sock.close()
+            self.sock.close()
         except Exception:
             pass
 
