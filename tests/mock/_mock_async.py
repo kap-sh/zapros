@@ -210,10 +210,16 @@ class AsyncMockServer:
                                 )
                             )
 
-                        response = h11.Response(
-                            status_code=mock.status,
-                            headers=response_headers,
-                        )
+                        if mock.status // 100 == 1:
+                            response = h11.InformationalResponse(
+                                status_code=mock.status,
+                                headers=response_headers,
+                            )
+                        else:
+                            response = h11.Response(
+                                status_code=mock.status,
+                                headers=response_headers,
+                            )
                         writer.write(conn.send(response))
                         if mock.body:
                             writer.write(conn.send(h11.Data(data=mock.body)))

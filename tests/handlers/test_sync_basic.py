@@ -540,3 +540,29 @@ def test_cookies_with_handler(
         )
         text = response2.text()
         assert "cookie: session=abc123" in text.lower()
+
+
+def test_with_websocket_upgrade(
+    mock_server: MockServer,
+    mock_builder,
+    request,
+    handler: BaseMiddleware,
+):
+    if isinstance(handler, PyreqwestHandler):
+        pytest.skip("TODO: figure out how to support websocket upgrades in PyreqwestHandler")
+    mock_builder.on("GET", "/ws").with_header(
+        "Upgrade",
+        "websocket",
+    ).with_status(101)
+
+    with Client(handler=handler) as client:
+        response = client.get(
+            f"{mock_server.url}/ws",
+            headers={
+                "Upgrade": "websocket",
+                "Connection": "Upgrade",
+                "X-Pytest-Node-Id": request.node.nodeid,
+            },
+        )
+        assert response.status == 101
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "0", "upgrade": "websocket"})

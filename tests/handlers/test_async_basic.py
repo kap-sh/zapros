@@ -540,3 +540,29 @@ async def test_cookies_with_handler(
         )
         text = await response2.atext()
         assert "cookie: session=abc123" in text.lower()
+
+
+async def test_with_websocket_upgrade(
+    async_mock_server: AsyncMockServer,
+    async_mock_builder,
+    request,
+    handler: AsyncBaseMiddleware,
+):
+    if isinstance(handler, AsyncPyreqwestHandler):
+        pytest.skip("TODO: figure out how to support websocket upgrades in AsyncPyreqwestHandler")
+    async_mock_builder.on("GET", "/ws").with_header(
+        "Upgrade",
+        "websocket",
+    ).with_status(101)
+
+    async with AsyncClient(handler=handler) as client:
+        response = await client.get(
+            f"{async_mock_server.url}/ws",
+            headers={
+                "Upgrade": "websocket",
+                "Connection": "Upgrade",
+                "X-Pytest-Node-Id": request.node.nodeid,
+            },
+        )
+        assert response.status == 101
+        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "0", "upgrade": "websocket"})

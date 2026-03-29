@@ -363,7 +363,8 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 continue
 
             if isinstance(event, h11.InformationalResponse):
-                continue
+                if event.status_code == 101:
+                    return event.status_code, [(k.decode("ascii"), v.decode("latin-1")) for k, v in event.headers]
 
             if isinstance(event, h11.Response):
                 status = event.status_code
@@ -503,6 +504,16 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 conn,
                 read_timeout=phase_timeout(read_timeout),
             )
+
+            if status == 101:
+                # We won't be able to reuse this connection, so we can release the pool reservation now.
+                await self._pool.release_reservation(key)
+                await conn.close()
+                return Response(
+                    status=status,
+                    headers=resp_headers,
+                    content=None,
+                )
 
         except BaseException:
             await self._pool.release(key, conn, reuse=False)

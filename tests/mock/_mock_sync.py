@@ -243,10 +243,16 @@ class MockServer:
                                 )
                             )
 
-                        response = h11.Response(
-                            status_code=mock.status,
-                            headers=response_headers,
-                        )
+                        if mock.status // 100 == 1:
+                            response = h11.InformationalResponse(
+                                status_code=mock.status,
+                                headers=response_headers,
+                            )
+                        else:
+                            response = h11.Response(
+                                status_code=mock.status,
+                                headers=response_headers,
+                            )
                         client_socket.sendall(conn.send(response))
                         if mock.body:
                             client_socket.sendall(conn.send(h11.Data(data=mock.body)))
