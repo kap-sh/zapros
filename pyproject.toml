@@ -67,8 +67,12 @@ line-length = 120
 exclude = [
     "src/zapros/_handlers/_sync_base.py",
     "src/zapros/_handlers/_sync_pyreqwest.py",
+    "src/zapros/_sync_pool.py",
+    "src/zapros/_sync_io.py",
     "src/zapros/_sync_client.py",
     "tests/handlers/test_sync_basic.py",
+    "src/zapros/_handlers/_sync_std.py",
+    "tests/test_sync_pool.py",
 ]
 
 [tool.ruff.lint]

@@ -25,6 +25,15 @@ SUBS = [
     ("AsyncIterator", "Iterator"),
     ("asynccontextmanager", "contextmanager"),
     ("AbstractAsyncContextManager", "AbstractContextManager"),
+    # asyncio to threading
+    ("import asyncio", "import threading"),
+    ("from asyncio import Condition", "from threading import Condition"),
+    ("from asyncio import Semaphore", "from threading import Semaphore"),
+    ("from asyncio import Lock", "from threading import Lock"),
+    ("asyncio.Condition", "threading.Condition"),
+    ("asyncio.Lock", "threading.Lock"),
+    ("asyncio.TimeoutError", "TimeoutError"),
+    ("asyncio.Semaphore", "threading.Semaphore"),
     # Zapros types / names
     ("Async([A-Z][A-Za-z0-9_]*)", r"\1"),
     ("AsyncClient", "Client"),
@@ -42,9 +51,17 @@ SUBS = [
     ("async_next", "next"),
     ("handle_async_request", "handle_request"),
     ("wrap_with_async_middleware", "wrap_with_middleware"),
+    ("aconnect_tcp", "connect_tcp"),
+    ("self._wait_with_timeout\\((.*)\\)", r"self._cond.wait(\1)"),
     # Zapros module paths
     ("zapros._async_base", "zapros._sync_base"),
     ("._async_base", "._sync_base"),
+    ("zapros._async_io", "zapros._sync_io"),
+    ("._async_io", "._sync_io"),
+    ("zapros._async_pool", "zapros._sync_pool"),
+    ("._async_pool", "._sync_pool"),
+    ("from asyncio import sleep", "from time import sleep"),
+    ("@pytest.mark.asyncio", ""),
     # pyreqwest
     (
         "from pyreqwest.response import Response as PyreqwestResponse",
@@ -82,8 +99,8 @@ def unasync_file(in_path, out_path):
 
 
 def unasync_file_check(in_path, out_path):
-    import tempfile
     import filecmp
+    import tempfile
 
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as tmp_file:
         tmp_path = tmp_file.name
@@ -127,9 +144,12 @@ def main():
             "src/zapros/_handlers/_async_pyreqwest.py",
             "src/zapros/_handlers/_sync_pyreqwest.py",
         ),
+        ("src/zapros/_handlers/_async_std.py", "src/zapros/_handlers/_sync_std.py"),
         ("src/zapros/_async_client.py", "src/zapros/_sync_client.py"),
+        ("src/zapros/_async_pool.py", "src/zapros/_sync_pool.py"),
         # Tests
         ("tests/handlers/test_async_basic.py", "tests/handlers/test_sync_basic.py"),
+        ("tests/test_async_pool.py", "tests/test_sync_pool.py"),
     ]
 
     for in_path, out_path in FILES:

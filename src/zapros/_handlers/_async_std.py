@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import asyncio
 import ssl
 import time
-from collections import deque
 from collections.abc import (
-    Awaitable,
     Iterator as ABCIterator,
 )
-from dataclasses import dataclass, field
-from typing import Protocol, TypeVar, cast
+from typing import cast
 
 import h11
 from typing_extensions import override
 
+from .._async_io import AsyncStdNetworkStream, aconnect_tcp
+from .._async_pool import AsyncConnPool
+from .._base_pool import PoolKey
 from .._errors import (
     ConnectionError,
     TotalTimeoutError,
@@ -24,19 +23,7 @@ from .._models import (
     Response,
 )
 from ._async_base import AsyncBaseHandler
-from ._exc_map import map_connect_exceptions, map_read_exceptions, map_write_exceptions
-
-PoolKey = tuple[str, str, int]  # (scheme, host, port)
-_T = TypeVar("_T")
-
-
-class PoolConnection(Protocol):
-    def close(self) -> None: ...
-
-    @property
-    def is_closed(self) -> bool: ...
-
-    def can_reuse(self) -> bool: ...
+from ._exc_map import map_read_exceptions, map_write_exceptions
 
 
 def _encode_target(path: str, query: str) -> bytes:
@@ -78,141 +65,27 @@ def _min_timeout(a: float | None, b: float | None) -> float | None:
 class AsyncConn:
     def __init__(
         self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
+        stream: AsyncStdNetworkStream,
     ) -> None:
-        self.reader = reader
-        self.writer = writer
+        self.stream = stream
         self.h11 = h11.Connection(h11.CLIENT)
         self._closed = False
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if self._closed:
             return
         self._closed = True
         try:
-            self.writer.close()
+            await self.stream.close()
         except Exception:
             pass
 
     @property
     def is_closed(self) -> bool:
-        return self._closed or self.writer.is_closing()
+        return self._closed
 
     def can_reuse(self) -> bool:
         return not self.is_closed and self.h11.our_state is h11.IDLE and self.h11.their_state is h11.IDLE
-
-
-@dataclass
-class IdlePoolConnection:
-    conn: PoolConnection
-    last_used: float = field(default_factory=time.monotonic)
-
-
-class ConnPool:
-    """Async connection pool keyed by (scheme, host, port).
-
-    Limits total checked-out + idle connections per host and keeps a bounded
-    LIFO idle cache for reuse.
-    """
-
-    def __init__(
-        self,
-        *,
-        max_connections_per_host: int = 10,
-        max_idle_per_host: int = 10,
-        max_idle_seconds: float = 30.0,
-    ) -> None:
-        self._max_connections_per_host = max_connections_per_host
-        self._max_idle_per_host = max_idle_per_host
-        self._max_age = max_idle_seconds
-
-        self._lock = asyncio.Lock()
-        self._idle: dict[PoolKey, deque[IdlePoolConnection]] = {}
-        self._semaphores: dict[PoolKey, asyncio.Semaphore] = {}
-        self._closed = False
-
-    async def _get_semaphore(self, key: PoolKey) -> asyncio.Semaphore:
-        async with self._lock:
-            sem = self._semaphores.get(key)
-            if sem is None:
-                sem = asyncio.Semaphore(self._max_connections_per_host)
-                self._semaphores[key] = sem
-            return sem
-
-    async def acquire(self, key: PoolKey) -> PoolConnection | None:
-        """Reserve a slot and return the freshest usable idle connection, if any."""
-        sem = await self._get_semaphore(key)
-        await sem.acquire()
-
-        now = time.monotonic()
-        async with self._lock:
-            if self._closed:
-                sem.release()
-                raise RuntimeError("Pool is closed")
-
-            dq = self._idle.get(key)
-            if not dq:
-                return None
-
-            while dq:
-                item = dq.pop()  # LIFO – reuse the freshest
-                if (now - item.last_used) <= self._max_age and item.conn.can_reuse():
-                    return item.conn
-                _close_quietly(item.conn)
-
-        return None
-
-    async def release_reservation(self, key: PoolKey) -> None:
-        """Release a previously acquired slot when no connection will be returned."""
-        sem = await self._get_semaphore(key)
-        sem.release()
-
-    async def release(
-        self,
-        key: PoolKey,
-        conn: PoolConnection,
-        *,
-        reuse: bool,
-    ) -> None:
-        """Return a connection and release its reserved slot."""
-        sem = await self._get_semaphore(key)
-
-        try:
-            if not reuse:
-                _close_quietly(conn)
-                return
-
-            async with self._lock:
-                if self._closed:
-                    _close_quietly(conn)
-                    return
-
-                dq = self._idle.setdefault(key, deque())
-                dq.append(IdlePoolConnection(conn=conn))
-
-                while len(dq) > self._max_idle_per_host:
-                    _close_quietly(dq.popleft().conn)
-        finally:
-            sem.release()
-
-    async def close_all(self) -> None:
-        async with self._lock:
-            if self._closed:
-                return
-            self._closed = True
-            idle, self._idle = self._idle, {}
-
-        for dq in idle.values():
-            for item in dq:
-                _close_quietly(item.conn)
-
-
-def _close_quietly(conn: PoolConnection) -> None:
-    try:
-        conn.close()
-    except Exception:
-        pass
 
 
 class AsyncStdStream(AsyncClosableStream):
@@ -221,7 +94,7 @@ class AsyncStdStream(AsyncClosableStream):
     def __init__(
         self,
         conn: AsyncConn,
-        pool: ConnPool,
+        pool: AsyncConnPool,
         key: PoolKey,
         *,
         read_timeout: float | None = None,
@@ -243,15 +116,9 @@ class AsyncStdStream(AsyncClosableStream):
 
     async def _read(self, n: int) -> bytes:
         with map_read_exceptions():
-            if self._read_timeout is None:
-                return await self._conn.reader.read(n)
-            return await asyncio.wait_for(
-                self._conn.reader.read(n),
-                timeout=self._read_timeout,
-            )
+            return await self._conn.stream.read(n, timeout=self._read_timeout)
 
     def _drain_no_body_end_of_message(self) -> None:
-        """Advance h11 to IDLE for responses that are known to have no body."""
         if self._eof or not self._no_body_response:
             return
 
@@ -262,7 +129,6 @@ class AsyncStdStream(AsyncClosableStream):
                 self._conn.h11.start_next_cycle()
                 return
             if event is h11.NEED_DATA:
-                # For true no-body responses, h11 should not need socket reads here.
                 self._ok = False
                 return
             if isinstance(event, h11.Data):
@@ -274,29 +140,28 @@ class AsyncStdStream(AsyncClosableStream):
             raise StopAsyncIteration
 
         try:
-            with map_read_exceptions():
-                while True:
-                    event = self._conn.h11.next_event()
+            while True:
+                event = self._conn.h11.next_event()
 
-                    if event is h11.NEED_DATA:
-                        data = await self._read(8192)
-                        if not data:
-                            self._conn.h11.receive_data(b"")
-                            continue
-                        self._conn.h11.receive_data(data)
+                if event is h11.NEED_DATA:
+                    data = await self._read(8192)
+                    if not data:
+                        self._conn.h11.receive_data(b"")
                         continue
+                    self._conn.h11.receive_data(data)
+                    continue
 
-                    if isinstance(event, h11.Data):
-                        return bytes(event.data)
+                if isinstance(event, h11.Data):
+                    return bytes(event.data)
 
-                    if isinstance(event, h11.EndOfMessage):
-                        self._eof = True
-                        try:
-                            self._conn.h11.start_next_cycle()
-                        except Exception:
-                            self._ok = False
-                        await self.aclose()
-                        raise StopAsyncIteration
+                if isinstance(event, h11.EndOfMessage):
+                    self._eof = True
+                    try:
+                        self._conn.h11.start_next_cycle()
+                    except Exception:
+                        self._ok = False
+                    await self.aclose()
+                    raise StopAsyncIteration
 
         except BaseException:
             self._ok = False
@@ -316,12 +181,7 @@ class AsyncStdStream(AsyncClosableStream):
                 self._ok = False
 
         reuse = self._eof and self._ok and not self._must_close and self._conn.can_reuse()
-
-        await self._pool.release(
-            self._key,
-            self._conn,
-            reuse=reuse,
-        )
+        await self._pool.release(self._key, self._conn, reuse=reuse)
 
 
 class AsyncStdNetworkHandler(AsyncBaseHandler):
@@ -347,22 +207,13 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         self.read_timeout = read_timeout if read_timeout is not None else None
         self.write_timeout = write_timeout if write_timeout is not None else None
 
-        self._pool = ConnPool(
+        self._pool = AsyncConnPool(
             max_connections_per_host=max_connections_per_host,
             max_idle_per_host=(
                 max_connections_per_host if max_idle_connections_per_host is None else max_idle_connections_per_host
             ),
             max_idle_seconds=max_idle_seconds,
         )
-
-    @staticmethod
-    async def _await_with_timeout(
-        awaitable: Awaitable[_T],
-        timeout: float | None,
-    ) -> _T:
-        if timeout is None:
-            return await awaitable
-        return await asyncio.wait_for(awaitable, timeout=timeout)
 
     @staticmethod
     def _remaining_timeout(deadline: float | None) -> float | None:
@@ -382,22 +233,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         connect_timeout: float | None = None,
     ) -> AsyncConn:
         ssl_ctx = self.ssl_context if scheme == "https" else None
-        reader: asyncio.StreamReader
-        writer: asyncio.StreamWriter
-        with map_connect_exceptions():
-            reader, writer = await self._await_with_timeout(
-                asyncio.open_connection(
-                    host,
-                    port,
-                    ssl=ssl_ctx,
-                    server_hostname=host if ssl_ctx else None,
-                    happy_eyeballs_delay=0.25,
-                    interleave=1,
-                    ssl_handshake_timeout=connect_timeout,
-                ),
-                connect_timeout,
-            )
-        return AsyncConn(reader, writer)
+        stream = await aconnect_tcp(
+            host,
+            port,
+            ssl_context=ssl_ctx,
+            timeout=connect_timeout,
+            server_hostname=host,
+        )
+        return AsyncConn(stream)
 
     @staticmethod
     def _prepare_body(
@@ -424,30 +267,116 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             return True
         return False
 
-    async def _drain_writer(
+    async def _write_all(
         self,
-        writer: asyncio.StreamWriter,
+        conn: AsyncConn,
+        data: bytes,
         *,
         write_timeout: float | None = None,
     ) -> None:
         with map_write_exceptions():
-            await self._await_with_timeout(
-                writer.drain(),
-                write_timeout,
-            )
+            await conn.stream.write_all(data, timeout=write_timeout)
 
     async def _read(
         self,
-        reader: asyncio.StreamReader,
+        conn: AsyncConn,
         n: int,
         *,
         read_timeout: float | None = None,
     ) -> bytes:
         with map_read_exceptions():
-            return await self._await_with_timeout(
-                reader.read(n),
-                read_timeout,
-            )
+            return await conn.stream.read(n, timeout=read_timeout)
+
+    async def _send_request_headers(
+        self,
+        conn: AsyncConn,
+        method: str,
+        target: bytes,
+        headers: list[tuple[str, str]],
+        *,
+        write_timeout: float | None = None,
+    ) -> None:
+        event = h11.Request(
+            method=method.encode("ascii"),
+            target=target,
+            headers=[
+                (
+                    k.encode("ascii"),
+                    v.encode("latin-1"),
+                )
+                for k, v in headers
+            ],
+        )
+        await self._write_all(
+            conn,
+            conn.h11.send(event),
+            write_timeout=write_timeout,
+        )
+
+    async def _send_request_body(
+        self,
+        conn: AsyncConn,
+        body: bytes | ABCIterator[bytes] | None,
+        *,
+        write_timeout: float | None = None,
+    ) -> None:
+        if isinstance(body, bytes):
+            if body:
+                await self._write_all(
+                    conn,
+                    conn.h11.send(h11.Data(data=body)),
+                    write_timeout=write_timeout,
+                )
+        elif isinstance(body, ABCIterator):
+            for chunk in body:
+                if chunk:
+                    await self._write_all(
+                        conn,
+                        conn.h11.send(h11.Data(data=chunk)),
+                        write_timeout=write_timeout,
+                    )
+
+        await self._write_all(
+            conn,
+            conn.h11.send(h11.EndOfMessage()),
+            write_timeout=write_timeout,
+        )
+
+    async def _receive_response_headers(
+        self,
+        conn: AsyncConn,
+        *,
+        read_timeout: float | None = None,
+    ) -> tuple[int, list[tuple[str, str]]]:
+        while True:
+            event = conn.h11.next_event()
+
+            if event is h11.NEED_DATA:
+                data = await self._read(
+                    conn,
+                    8192,
+                    read_timeout=read_timeout,
+                )
+                if not data:
+                    raise ConnectionError("Connection closed while reading response headers")
+                conn.h11.receive_data(data)
+                continue
+
+            if isinstance(event, h11.InformationalResponse):
+                continue
+
+            if isinstance(event, h11.Response):
+                status = event.status_code
+                resp_headers = [
+                    (
+                        k.decode("ascii"),
+                        v.decode("latin-1"),
+                    )
+                    for k, v in event.headers
+                ]
+                return status, resp_headers
+
+            raise ConnectionError(f"Unexpected HTTP event while reading headers: {event!r}")
 
     def _resolve_timeouts(
         self,
@@ -482,171 +411,126 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             write_timeout,
         )
 
-    async def ahandle(self, request: Request) -> Response:
-        (
-            total_timeout,
-            connect_timeout,
-            read_timeout,
-            write_timeout,
-        ) = self._resolve_timeouts(request)
-        deadline = None if total_timeout is None else (time.monotonic() + total_timeout)
-
-        port = int(request.url.port) if request.url.port != "" else (443 if request.url.protocol == "https:" else 80)
-        key: PoolKey = (
-            request.url.protocol[:-1],
-            request.url.hostname,
-            port,
-        )
-
-        conn: AsyncConn | None = cast(
-            AsyncConn | None,
-            await self._await_with_timeout(
-                self._pool.acquire(key),
-                self._remaining_timeout(deadline),
-            ),
-        )
-        if conn is None:
-            try:
-                conn = await self._new_conn(
-                    request.url.protocol[:-1],
-                    request.url.hostname,
-                    port,
-                    connect_timeout=_min_timeout(
-                        connect_timeout,
-                        self._remaining_timeout(deadline),
-                    ),
-                )
-            except BaseException:
-                await self._pool.release_reservation(key)
-                raise
-
-        target = _encode_target(
-            request.url.pathname,
-            request.url.search[1:],
-        )
-
-        body = self._prepare_body(request)
-
-        headers = list(request.headers.list())
-        request_wants_close = _header_has_token(
-            headers,
-            "connection",
-            "close",
-        )
+    async def _acquire_conn_for_request(
+        self,
+        key: PoolKey,
+        scheme: str,
+        host: str,
+        port: int,
+        *,
+        connect_timeout: float | None = None,
+    ) -> tuple[AsyncConn, bool]:
+        conn = cast(AsyncConn | None, await self._pool.acquire(key))
+        if conn is not None:
+            return conn, True
 
         try:
-            with map_read_exceptions():
-                event = h11.Request(
-                    method=request.method.encode("ascii"),
-                    target=target,
-                    headers=[
-                        (
-                            k.encode("ascii"),
-                            v.encode("latin-1"),
-                        )
-                        for k, v in headers
-                    ],
-                )
-                conn.writer.write(conn.h11.send(event))
-                await self._drain_writer(
-                    conn.writer,
-                    write_timeout=_min_timeout(
-                        write_timeout,
-                        self._remaining_timeout(deadline),
-                    ),
-                )
-
-                if isinstance(body, bytes):
-                    if body:
-                        conn.writer.write(conn.h11.send(h11.Data(data=body)))
-                        await self._drain_writer(
-                            conn.writer,
-                            write_timeout=_min_timeout(
-                                write_timeout,
-                                self._remaining_timeout(deadline),
-                            ),
-                        )
-                elif isinstance(body, ABCIterator):
-                    for chunk in body:
-                        if chunk:
-                            conn.writer.write(conn.h11.send(h11.Data(data=chunk)))
-                            await self._drain_writer(
-                                conn.writer,
-                                write_timeout=_min_timeout(
-                                    write_timeout,
-                                    self._remaining_timeout(deadline),
-                                ),
-                            )
-
-                conn.writer.write(conn.h11.send(h11.EndOfMessage()))
-                await self._drain_writer(
-                    conn.writer,
-                    write_timeout=_min_timeout(
-                        write_timeout,
-                        self._remaining_timeout(deadline),
-                    ),
-                )
-
-                while True:
-                    event = conn.h11.next_event()
-
-                    if event is h11.NEED_DATA:
-                        data = await self._read(
-                            conn.reader,
-                            8192,
-                            read_timeout=_min_timeout(
-                                read_timeout,
-                                self._remaining_timeout(deadline),
-                            ),
-                        )
-                        if not data:
-                            raise ConnectionError("Connection closed while reading response headers")
-                        conn.h11.receive_data(data)
-                        continue
-
-                    if isinstance(event, h11.InformationalResponse):
-                        continue
-
-                    if isinstance(event, h11.Response):
-                        status = event.status_code
-                        resp_headers = [
-                            (
-                                k.decode("ascii"),
-                                v.decode("latin-1"),
-                            )
-                            for k, v in event.headers
-                        ]
-                        break
-
-                    raise ConnectionError(f"Unexpected HTTP event while reading headers: {event!r}")
-
-            no_body_response = self._response_has_no_body(
-                request.method,
-                status,
-                resp_headers,
-            )
-            response_wants_close = _header_has_token(
-                resp_headers,
-                "connection",
-                "close",
-            )
-
-            return Response(
-                status=status,
-                headers=resp_headers,
-                content=AsyncStdStream(
-                    conn,
-                    self._pool,
-                    key,
-                    read_timeout=read_timeout,
-                    no_body_response=no_body_response,
-                    must_close=(request_wants_close or response_wants_close),
+            return (
+                await self._new_conn(
+                    scheme,
+                    host,
+                    port,
+                    connect_timeout=connect_timeout,
                 ),
+                False,
+            )
+        except BaseException:
+            await self._pool.release_reservation(key)
+            raise
+
+    async def ahandle(self, request: Request) -> Response:
+        total_timeout, connect_timeout, read_timeout, write_timeout = self._resolve_timeouts(request)
+        deadline = None if total_timeout is None else (time.monotonic() + total_timeout)
+
+        scheme = request.url.protocol[:-1]
+        host = request.url.hostname
+        port = int(request.url.port) if request.url.port != "" else (443 if scheme == "https" else 80)
+        key: PoolKey = (scheme, host, port)
+
+        def phase_timeout(value: float | None) -> float | None:
+            return _min_timeout(value, self._remaining_timeout(deadline))
+
+        conn, from_pool = await self._acquire_conn_for_request(
+            key,
+            scheme,
+            host,
+            port,
+            connect_timeout=phase_timeout(connect_timeout),
+        )
+
+        target = _encode_target(request.url.pathname, request.url.search[1:])
+        body = self._prepare_body(request)
+        headers = list(request.headers.list())
+        request_wants_close = _header_has_token(headers, "connection", "close")
+
+        try:
+            # When using a pooled connection, we might noticed that it was closed by the server when it was idle.
+            # In that case, we need to create a new connection and retry the request once.
+            try:
+                await self._send_request_headers(
+                    conn,
+                    request.method,
+                    target,
+                    headers,
+                    write_timeout=phase_timeout(write_timeout),
+                )
+            except ConnectionError:
+                if not from_pool:
+                    raise
+
+                await conn.close()
+                conn = await self._new_conn(
+                    scheme,
+                    host,
+                    port,
+                    connect_timeout=phase_timeout(connect_timeout),
+                )
+                await self._send_request_headers(
+                    conn,
+                    request.method,
+                    target,
+                    headers,
+                    write_timeout=phase_timeout(write_timeout),
+                )
+
+            await self._send_request_body(
+                conn,
+                body,
+                write_timeout=phase_timeout(write_timeout),
+            )
+
+            status, resp_headers = await self._receive_response_headers(
+                conn,
+                read_timeout=phase_timeout(read_timeout),
             )
 
         except BaseException:
             await self._pool.release(key, conn, reuse=False)
             raise
+
+        no_body_response = self._response_has_no_body(
+            request.method,
+            status,
+            resp_headers,
+        )
+        response_wants_close = _header_has_token(
+            resp_headers,
+            "connection",
+            "close",
+        )
+
+        return Response(
+            status=status,
+            headers=resp_headers,
+            content=AsyncStdStream(
+                conn,
+                self._pool,
+                key,
+                read_timeout=read_timeout,
+                no_body_response=no_body_response,
+                must_close=(request_wants_close or response_wants_close),
+            ),
+        )
 
     async def aclose(self) -> None:
         await self._pool.close_all()
