@@ -186,7 +186,6 @@ class AsyncConnPool:
             await _close_many_quietly(to_close)
 
         finally:
-            breakpoint()
             state.semaphore.release()
             await self._release_state_ref(key, state)
 

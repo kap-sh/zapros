@@ -186,7 +186,6 @@ class ConnPool:
             _close_many_quietly(to_close)
 
         finally:
-            breakpoint()
             state.semaphore.release()
             self._release_state_ref(key, state)
 
