@@ -10,6 +10,8 @@ from typing import cast
 import h11
 from typing_extensions import override
 
+from zapros._sync_io import StdNetworkStream
+
 from .._async_io import AsyncStdNetworkStream, aconnect_tcp
 from .._async_pool import AsyncConnPool
 from .._base_pool import PoolKey
@@ -515,7 +517,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     content=None,
                     context={
                         "handoff": ResponseHandoffContext(
-                            transport=(conn.stream.reader, conn.stream.writer),
+                            transport=(conn.stream.reader, conn.stream.writer)
+                            if not isinstance(conn.stream, StdNetworkStream)  # type: ignore[reportUnnecessaryIsInstance]
+                            else conn.stream.sock,
                         )
                     },
                 )
