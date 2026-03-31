@@ -21,6 +21,7 @@ from .._errors import (
 )
 from .._models import Request, Response
 from ._async_base import (
+    AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
 from ._sync_base import BaseHandler
@@ -144,7 +145,7 @@ def _calculate_backoff(
 class RetryHandler(AsyncBaseMiddleware, BaseHandler):
     def __init__(
         self,
-        next_handler: AsyncBaseMiddleware | BaseHandler,
+        next_handler: AsyncBaseHandler | BaseHandler,
         *,
         policy: RetryPolicy | None = None,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,

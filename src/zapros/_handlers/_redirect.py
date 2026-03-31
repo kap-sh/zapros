@@ -16,6 +16,7 @@ from zapros._handlers._sync_base import (
 from .._errors import TooManyRedirectsError
 from .._models import Headers, Request, Response
 from ._async_base import (
+    AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
 
@@ -65,7 +66,7 @@ CONTENT_HEADERS_TO_STRIP = frozenset(
 class RedirectHandler(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
-        next_handler: AsyncBaseMiddleware | BaseHandler,
+        next_handler: AsyncBaseHandler | BaseHandler,
         *,
         max_redirects: int = 10,
     ) -> None:

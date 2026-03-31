@@ -50,6 +50,7 @@ from zapros._models import (
 )
 
 from ._async_base import (
+    AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
 from ._sync_base import (
@@ -184,7 +185,7 @@ class CachingHandler(AsyncBaseMiddleware, BaseMiddleware):
     @overload
     def __init__(
         self,
-        next_handler: AsyncBaseMiddleware,
+        next_handler: AsyncBaseHandler,
         *,
         storage: Union[HishelAsyncBaseStorage, None] = None,
         policy: Union[CachePolicy, None] = None,
@@ -199,7 +200,7 @@ class CachingHandler(AsyncBaseMiddleware, BaseMiddleware):
     ) -> None: ...
     def __init__(
         self,
-        next_handler: AsyncBaseMiddleware | BaseHandler,
+        next_handler: AsyncBaseHandler | BaseHandler,
         *,
         storage: Union[HishelSyncBaseStorage, HishelAsyncBaseStorage, None] = None,
         policy: Union[CachePolicy, None] = None,

@@ -19,6 +19,7 @@ from urllib.parse import (
 )
 
 from zapros._handlers._async_base import (
+    AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
 from zapros._handlers._common import (
@@ -255,7 +256,7 @@ class CassetteHandler(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         cassette: Cassette,
-        next_handler: AsyncBaseMiddleware | BaseHandler,
+        next_handler: AsyncBaseHandler | BaseHandler,
         *,
         mode: CassetteMode,
         cassette_dir: str,
