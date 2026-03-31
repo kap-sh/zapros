@@ -138,6 +138,8 @@ class AsyncMockServer:
                             value_str = value.decode()
                             if value_str.startswith("python-zapros/"):
                                 value = b"python-zapros"
+                        elif name == b"host":
+                            value = value.split(b":")[0]
                         raw_request += name + b": " + value + b"\r\n"
                     raw_request += b"\r\n"
                     raw_request += body
@@ -224,7 +226,8 @@ class AsyncMockServer:
                         if mock.body:
                             writer.write(conn.send(h11.Data(data=mock.body)))
 
-                    writer.write(conn.send(h11.EndOfMessage()))
+                    if mock and mock.status != 101:
+                        writer.write(conn.send(h11.EndOfMessage()))
 
                 await writer.drain()
                 conn.start_next_cycle()

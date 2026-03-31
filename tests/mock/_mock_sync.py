@@ -171,6 +171,8 @@ class MockServer:
                             value_str = value.decode()
                             if value_str.startswith("python-zapros/"):
                                 value = b"python-zapros"
+                        elif name == b"host":
+                            value = value.split(b":")[0]
                         raw_request += name + b": " + value + b"\r\n"
                     raw_request += b"\r\n"
                     raw_request += body
@@ -257,9 +259,13 @@ class MockServer:
                         if mock.body:
                             client_socket.sendall(conn.send(h11.Data(data=mock.body)))
 
-                    client_socket.sendall(conn.send(h11.EndOfMessage()))
+                    if mock and mock.status != 101:
+                        client_socket.sendall(conn.send(h11.EndOfMessage()))
 
-                conn.start_next_cycle()
+                if conn.our_state is h11.SWITCHED_PROTOCOL:
+                    conn = h11.Connection(h11.CLIENT)
+                else:
+                    conn.start_next_cycle()
 
         except (
             ConnectionError,
