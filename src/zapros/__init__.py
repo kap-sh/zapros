@@ -3,6 +3,7 @@ from pywhatwgurl import URL as URL, URLSearchParams as URLSearchParams
 from zapros._handlers._cookies import (
     CookieHandler as CookieHandler,
 )
+from zapros._handlers._proxy import ProxyMiddleware as ProxyMiddleware
 from zapros._handlers._redirect import (
     RedirectHandler as RedirectHandler,
 )
@@ -61,6 +62,12 @@ from ._handlers._sync_pyreqwest import (
 )
 from ._handlers._sync_std import (
     StdNetworkHandler as StdNetworkHandler,
+)
+from ._io._base import (
+    AsyncBaseNetworkStream as AsyncBaseNetworkStream,
+    AsyncBaseTransport as AsyncBaseTransport,
+    BaseNetworkStream as BaseNetworkStream,
+    BaseTransport as BaseTransport,
 )
 from ._models import (
     AsyncClosableStream as AsyncClosableStream,

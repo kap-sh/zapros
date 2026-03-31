@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import ssl
 import time
+import warnings
 from collections.abc import (
     Iterator as ABCIterator,
 )
 from typing import cast
 
 import h11
+from pywhatwgurl import URL
 from typing_extensions import override
 
-from zapros._sync_io import StdNetworkStream
+from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
+from zapros._io._sync import SyncTransport
+from zapros._io._base import BaseNetworkStream, BaseTransport
+from zapros._utils import get_authority_value
 
-from .._sync_io import StdNetworkStream, connect_tcp
 from .._sync_pool import ConnPool
 from .._base_pool import PoolKey
 from .._errors import (
@@ -68,7 +72,7 @@ def _min_timeout(a: float | None, b: float | None) -> float | None:
 class Conn:
     def __init__(
         self,
-        stream: StdNetworkStream,
+        stream: BaseNetworkStream,
     ) -> None:
         self.stream = stream
         self.h11 = h11.Connection(h11.CLIENT)
@@ -147,7 +151,7 @@ class StdStream(ClosableStream):
                 event = self._conn.h11.next_event()
 
                 if event is h11.NEED_DATA:
-                    data = self._read(8192)
+                    data = self._read(DEFAULT_READ_SIZE)
                     if not data:
                         self._conn.h11.receive_data(b"")
                         continue
@@ -191,6 +195,7 @@ class StdNetworkHandler(BaseHandler):
     def __init__(
         self,
         *,
+        transport: BaseTransport | None = None,
         ssl_context: ssl.SSLContext | None = None,
         total_timeout: float | None = None,
         connect_timeout: float | None = None,
@@ -200,7 +205,17 @@ class StdNetworkHandler(BaseHandler):
         max_idle_connections_per_host: int | None = None,
         max_idle_seconds: float = 30.0,
     ) -> None:
-        self.ssl_context = ssl_context or ssl.create_default_context()
+        if ssl_context is not None:
+            warnings.warn(
+                "The ssl_context argument is deprecated; set it through the transport argument instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
+
+        self.transport = transport or SyncTransport(
+            ssl_context=self.ssl_context, tunnel_ssl_context=self.ssl_context
+        )
 
         # Total timeout means: start of handle() until response headers received.
         self.total_timeout = total_timeout
@@ -229,21 +244,62 @@ class StdNetworkHandler(BaseHandler):
 
     def _new_conn(
         self,
+        request: Request,
         scheme: str,
         host: str,
         port: int,
         *,
         connect_timeout: float | None = None,
     ) -> Conn:
-        ssl_ctx = self.ssl_context if scheme == "https" else None
-        stream = connect_tcp(
-            host,
-            port,
-            ssl_context=ssl_ctx,
+        is_secure = scheme in ("https", "wss")
+        proxy_context = request.context.get("network", {}).get("proxy")
+        proxy_url = proxy_context.get("url") if proxy_context is not None else None
+
+        if proxy_url is not None:
+            proxy_url = URL(proxy_url) if isinstance(proxy_url, str) else proxy_url
+            connect_host = proxy_url.hostname
+            connect_port = int(proxy_url.port) if proxy_url.port != "" else 80
+            use_tls = proxy_url.protocol in ("https:", "wss:")
+        else:
+            connect_host = host
+            connect_port = port
+            use_tls = is_secure
+
+        stream = self.transport.connect(
+            connect_host,
+            connect_port,
+            server_hostname=connect_host if use_tls else None,
+            tls=use_tls,
             timeout=connect_timeout,
-            server_hostname=host,
         )
-        return Conn(stream)
+
+        conn = Conn(stream)
+
+        if proxy_url is None:
+            return conn
+
+        assert proxy_context is not None
+        if is_secure:
+            target = f"{host}:{port}".encode("ascii")
+            self._send_request_headers(
+                conn,
+                "CONNECT",
+                target,
+                [("Host", get_authority_value(host, str(port)))],
+            )
+
+            status, _ = self._receive_response_headers(conn, read_timeout=connect_timeout)
+
+            if status < 200 or status > 299:
+                conn.close()
+                raise ConnectionError(f"Proxy CONNECT failed with status {status}")
+
+            conn.h11 = h11.Connection(h11.CLIENT)
+
+            server_hostname = proxy_context.get("server_hostname") or host
+            conn.stream.start_tls(server_hostname=server_hostname)
+
+        return conn
 
     @staticmethod
     def _prepare_body(
@@ -357,7 +413,7 @@ class StdNetworkHandler(BaseHandler):
             if event is h11.NEED_DATA:
                 data = self._read(
                     conn,
-                    8192,
+                    DEFAULT_READ_SIZE,
                     read_timeout=read_timeout,
                 )
                 if not data:
@@ -417,6 +473,7 @@ class StdNetworkHandler(BaseHandler):
 
     def _acquire_conn_for_request(
         self,
+        request: Request,
         key: PoolKey,
         scheme: str,
         host: str,
@@ -431,6 +488,7 @@ class StdNetworkHandler(BaseHandler):
         try:
             return (
                 self._new_conn(
+                    request,
                     scheme,
                     host,
                     port,
@@ -455,6 +513,7 @@ class StdNetworkHandler(BaseHandler):
             return _min_timeout(value, self._remaining_timeout(deadline))
 
         conn, from_pool = self._acquire_conn_for_request(
+            request,
             key,
             scheme,
             host,
@@ -484,6 +543,7 @@ class StdNetworkHandler(BaseHandler):
 
                 conn.close()
                 conn = self._new_conn(
+                    request,
                     scheme,
                     host,
                     port,
@@ -515,13 +575,7 @@ class StdNetworkHandler(BaseHandler):
                     status=status,
                     headers=resp_headers,
                     content=None,
-                    context={
-                        "handoff": ResponseHandoffContext(
-                            transport=(conn.stream.reader, conn.stream.writer)
-                            if not isinstance(conn.stream, StdNetworkStream)  # type: ignore[reportUnnecessaryIsInstance]
-                            else conn.stream.sock,
-                        )
-                    },
+                    context={"handoff": ResponseHandoffContext(transport=conn.stream)},
                 )
 
         except BaseException:

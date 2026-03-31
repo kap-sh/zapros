@@ -9,7 +9,7 @@ from zapros._handlers._sync_base import BaseHandler, BaseMiddleware
 from zapros._models import Request, Response
 
 
-class Proxy(BaseMiddleware, AsyncBaseMiddleware):
+class ProxyMiddleware(BaseMiddleware, AsyncBaseMiddleware):
     def __init__(self, next_handler: AsyncBaseHandler | BaseHandler) -> None:
         self.next = cast(BaseHandler, next_handler)
         self.async_next = cast(

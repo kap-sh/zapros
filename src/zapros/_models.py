@@ -1,4 +1,3 @@
-import asyncio
 import json as json_module
 import socket
 from collections.abc import (
@@ -24,9 +23,11 @@ from typing import (
 from pywhatwgurl import URL, URLSearchParams
 
 from zapros._errors import AsyncSyncMismatchError
+from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
 from zapros._multidict import (
     CIMultiDict,
 )
+from zapros._utils import get_host_header_value
 
 if TYPE_CHECKING:
     from ._multipart import Multipart
@@ -80,9 +81,19 @@ class CachingContext(TypedDict, total=False):
     body_key: str
 
 
+class ProxyContext(TypedDict, total=False):
+    url: str | URL
+    server_hostname: str
+
+
+class NetworkContext(TypedDict, total=False):
+    proxy: ProxyContext
+
+
 class RequestContext(TypedDict, total=False):
     timeouts: TimeoutsContext
     caching: CachingContext
+    network: NetworkContext
 
 
 class ResponseCachingContext(TypedDict, total=False):
@@ -93,7 +104,7 @@ class ResponseCachingContext(TypedDict, total=False):
 
 
 class ResponseHandoffContext(TypedDict, total=False):
-    transport: Union[socket.socket, tuple[asyncio.StreamReader, asyncio.StreamWriter]]
+    transport: Union[socket.socket, AsyncBaseNetworkStream | BaseNetworkStream]
 
 
 class ResponseContext(TypedDict, total=False):
@@ -268,7 +279,10 @@ class Request:
         self.context: RequestContext = context if context is not None else {}
 
         if "host" not in self.headers and url.hostname:
-            self.headers.add("Host", url.hostname)
+            self.headers.add(
+                "Host",
+                get_host_header_value(url.hostname, url.protocol[:-1], url.port),
+            )
 
         if "accept" not in self.headers:
             self.headers.add("Accept", "*/*")

@@ -35,15 +35,18 @@ SUBS = [
     ("asyncio.TimeoutError", "TimeoutError"),
     ("asyncio.Semaphore", "threading.Semaphore"),
     # Zapros types / names
+    ("AsyncIOTransport", "SyncTransport"),
     ("Async([A-Z][A-Za-z0-9_]*)", r"\1"),
     ("AsyncClient", "Client"),
     ("AsyncBaseHandler", "BaseHandler"),
     ("AsyncStream", "Stream"),
     ("AsyncClosableStream", "ClosableStream"),
     ("ClientBuilder", "SyncClientBuilder"),
+    ("from zapros._io._asyncio import SyncTransport", "from zapros._io._sync import SyncTransport"),
     # Zapros methods
     ("aclose", "close"),
     ("ahandle", "handle"),
+    ("aconnect", "connect"),
     ("aread", "read"),
     ("atext", "text"),
     ("async_iter_bytes", "iter_bytes"),
@@ -149,6 +152,7 @@ def main():
         ("src/zapros/_async_pool.py", "src/zapros/_sync_pool.py"),
         # Tests
         ("tests/handlers/test_async_basic.py", "tests/handlers/test_sync_basic.py"),
+        ("tests/handlers/test_async_proxy.py", "tests/handlers/test_sync_proxy.py"),
         ("tests/test_async_pool.py", "tests/test_sync_pool.py"),
     ]
 
