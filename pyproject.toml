@@ -73,6 +73,7 @@ exclude = [
     "tests/handlers/test_sync_basic.py",
     "src/zapros/_handlers/_sync_std.py",
     "tests/test_sync_pool.py",
+    "tests/handlers/test_sync_proxy.py",
 ]
 
 [tool.ruff.lint]
