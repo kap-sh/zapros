@@ -17,42 +17,42 @@ pip install zapros[caching]
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 ```
 
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 ```
 
 :::
 
 ## Basic usage
 
-By default, `CachingHandler` uses RFC 9111 compliant caching, respecting standard HTTP cache headers:
+By default, `CacheMiddleware` uses RFC 9111 compliant caching, respecting standard HTTP cache headers:
 
 ::: code-group
 
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -66,11 +66,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -96,12 +96,12 @@ Strict RFC 9111 compliant caching:
 from hishel import SpecificationPolicy
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         policy=SpecificationPolicy(),
     )
@@ -112,12 +112,12 @@ client = AsyncClient(
 from hishel import SpecificationPolicy
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
 client = Client(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         StdNetworkHandler(),
         policy=SpecificationPolicy(),
     )
@@ -136,12 +136,12 @@ Cache anything that passes custom filters:
 from hishel import FilterPolicy
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         policy=FilterPolicy(),
     )
@@ -157,12 +157,12 @@ async with client:
 from hishel import FilterPolicy
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
 client = Client(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         StdNetworkHandler(),
         policy=FilterPolicy(),
     )
@@ -184,7 +184,7 @@ You can pass both request and response filters to `FilterPolicy` to control what
 from hishel import FilterPolicy
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
@@ -194,7 +194,7 @@ policy = FilterPolicy(
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         policy=policy,
     )
@@ -205,7 +205,7 @@ client = AsyncClient(
 from hishel import FilterPolicy
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
@@ -215,7 +215,7 @@ policy = FilterPolicy(
 )
 
 client = Client(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         StdNetworkHandler(),
         policy=policy,
     )
@@ -239,12 +239,12 @@ import anysqlite
 from hishel import AsyncSqliteStorage
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         storage=AsyncSqliteStorage(
             connection=anysqlite.connect(":memory:")
@@ -258,12 +258,12 @@ import sqlite3
 from hishel import SyncSqliteStorage
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
 client = Client(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         StdNetworkHandler(),
         storage=SyncSqliteStorage(
             connection=sqlite3.connect(":memory:")
@@ -285,12 +285,12 @@ import anysqlite
 from hishel import AsyncSqliteStorage
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         storage=AsyncSqliteStorage(
             connection=sqlite3.connect("my_cache.db")
@@ -304,12 +304,12 @@ import sqlite3
 from hishel import SyncSqliteStorage
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
 client = Client(
-    handler=CachingHandler(
+    handler=CacheMiddleware(
         StdNetworkHandler(),
         storage=SyncSqliteStorage(
             connection=sqlite3.connect("my_cache.db")
@@ -333,12 +333,12 @@ Set a maximum lifetime for cached responses:
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -355,11 +355,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -383,12 +383,12 @@ Extend the cache lifetime each time a cached response is accessed:
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -405,11 +405,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -433,12 +433,12 @@ Use a custom key for caching responses with request bodies:
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -456,11 +456,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.post(
@@ -487,12 +487,12 @@ The response context provides useful information about caching behavior.
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -508,11 +508,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -538,12 +538,12 @@ with client:
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CachingHandler,
+    CacheMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -565,11 +565,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CachingHandler,
+    CacheMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CachingHandler(StdNetworkHandler()))
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -591,19 +591,19 @@ with client:
 
 ## Combining with other handlers
 
-Chain `CachingHandler` with other handlers like cookies or retries:
+Chain `CacheMiddleware` with other handlers like cookies or retries:
 
 ```python
 from zapros import (
     AsyncClient,
-    CachingHandler,
-    CookieHandler,
+    CacheMiddleware,
+    CookieMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CachingHandler(
-        CookieHandler(AsyncStdNetworkHandler())
+    handler=CacheMiddleware(
+        CookieMiddleware(AsyncStdNetworkHandler())
     )
 )
 ```

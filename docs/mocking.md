@@ -11,7 +11,7 @@ Zapros includes a small, *[WireMock-style](https://docs.rs/wiremock/latest/wirem
 
 Mocking is implemented with [handlers](/handlers) and ensures that all outgoing requests are intercepted and matched against the mock router. It blocks I/O for unmatched requests by default, but you can also configure it to allow unmatched requests to pass through to the network.
 
-Here is a simple example of how you can mock a request with the `MockHandler`:
+Here is a simple example of how you can mock a request with the `MockMiddleware`:
 
 ::: code-group
 
@@ -20,7 +20,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -34,7 +34,7 @@ Mock.given(path("/api")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/api",
@@ -49,7 +49,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -60,7 +60,7 @@ Mock.given(path("/api")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/api",
     )
@@ -135,7 +135,7 @@ Mocks match requests using **matchers**. A matcher inspects some part of the req
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -149,7 +149,7 @@ Mock.given(path("/health")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/health",
@@ -163,7 +163,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -174,7 +174,7 @@ Mock.given(path("/health")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/health",
     )
@@ -193,7 +193,7 @@ Matches requests where the path is `/health`.
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method
@@ -207,7 +207,7 @@ Mock.given(method("GET")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/",
@@ -221,7 +221,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method
@@ -232,7 +232,7 @@ Mock.given(method("GET")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/",
     )
@@ -251,7 +251,7 @@ Method matching is **case-insensitive**.
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import host
@@ -265,7 +265,7 @@ Mock.given(host("api.example.com")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/",
@@ -279,7 +279,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import host
@@ -290,7 +290,7 @@ Mock.given(host("api.example.com")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/",
     )
@@ -307,7 +307,7 @@ with Client(handler=MockHandler(router)) as client:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import header
@@ -321,7 +321,7 @@ Mock.given(header("authorization", "Bearer token")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/",
@@ -336,7 +336,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import header
@@ -347,7 +347,7 @@ Mock.given(header("authorization", "Bearer token")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/",
         headers={"authorization": "Bearer token"},
@@ -365,7 +365,7 @@ with Client(handler=MockHandler(router)) as client:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import query
@@ -379,7 +379,7 @@ Mock.given(query(page="2", limit="10")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/items",
@@ -397,7 +397,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import query
@@ -408,7 +408,7 @@ Mock.given(query(page="2", limit="10")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/items",
         params={
@@ -429,7 +429,7 @@ with Client(handler=MockHandler(router)) as client:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import json
@@ -443,7 +443,7 @@ Mock.given(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.post(
             "https://api.example.com/items",
@@ -458,7 +458,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import json
@@ -469,7 +469,7 @@ Mock.given(
     json(lambda body: body["name"] == "test")
 ).respond(Response(status=200)).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.post(
         "https://api.example.com/items",
         json={"name": "test"},
@@ -495,7 +495,7 @@ Matchers can be combined using logical helpers.
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import (
@@ -513,7 +513,7 @@ Mock.given(and_(method("GET"), path("/health"))).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/health",
@@ -527,7 +527,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import (
@@ -542,7 +542,7 @@ Mock.given(and_(method("GET"), path("/health"))).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/health",
     )
@@ -559,7 +559,7 @@ with Client(handler=MockHandler(router)) as client:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import or_, path
@@ -573,7 +573,7 @@ Mock.given(or_(path("/health"), path("/status"))).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/status",
@@ -587,7 +587,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import or_, path
@@ -598,7 +598,7 @@ Mock.given(or_(path("/health"), path("/status"))).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/status",
     )
@@ -615,7 +615,7 @@ with Client(handler=MockHandler(router)) as client:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method, not_
@@ -629,7 +629,7 @@ Mock.given(not_(method("POST"))).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/",
@@ -643,7 +643,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method, not_
@@ -654,7 +654,7 @@ Mock.given(not_(method("POST"))).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/",
     )
@@ -675,7 +675,7 @@ Matchers can also be chained fluently:
 import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -694,7 +694,7 @@ Mock.given(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.post(
             "https://api.example.com/api/users",
@@ -709,7 +709,7 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Response
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -725,7 +725,7 @@ Mock.given(
     )
 ).respond(Response(status=201)).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.post(
         "https://api.example.com/api/users",
         headers={"content-type": "application/json"},
@@ -748,7 +748,7 @@ import asyncio
 from zapros import AsyncClient, Request, Response
 from zapros.matchers import Matcher
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 
@@ -770,7 +770,7 @@ Mock.given(PathPrefixMatcher("/api/v1")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         assert (
             await client.get(
@@ -791,7 +791,7 @@ asyncio.run(main())
 from zapros import Client, Request, Response
 from zapros.matchers import Matcher
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 
@@ -810,7 +810,7 @@ Mock.given(PathPrefixMatcher("/api/v1")).respond(
     Response(status=200)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     assert (
         client.get(
             "https://api.example.com/api/v1/users",
@@ -848,7 +848,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -862,7 +862,7 @@ Mock.given(path("/data")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/data",
@@ -877,7 +877,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -888,7 +888,7 @@ Mock.given(path("/data")).respond(
     Response(status=200, json={"key": "value"})
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/data",
     )
@@ -906,7 +906,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -920,7 +920,7 @@ Mock.given(path("/hello")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/hello",
@@ -935,7 +935,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -946,7 +946,7 @@ Mock.given(path("/hello")).respond(
     Response(status=200, text="Hello World")
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/hello",
     )
@@ -964,7 +964,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -982,7 +982,7 @@ Mock.given(path("/custom")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://api.example.com/custom",
@@ -998,7 +998,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1013,7 +1013,7 @@ Mock.given(path("/custom")).respond(
     )
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/custom",
     )
@@ -1036,7 +1036,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method
@@ -1055,7 +1055,7 @@ Mock.given(method("GET")).callback(handler).mount(router)
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         assert (
             await client.get(
@@ -1076,7 +1076,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import method
@@ -1092,7 +1092,7 @@ def handler(req):
 
 Mock.given(method("GET")).callback(handler).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     assert (
         client.get(
             "https://api.example.com/notfound",
@@ -1124,7 +1124,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1138,7 +1138,7 @@ Mock.given(path("/api")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         await client.get(
             "https://api.example.com/api",
@@ -1157,7 +1157,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1168,7 +1168,7 @@ Mock.given(path("/api")).respond(
     Response(status=200)
 ).expect(2).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     client.get(
         "https://api.example.com/api",
     )
@@ -1190,7 +1190,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1204,7 +1204,7 @@ Mock.given(path("/api")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         await client.get(
             "https://api.example.com/api",
@@ -1220,7 +1220,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1231,7 +1231,7 @@ Mock.given(path("/api")).respond(
     Response(status=200)
 ).once().mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     client.get(
         "https://api.example.com/api",
     )
@@ -1250,7 +1250,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1270,7 +1270,7 @@ router.verify()
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1297,7 +1297,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1314,7 +1314,7 @@ Mock.given(path("/api")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         assert (
             await client.get(
@@ -1335,7 +1335,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1349,7 +1349,7 @@ Mock.given(path("/api")).respond(
     Response(status=500)
 ).once().mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     assert (
         client.get(
             "https://api.example.com/api",
@@ -1381,7 +1381,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1398,7 +1398,7 @@ Mock.given(path("/status")).respond(
 
 async def main():
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         assert (
             await client.get(
@@ -1419,7 +1419,7 @@ asyncio.run(main())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1433,7 +1433,7 @@ Mock.given(path("/status")).respond(
     Response(status=204)
 ).mount(router)
 
-with Client(handler=MockHandler(router)) as client:
+with Client(handler=MockMiddleware(router)) as client:
     assert (
         client.get(
             "https://api.example.com/health",
@@ -1452,7 +1452,7 @@ with Client(handler=MockHandler(router)) as client:
 
 `.mount(router)` is the preferred way to register a mock. If you need to add a pre-built `Mock` object directly, `router.add(mock)` is also available.
 
-Dispatching happens automatically when used with `MockHandler`.
+Dispatching happens automatically when used with `MockMiddleware`.
 
 ---
 
@@ -1480,10 +1480,10 @@ router.reset()
 
 ## Async Support
 
-`MockHandler` also works with async handlers.
+`MockMiddleware` also works with async handlers.
 
 ```python
-handler = MockHandler(router)
+handler = MockMiddleware(router)
 
 response = await handler.ahandle(request)
 ```
@@ -1493,7 +1493,7 @@ If no mock matches and no fallback handler is configured, a `ValueError` is rais
 You can optionally provide a fallback handler:
 
 ```python
-handler = MockHandler(router, fallback=my_handler)
+handler = MockMiddleware(router, fallback=my_handler)
 ```
 
 ---
@@ -1507,7 +1507,7 @@ import asyncio
 from zapros import AsyncClient, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1521,7 +1521,7 @@ async def test_api():
     ).once().mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router)
+        handler=MockMiddleware(router)
     ) as client:
         response = await client.get(
             "https://example.com/users",
@@ -1536,7 +1536,7 @@ asyncio.run(test_api())
 from zapros import Client, Response
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -1549,7 +1549,7 @@ def test_api():
         Response(status=200, json=[])
     ).once().mount(router)
 
-    with Client(handler=MockHandler(router)) as client:
+    with Client(handler=MockMiddleware(router)) as client:
         response = client.get(
             "https://example.com/users",
         )

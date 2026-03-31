@@ -9,23 +9,23 @@ Cookies in Zapros are implemented as a [handler](/handlers) — wrapping another
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CookieHandler,
+    CookieMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CookieHandler(AsyncStdNetworkHandler())
+    handler=CookieMiddleware(AsyncStdNetworkHandler())
 )
 ```
 
 ```python [Sync]
 from zapros import (
     Client,
-    CookieHandler,
+    CookieMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CookieHandler(StdNetworkHandler()))
+client = Client(handler=CookieMiddleware(StdNetworkHandler()))
 ```
 
 :::
@@ -39,12 +39,12 @@ Cookies from `Set-Cookie` headers are automatically stored and sent with subsequ
 ```python [Async]
 from zapros import (
     AsyncClient,
-    CookieHandler,
+    CookieMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=CookieHandler(AsyncStdNetworkHandler())
+    handler=CookieMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -62,11 +62,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    CookieHandler,
+    CookieMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=CookieHandler(StdNetworkHandler()))
+client = Client(handler=CookieMiddleware(StdNetworkHandler()))
 
 with client:
     client.get(
@@ -90,20 +90,20 @@ Share cookies across clients:
 from http.cookiejar import CookieJar
 from zapros import (
     AsyncClient,
-    CookieHandler,
+    CookieMiddleware,
     AsyncStdNetworkHandler,
 )
 
 shared_jar = CookieJar()
 
 client1 = AsyncClient(
-    handler=CookieHandler(
+    handler=CookieMiddleware(
         AsyncStdNetworkHandler(),
         jar=shared_jar,
     )
 )
 client2 = AsyncClient(
-    handler=CookieHandler(
+    handler=CookieMiddleware(
         AsyncStdNetworkHandler(),
         jar=shared_jar,
     )
@@ -123,7 +123,7 @@ from zapros import (
 )
 
 
-class MyCookieHandler(AsyncBaseHandler, BaseHandler):
+class MyCookieMiddleware(AsyncBaseHandler, BaseHandler):
     def __init__(self, handler):
         self._handler = handler
 

@@ -10,6 +10,8 @@ from typing import (
     runtime_checkable,
 )
 
+import typing_extensions
+
 from zapros._handlers._common import (
     ensure_async_handler,
     ensure_sync_handler,
@@ -142,7 +144,7 @@ def _calculate_backoff(
     return delay
 
 
-class RetryHandler(AsyncBaseMiddleware, BaseHandler):
+class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
     def __init__(
         self,
         next_handler: AsyncBaseHandler | BaseHandler,
@@ -277,3 +279,11 @@ class RetryHandler(AsyncBaseMiddleware, BaseHandler):
                 attempt += 1
 
         raise RuntimeError("Unreachable code")
+
+
+@typing_extensions.deprecated(
+    "RetryHandler is deprecated, use RetryMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class RetryHandler(RetryMiddleware):
+    pass

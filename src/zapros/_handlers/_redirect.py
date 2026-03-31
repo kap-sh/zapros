@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
+import typing_extensions
 from pywhatwgurl import URL
 
 from zapros._handlers._common import (
@@ -63,7 +64,7 @@ CONTENT_HEADERS_TO_STRIP = frozenset(
 )
 
 
-class RedirectHandler(AsyncBaseMiddleware, BaseMiddleware):
+class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         next_handler: AsyncBaseHandler | BaseHandler,
@@ -192,3 +193,11 @@ class RedirectHandler(AsyncBaseMiddleware, BaseMiddleware):
             )
             redirect_count += 1
             response.close()
+
+
+@typing_extensions.deprecated(
+    "RedirectHandler is deprecated, use RedirectMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class RedirectHandler(RedirectMiddleware):
+    pass

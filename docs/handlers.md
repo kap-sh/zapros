@@ -230,7 +230,7 @@ async with AsyncClient(
 
 ### Reading response context
 
-Handlers can annotate responses by setting keys on `response.context`. For example, `CachingHandler` sets `response.context["caching"]` with cache metadata:
+Handlers can annotate responses by setting keys on `response.context`. For example, `CacheMiddleware` sets `response.context["caching"]` with cache metadata:
 
 | Key | Description |
 |---|---|

@@ -21,13 +21,13 @@ from zapros import (
 )
 from zapros import (
     Cassette,
-    CassetteHandler,
+    CassetteMiddleware,
 )
 
 
 async def main():
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         AsyncStdNetworkHandler(),
         mode="once",
@@ -52,11 +52,11 @@ from zapros import (
 )
 from zapros import (
     Cassette,
-    CassetteHandler,
+    CassetteMiddleware,
 )
 
 cassette = Cassette()
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     StdNetworkHandler(),
     mode="once",
@@ -86,7 +86,7 @@ The `mode` parameter controls recording behavior:
 Records only if the cassette file doesn't exist yet. Useful for initial recording:
 
 ```python
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     network_handler,
     mode="once",
@@ -103,7 +103,7 @@ handler = CassetteHandler(
 Replays existing interactions, records new ones:
 
 ```python
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     network_handler,
     mode="new_episodes",
@@ -120,7 +120,7 @@ handler = CassetteHandler(
 Always hits the network, always records (even duplicates):
 
 ```python
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     network_handler,
     mode="all",
@@ -136,7 +136,7 @@ Use for regenerating cassettes or debugging.
 Replay-only mode. Raises error if no match found:
 
 ```python
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     None,  # no network handler needed
     mode="none",
@@ -155,7 +155,7 @@ By default, each cassette interaction can be played back once. Requesting the sa
 
 ```python
 cassette = Cassette()
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     None,
     mode="none",
@@ -176,7 +176,7 @@ To allow repeated playback:
 
 ```python
 cassette = Cassette(allow_playback_repeats=True)
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
     None,
     mode="none",
@@ -232,11 +232,11 @@ import asyncio
 from zapros import AsyncClient, Request
 from zapros import (
     Cassette,
-    CassetteHandler,
+    CassetteMiddleware,
 )
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -262,9 +262,9 @@ async def main():
         strip_query
     )
 
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
-        MockHandler(router),
+        MockMiddleware(router),
         mode="all",
         cassette_dir="cassettes",
         cassette_name="test",
@@ -283,11 +283,11 @@ asyncio.run(main())
 from zapros import Client, Request
 from zapros import (
     Cassette,
-    CassetteHandler,
+    CassetteMiddleware,
 )
 from zapros.mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros.matchers import path
@@ -313,9 +313,9 @@ cassette.modifier(path("/api")).map_network_request(
     strip_query
 )
 
-handler = CassetteHandler(
+handler = CassetteMiddleware(
     cassette,
-    MockHandler(router),
+    MockMiddleware(router),
     mode="all",
     cassette_dir="cassettes",
     cassette_name="test",

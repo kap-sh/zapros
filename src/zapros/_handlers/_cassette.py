@@ -18,6 +18,8 @@ from urllib.parse import (
     urlunsplit,
 )
 
+import typing_extensions
+
 from zapros._handlers._async_base import (
     AsyncBaseHandler,
     AsyncBaseMiddleware,
@@ -252,7 +254,7 @@ class Cassette:
         return self._allow_playback_repeats
 
 
-class CassetteHandler(AsyncBaseMiddleware, BaseMiddleware):
+class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         cassette: Cassette,
@@ -502,3 +504,11 @@ class CassetteHandler(AsyncBaseMiddleware, BaseMiddleware):
             mapped_headers,
         )
         return replayable_response
+
+
+@typing_extensions.deprecated(
+    "CassetteHandler is deprecated, use CassetteMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class CassetteHandler(CassetteMiddleware):
+    pass

@@ -5,6 +5,8 @@ from typing import (
     cast,
 )
 
+import typing_extensions
+
 from zapros._handlers._common import (
     ensure_async_handler,
     ensure_sync_handler,
@@ -139,7 +141,7 @@ class MockRouter:
             mock.reset()
 
 
-class MockHandler(AsyncBaseMiddleware, BaseMiddleware):
+class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         router: MockRouter,
@@ -185,3 +187,11 @@ class MockHandler(AsyncBaseMiddleware, BaseMiddleware):
     def close(self) -> None:
         self._router.verify()
         self._router.reset()
+
+
+@typing_extensions.deprecated(
+    "MockHandler is deprecated, use MockMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class MockHandler(MockMiddleware):
+    pass

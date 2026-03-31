@@ -9,7 +9,7 @@ from pywhatwgurl import URL
 from zapros import (
     AsyncClient,
     Cassette,
-    CassetteHandler,
+    CassetteMiddleware,
     Client,
     UnhandledRequestError,
 )
@@ -17,7 +17,7 @@ from zapros._handlers._mock import Mock
 from zapros._models import Response
 from zapros.matchers import path
 from zapros.mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 
@@ -27,10 +27,10 @@ async def test_records_interaction_to_file(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/record")).respond(Response(status=200, text="recorded")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -59,10 +59,10 @@ async def test_replays_from_cassette_without_hitting_network(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/replay")).respond(Response(status=200, text="from cassette")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -76,9 +76,9 @@ async def test_replays_from_cassette_without_hitting_network(
         )
 
     replay_cassette = Cassette()
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -99,10 +99,10 @@ async def test_mode_once_records_when_no_cassette(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/once")).respond(Response(status=200, text="once-recorded")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="once",
@@ -126,10 +126,10 @@ async def test_mode_once_does_not_record_when_cassette_exists(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/existing")).respond(Response(status=200, text="cached")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    first_handler = CassetteHandler(
+    first_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="once",
@@ -144,10 +144,10 @@ async def test_mode_once_does_not_record_when_cassette_exists(
 
     router2 = MockRouter()
     Mock.given(path("/new-path")).respond(Response(status=200, text="new")).mount(router2)
-    mock_handler2 = MockHandler(router=router2)
+    mock_handler2 = MockMiddleware(router=router2)
 
     cassette2 = Cassette()
-    second_handler = CassetteHandler(
+    second_handler = CassetteMiddleware(
         cassette2,
         mock_handler2,
         mode="once",
@@ -166,9 +166,9 @@ async def test_mode_none_raises_for_unmatched_request(
     tmp_path: Path,
 ) -> None:
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -186,10 +186,10 @@ async def test_mode_none_replays_matched_request(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/match")).respond(Response(status=200, text="matched")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -203,9 +203,9 @@ async def test_mode_none_replays_matched_request(
         )
 
     replay_cassette = Cassette()
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -226,10 +226,10 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/old-path")).respond(Response(status=200, text="old-cached")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -244,10 +244,10 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
 
     router2 = MockRouter()
     Mock.given(path("/new-path")).respond(Response(status=201, text="new-recorded")).mount(router2)
-    mock_handler2 = MockHandler(router=router2)
+    mock_handler2 = MockMiddleware(router=router2)
 
     cassette2 = Cassette()
-    new_episodes_handler = CassetteHandler(
+    new_episodes_handler = CassetteMiddleware(
         cassette2,
         mock_handler2,
         mode="new_episodes",
@@ -280,10 +280,10 @@ async def test_mode_all_always_hits_network(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/path")).respond(Response(status=200, text="cached")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    first_handler = CassetteHandler(
+    first_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -298,10 +298,10 @@ async def test_mode_all_always_hits_network(
 
     router2 = MockRouter()
     Mock.given(path("/path")).respond(Response(status=201, text="fresh")).mount(router2)
-    mock_handler2 = MockHandler(router=router2)
+    mock_handler2 = MockMiddleware(router=router2)
 
     cassette2 = Cassette()
-    second_handler = CassetteHandler(
+    second_handler = CassetteMiddleware(
         cassette2,
         mock_handler2,
         mode="all",
@@ -327,10 +327,10 @@ async def test_playback_marks_played_back(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/once-only")).respond(Response(status=200, text="once")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -344,9 +344,9 @@ async def test_playback_marks_played_back(
         )
 
     replay_cassette = Cassette()
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -367,10 +367,10 @@ async def test_allow_playback_repeats(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/repeatable")).respond(Response(status=200, text="repeat")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -384,9 +384,9 @@ async def test_allow_playback_repeats(
         )
 
     replay_cassette = Cassette(allow_playback_repeats=True)
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -417,7 +417,7 @@ async def test_modifier_transforms_cassette_request_key(
 
     router = MockRouter()
     Mock.given(path("/api")).respond(Response(status=200, text="ok")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
 
@@ -429,7 +429,7 @@ async def test_modifier_transforms_cassette_request_key(
         return ZaprosRequest(new_url, req.method)
 
     cassette.modifier(path("/api")).map_network_request(strip_query)
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -453,7 +453,7 @@ async def test_modifier_transforms_network_response(
 
     router = MockRouter()
     Mock.given(path("/transform")).respond(Response(status=200, text="original")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
     cassette.modifier(path("/transform")).map_network_response(
@@ -463,7 +463,7 @@ async def test_modifier_transforms_network_response(
             content=resp.content,
         )
     )
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -487,10 +487,10 @@ async def test_url_query_param_normalization(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/search")).respond(Response(status=200, text="normalized")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -504,9 +504,9 @@ async def test_url_query_param_normalization(
         )
 
     replay_cassette = Cassette()
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -527,10 +527,10 @@ def test_records_interaction_to_file_sync(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/sync-record")).respond(Response(status=200, text="sync-recorded")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -554,10 +554,10 @@ def test_replays_from_cassette_sync(
 ) -> None:
     router = MockRouter()
     Mock.given(path("/sync-replay")).respond(Response(status=200, text="sync-cached")).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -571,9 +571,9 @@ def test_replays_from_cassette_sync(
         )
 
     replay_cassette = Cassette()
-    replay_handler = CassetteHandler(
+    replay_handler = CassetteMiddleware(
         replay_cassette,
-        MockHandler(router=MockRouter()),
+        MockMiddleware(router=MockRouter()),
         mode="none",
         cassette_dir=str(tmp_path),
         cassette_name="test",
@@ -599,10 +599,10 @@ def test_mode_new_episodes_sync(
             text="sync-old-cached",
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    record_handler = CassetteHandler(
+    record_handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -622,10 +622,10 @@ def test_mode_new_episodes_sync(
             text="sync-new-recorded",
         )
     ).mount(router2)
-    mock_handler2 = MockHandler(router=router2)
+    mock_handler2 = MockMiddleware(router=router2)
 
     cassette2 = Cassette()
-    new_episodes_handler = CassetteHandler(
+    new_episodes_handler = CassetteMiddleware(
         cassette2,
         mock_handler2,
         mode="new_episodes",
@@ -660,10 +660,10 @@ async def test_json_body_stored_as_object(
             json={"id": 123, "name": "John", "active": True},
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -696,10 +696,10 @@ def test_json_body_stored_as_object_sync(
             json=[1, 2, 3, 4, 5],
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -739,10 +739,10 @@ async def test_binary_body_stored_as_base64(
             content=_CassetteBytesStream(binary_data),
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -788,10 +788,10 @@ async def test_compressed_json_stored_decompressed(
             content=_CassetteBytesStream(compressed),
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -837,10 +837,10 @@ async def test_compressed_text_stored_decompressed(
             content=_CassetteBytesStream(compressed),
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -887,10 +887,10 @@ async def test_compressed_binary_stored_decompressed(
             content=_CassetteBytesStream(compressed),
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",
@@ -926,10 +926,10 @@ async def test_empty_body_stored_as_null(
             content=None,
         )
     ).mount(router)
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
 
     cassette = Cassette()
-    handler = CassetteHandler(
+    handler = CassetteMiddleware(
         cassette,
         mock_handler,
         mode="all",

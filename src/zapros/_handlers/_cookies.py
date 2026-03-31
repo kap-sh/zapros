@@ -7,6 +7,8 @@ from urllib.request import (
     Request as UrllibRequest,
 )
 
+import typing_extensions
+
 from zapros._handlers._common import (
     ensure_async_handler,
     ensure_sync_handler,
@@ -31,7 +33,7 @@ class _MockHTTPResponse:
         return self.msg
 
 
-class CookieHandler(AsyncBaseMiddleware, BaseMiddleware):
+class CookieMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         next_handler: AsyncBaseHandler | BaseHandler,
@@ -99,3 +101,11 @@ class CookieHandler(AsyncBaseMiddleware, BaseMiddleware):
         req = self._process_request(request)
         response = handler.handle(request)
         return self._process_response(response, req)
+
+
+@typing_extensions.deprecated(
+    "CookieHandler is deprecated, use CookieMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class CookieHandler(CookieMiddleware):
+    pass

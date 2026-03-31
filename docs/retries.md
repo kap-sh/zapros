@@ -9,42 +9,42 @@ Retries in Zapros are implemented as a [handler](/handlers) — wrapping another
 ```python [Async]
 from zapros import (
     AsyncClient,
-    RetryHandler,
+    RetryMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=RetryHandler(AsyncStdNetworkHandler())
+    handler=RetryMiddleware(AsyncStdNetworkHandler())
 )
 ```
 
 ```python [Sync]
 from zapros import (
     Client,
-    RetryHandler,
+    RetryMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=RetryHandler(StdNetworkHandler()))
+client = Client(handler=RetryMiddleware(StdNetworkHandler()))
 ```
 
 :::
 
 ## Basic usage
 
-By default, `RetryHandler` retries requests that fail with specific status codes or network errors:
+By default, `RetryMiddleware` retries requests that fail with specific status codes or network errors:
 
 ::: code-group
 
 ```python [Async]
 from zapros import (
     AsyncClient,
-    RetryHandler,
+    RetryMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=RetryHandler(AsyncStdNetworkHandler())
+    handler=RetryMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -56,11 +56,11 @@ async with client:
 ```python [Sync]
 from zapros import (
     Client,
-    RetryHandler,
+    RetryMiddleware,
     StdNetworkHandler,
 )
 
-client = Client(handler=RetryHandler(StdNetworkHandler()))
+client = Client(handler=RetryMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.get(
@@ -100,7 +100,7 @@ Pre-transmission errors are always retried, regardless of HTTP method:
 
 ```python
 client = AsyncClient(
-    handler=RetryHandler(AsyncStdNetworkHandler())
+    handler=RetryMiddleware(AsyncStdNetworkHandler())
 )
 
 async with client:
@@ -117,12 +117,12 @@ Customize retry behavior with these parameters:
 ```python
 from zapros import (
     AsyncClient,
-    RetryHandler,
+    RetryMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=RetryHandler(
+    handler=RetryMiddleware(
         AsyncStdNetworkHandler(),
         max_attempts=5,
         backoff_factor=1.0,
@@ -162,7 +162,7 @@ Implement your own retry logic using the `RetryPolicy` protocol:
 from zapros import (
     Request,
     Response,
-    RetryHandler,
+    RetryMiddleware,
     AsyncStdNetworkHandler,
     AsyncClient,
 )
@@ -187,7 +187,7 @@ class CustomRetryPolicy:
 
 
 client = AsyncClient(
-    handler=RetryHandler(
+    handler=RetryMiddleware(
         AsyncStdNetworkHandler(),
         policy=CustomRetryPolicy(),
         max_attempts=3,
@@ -235,7 +235,7 @@ class AlwaysRetryPolicy:
 
 
 client = AsyncClient(
-    handler=RetryHandler(
+    handler=RetryMiddleware(
         AsyncStdNetworkHandler(),
         policy=AlwaysRetryPolicy(),
     )
@@ -250,19 +250,19 @@ async with client:
 
 ## Combining with other handlers
 
-Chain `RetryHandler` with other handlers like cookies or auth:
+Chain `RetryMiddleware` with other handlers like cookies or auth:
 
 ```python
 from zapros import (
     AsyncClient,
-    RetryHandler,
-    CookieHandler,
+    RetryMiddleware,
+    CookieMiddleware,
     AsyncStdNetworkHandler,
 )
 
 client = AsyncClient(
-    handler=RetryHandler(
-        CookieHandler(AsyncStdNetworkHandler()),
+    handler=RetryMiddleware(
+        CookieMiddleware(AsyncStdNetworkHandler()),
         max_attempts=3,
     )
 )

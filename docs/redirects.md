@@ -5,11 +5,11 @@ description: RFC 9110 compliant redirect handling
 
 # HTTP Redirects
 
-Zapros includes a `RedirectHandler` for following HTTP redirects (3xx status codes).
+Zapros includes a `RedirectMiddleware` for following HTTP redirects (3xx status codes).
 
 ## Quickstart
 
-To enable redirect following, wrap your handler with `RedirectHandler`:
+To enable redirect following, wrap your handler with `RedirectMiddleware`:
 
 ::: code-group
 
@@ -17,14 +17,14 @@ To enable redirect following, wrap your handler with `RedirectHandler`:
 import asyncio
 from zapros import (
     AsyncClient,
-    RedirectHandler,
+    RedirectMiddleware,
     AsyncStdNetworkHandler,
 )
 
 
 async def main():
     base_handler = AsyncStdNetworkHandler()
-    handler = RedirectHandler(
+    handler = RedirectMiddleware(
         base_handler, max_redirects=10
     )
 
@@ -43,12 +43,12 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import (
     Client,
-    RedirectHandler,
+    RedirectMiddleware,
     StdNetworkHandler,
 )
 
 base_handler = StdNetworkHandler()
-handler = RedirectHandler(base_handler, max_redirects=10)
+handler = RedirectMiddleware(base_handler, max_redirects=10)
 
 with Client(handler=handler) as client:
     response = client.get(
@@ -73,14 +73,14 @@ Control the maximum number of redirects to follow. Default is `10`.
 import asyncio
 from zapros import (
     AsyncClient,
-    RedirectHandler,
+    RedirectMiddleware,
     AsyncStdNetworkHandler,
 )
 
 
 async def main():
     base_handler = AsyncStdNetworkHandler()
-    handler = RedirectHandler(base_handler, max_redirects=5)
+    handler = RedirectMiddleware(base_handler, max_redirects=5)
 
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
@@ -102,12 +102,12 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import (
     Client,
-    RedirectHandler,
+    RedirectMiddleware,
     StdNetworkHandler,
 )
 
 base_handler = StdNetworkHandler()
-handler = RedirectHandler(base_handler, max_redirects=5)
+handler = RedirectMiddleware(base_handler, max_redirects=5)
 
 with Client(handler=handler) as client:
     response = client.get(
@@ -139,13 +139,13 @@ Converts all methods to GET, except HEAD which remains HEAD:
 import asyncio
 from zapros import (
     AsyncClient,
-    RedirectHandler,
+    RedirectMiddleware,
     AsyncStdNetworkHandler,
 )
 
 
 async def main():
-    handler = RedirectHandler(AsyncStdNetworkHandler())
+    handler = RedirectMiddleware(AsyncStdNetworkHandler())
 
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
@@ -161,11 +161,11 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import (
     Client,
-    RedirectHandler,
+    RedirectMiddleware,
     StdNetworkHandler,
 )
 
-handler = RedirectHandler(StdNetworkHandler())
+handler = RedirectMiddleware(StdNetworkHandler())
 
 with Client(handler=handler) as client:
     response = client.post(
@@ -187,13 +187,13 @@ Only POST is converted to GET. Other methods (PUT, PATCH, DELETE) are preserved:
 import asyncio
 from zapros import (
     AsyncClient,
-    RedirectHandler,
+    RedirectMiddleware,
     AsyncStdNetworkHandler,
 )
 
 
 async def main():
-    handler = RedirectHandler(AsyncStdNetworkHandler())
+    handler = RedirectMiddleware(AsyncStdNetworkHandler())
 
     async with AsyncClient(handler=handler) as client:
         post_response = await client.post(
@@ -211,11 +211,11 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import (
     Client,
-    RedirectHandler,
+    RedirectMiddleware,
     StdNetworkHandler,
 )
 
-handler = RedirectHandler(StdNetworkHandler())
+handler = RedirectMiddleware(StdNetworkHandler())
 
 with Client(handler=handler) as client:
     post_response = client.post(
@@ -239,13 +239,13 @@ Method and body are always preserved:
 import asyncio
 from zapros import (
     AsyncClient,
-    RedirectHandler,
+    RedirectMiddleware,
     AsyncStdNetworkHandler,
 )
 
 
 async def main():
-    handler = RedirectHandler(AsyncStdNetworkHandler())
+    handler = RedirectMiddleware(AsyncStdNetworkHandler())
 
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
@@ -261,11 +261,11 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import (
     Client,
-    RedirectHandler,
+    RedirectMiddleware,
     StdNetworkHandler,
 )
 
-handler = RedirectHandler(StdNetworkHandler())
+handler = RedirectMiddleware(StdNetworkHandler())
 
 with Client(handler=handler) as client:
     response = client.post(

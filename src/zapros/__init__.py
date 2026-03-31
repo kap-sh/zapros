@@ -1,14 +1,17 @@
 from pywhatwgurl import URL as URL, URLSearchParams as URLSearchParams
 
 from zapros._handlers._cookies import (
-    CookieHandler as CookieHandler,
+    CookieHandler as CookieHandler,  # type: ignore[reportDeprecated]
+    CookieMiddleware as CookieMiddleware,
 )
 from zapros._handlers._proxy import ProxyMiddleware as ProxyMiddleware
 from zapros._handlers._redirect import (
-    RedirectHandler as RedirectHandler,
+    RedirectHandler as RedirectHandler,  # type: ignore[reportDeprecated]
+    RedirectMiddleware as RedirectMiddleware,
 )
 from zapros._handlers._retries import (
-    RetryHandler as RetryHandler,
+    RetryHandler as RetryHandler,  # type: ignore[reportDeprecated]
+    RetryMiddleware as RetryMiddleware,
 )
 
 from ._async_client import (
@@ -45,11 +48,13 @@ from ._handlers._async_std import (
     AsyncStdNetworkHandler as AsyncStdNetworkHandler,
 )
 from ._handlers._caching import (
-    CachingHandler as CachingHandler,
+    CacheMiddleware as CacheMiddleware,
+    CachingHandler as CachingHandler,  # type: ignore[reportDeprecated]
 )
 from ._handlers._cassette import (
     Cassette as Cassette,
-    CassetteHandler as CassetteHandler,
+    CassetteHandler as CassetteHandler,  # type: ignore[reportDeprecated]
+    CassetteMiddleware as CassetteMiddleware,
     Modifier as Modifier,
     UnhandledRequestError as UnhandledRequestError,
 )

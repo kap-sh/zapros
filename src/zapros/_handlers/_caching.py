@@ -9,6 +9,8 @@ from typing import (
     overload,
 )
 
+import typing_extensions
+
 if TYPE_CHECKING:
     from hishel import (
         AsyncBaseStorage as HishelAsyncBaseStorage,
@@ -181,7 +183,7 @@ def _hishel_to_zapros(
         )
 
 
-class CachingHandler(AsyncBaseMiddleware, BaseMiddleware):
+class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     @overload
     def __init__(
         self,
@@ -294,3 +296,11 @@ class CachingHandler(AsyncBaseMiddleware, BaseMiddleware):
         hishel_request = _zapros_to_hishel(request)
         hishel_response = self._get_sync_cache_proxy().handle_request(hishel_request)
         return _hishel_to_zapros(hishel_response)
+
+
+@typing_extensions.deprecated(
+    "CachingHandler is deprecated, use CacheMiddleware instead. "
+    "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
+)
+class CachingHandler(CacheMiddleware):
+    pass

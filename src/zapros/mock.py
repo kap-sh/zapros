@@ -8,7 +8,8 @@ from zapros import (
 
 from ._handlers._mock import (
     Mock,
-    MockHandler,
+    MockHandler,  # type: ignore[reportDeprecated]
+    MockMiddleware,
     MockRouter,
 )
 from .matchers import (
@@ -42,6 +43,7 @@ __all__ = [
     "MethodMatcher",
     "Mock",
     "MockHandler",
+    "MockMiddleware",
     "MockRouter",
     "NotMatcher",
     "OrMatcher",
@@ -63,9 +65,9 @@ __all__ = [
 class mock_http:
     def __init__(
         self,
-        mock_handler: MockHandler | None = None,
+        mock_handler: MockMiddleware | None = None,
     ) -> None:
-        self._mock_handler = mock_handler if mock_handler is not None else MockHandler(router=MockRouter())
+        self._mock_handler = mock_handler if mock_handler is not None else MockMiddleware(router=MockRouter())
         self._router = self._mock_handler._router  # type: ignore
 
         self._std_patch = patch.object(

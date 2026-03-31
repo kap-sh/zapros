@@ -57,12 +57,12 @@ In addition to transport handlers, Zapros includes **middleware handlers** — h
 ```python [Async]
 from zapros import (
     AsyncClient,
-    RetryHandler,
+    RetryMiddleware,
     AsyncStdNetworkHandler,
 )
 
 async with AsyncClient(
-    handler=RetryHandler(
+    handler=RetryMiddleware(
         AsyncStdNetworkHandler(),
         max_attempts=3,
     )
@@ -75,12 +75,12 @@ async with AsyncClient(
 ```python [Sync]
 from zapros import (
     Client,
-    RetryHandler,
+    RetryMiddleware,
     StdNetworkHandler,
 )
 
 with Client(
-    handler=RetryHandler(
+    handler=RetryMiddleware(
         StdNetworkHandler(),
         max_attempts=3,
     )
@@ -98,25 +98,25 @@ Multiple middleware handlers can be composed into a chain. For long chains, deep
 
 ```python
 from zapros import (
-    CachingHandler,
-    RetryHandler,
-    RedirectHandler,
-    CookieHandler,
+    CacheMiddleware,
+    RetryMiddleware,
+    RedirectMiddleware,
+    CookieMiddleware,
     Client,
     StdNetworkHandler,
 )
 
 handler = (
-    RetryHandler(
+    RetryMiddleware(
         StdNetworkHandler(),
         max_attempts=3,
         backoff_factor=0.1,
     )
     .wrap_with_middleware(
-        lambda next: RedirectHandler(next)
+        lambda next: RedirectMiddleware(next)
     )
-    .wrap_with_middleware(lambda next: CookieHandler(next))
-    .wrap_with_middleware(lambda next: CachingHandler(next))
+    .wrap_with_middleware(lambda next: CookieMiddleware(next))
+    .wrap_with_middleware(lambda next: CacheMiddleware(next))
 )
 
 with Client(handler) as client:
