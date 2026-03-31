@@ -15,7 +15,7 @@ from typing_extensions import override
 from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 from zapros._io._sync import SyncTransport
 from zapros._io._base import BaseNetworkStream, BaseTransport
-from zapros._utils import get_authority_value
+from zapros._utils import get_authority_value, get_pool_key
 
 from .._sync_pool import ConnPool
 from .._base_pool import PoolKey
@@ -507,7 +507,8 @@ class StdNetworkHandler(BaseHandler):
         scheme = request.url.protocol[:-1]
         host = request.url.hostname
         port = int(request.url.port) if request.url.port != "" else (443 if scheme == "https" else 80)
-        key: PoolKey = (scheme, host, port)
+
+        key, use_full_url = get_pool_key(request, scheme, host, port)
 
         def phase_timeout(value: float | None) -> float | None:
             return _min_timeout(value, self._remaining_timeout(deadline))
@@ -521,7 +522,10 @@ class StdNetworkHandler(BaseHandler):
             connect_timeout=phase_timeout(connect_timeout),
         )
 
-        target = _encode_target(request.url.pathname, request.url.search[1:])
+        if use_full_url:
+            target = str(request.url).encode("ascii")
+        else:
+            target = _encode_target(request.url.pathname, request.url.search[1:])
         body = self._prepare_body(request)
         headers = list(request.headers.list())
         request_wants_close = _header_has_token(headers, "connection", "close")

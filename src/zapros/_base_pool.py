@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
-PoolKey = tuple[str, str, int]
+PoolKey = tuple[str, str, int] | tuple[str, str, int, str, str, int]
 
 
 class PoolConnection(Protocol):
