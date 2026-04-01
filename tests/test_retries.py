@@ -9,13 +9,13 @@ from zapros import (
 )
 from zapros._handlers._mock import (
     Mock as ZaprosMock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros._handlers._retries import (
     DEFAULT_RETRY_STATUS_CODES,
     SAFE_RETRY_METHODS,
-    RetryHandler,
+    RetryMiddleware,
     RetryPolicy,
 )
 from zapros._models import Headers
@@ -26,8 +26,8 @@ def test_retry_on_503():
     ZaprosMock().respond(Response(status=503)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -48,8 +48,8 @@ def test_retry_on_network_exception():
     ZaprosMock().callback(ConnectionError("Network error")).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -71,8 +71,8 @@ def test_multiple_retries_until_success():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=4,
         backoff_factor=0.0,
@@ -92,8 +92,8 @@ def test_retry_exhaustion_returns_last_response():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=503)).expect(3).mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -113,8 +113,8 @@ def test_retry_exhaustion_raises_last_exception():
     router = MockRouter()
     mock = ZaprosMock().callback(ConnectionError("Network error")).expect(3).mount(router)
 
-    mock_handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    mock_handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         mock_handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -136,8 +136,8 @@ def test_get_method_retries_on_500():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -157,8 +157,8 @@ def test_post_method_does_not_retry():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=500)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -180,8 +180,8 @@ def test_put_method_retries():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -203,8 +203,8 @@ def test_delete_method_retries():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -225,8 +225,8 @@ def test_retry_on_429_rate_limit():
     ZaprosMock().respond(Response(status=429)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -247,8 +247,8 @@ def test_retry_on_502_bad_gateway():
     ZaprosMock().respond(Response(status=502)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -269,8 +269,8 @@ def test_retry_on_504_gateway_timeout():
     ZaprosMock().respond(Response(status=504)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -290,8 +290,8 @@ def test_no_retry_on_404():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=404)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -311,8 +311,8 @@ def test_no_retry_on_200():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -342,8 +342,8 @@ def test_no_retry_on_301():
         .mount(router)
     )
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -363,8 +363,8 @@ def test_max_attempts_one_means_no_retry():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=500)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=1,
         backoff_factor=0.0,
@@ -401,8 +401,8 @@ def test_exponential_backoff_timing():
 
     router = MockRouter()
     ZaprosMock().callback(handle_with_timestamps).mount(router)
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.1,
@@ -446,8 +446,8 @@ def test_backoff_max_cap():
 
     router = MockRouter()
     ZaprosMock().callback(handle_with_timestamps).mount(router)
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=1.0,
@@ -485,8 +485,8 @@ def test_custom_retry_policy():
     ZaprosMock().respond(Response(status=418)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         policy=CustomRetryPolicy(),
         max_attempts=2,
@@ -521,8 +521,8 @@ def test_custom_policy_overrides_defaults():
     ZaprosMock().respond(Response(status=404)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         policy=AlwaysRetryPolicy(),
         max_attempts=3,
@@ -544,8 +544,8 @@ def test_second_attempt_succeeds():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -567,8 +567,8 @@ async def test_async_retry_on_503():
     ZaprosMock().respond(Response(status=503)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -590,8 +590,8 @@ async def test_async_retry_on_network_exception():
     ZaprosMock().callback(ConnectionError("Network error")).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -612,8 +612,8 @@ async def test_async_post_does_not_retry():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=500)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -652,8 +652,8 @@ async def test_async_exponential_backoff():
 
     router = MockRouter()
     ZaprosMock().callback(handle_with_timestamps).mount(router)
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.1,
@@ -714,8 +714,8 @@ def test_head_method_retries():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -736,8 +736,8 @@ def test_options_method_retries():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -758,8 +758,8 @@ def test_trace_method_retries():
     ZaprosMock().respond(Response(status=500)).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -779,8 +779,8 @@ def test_patch_method_does_not_retry():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=500)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=3,
         backoff_factor=0.0,
@@ -802,8 +802,8 @@ def test_post_retries_on_connection_error_before_transmission():
     ZaprosMock().callback(ConnectionError("Connection refused")).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -825,8 +825,8 @@ def test_post_retries_on_connection_refused_error():
     ZaprosMock().callback(ConnectionRefusedError("Connection refused")).once().mount(router)
     ZaprosMock().respond(Response(status=200)).once().mount(router)
 
-    handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         handler,
         max_attempts=2,
         backoff_factor=0.0,
@@ -850,8 +850,8 @@ def test_post_does_not_retry_on_read_timeout():
     router = MockRouter()
     mock = ZaprosMock().callback(ReadTimeoutError("Read timeout")).once().mount(router)
 
-    mock_handler = MockHandler(router)
-    retry_handler = RetryHandler(
+    mock_handler = MockMiddleware(router)
+    retry_handler = RetryMiddleware(
         mock_handler,
         max_attempts=3,
         backoff_factor=0.0,

@@ -3,7 +3,7 @@ import pytest
 from zapros import URL
 from zapros._handlers._mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros._models import (
@@ -751,7 +751,7 @@ async def test_async_mock_handler_dispatch():
         )
     ).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
 
     request_health = Request(
         URL("https://example.com/health"),
@@ -773,7 +773,7 @@ async def test_async_mock_handler_no_match():
     router = MockRouter()
     Mock.given(path("/health")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
 
     request = Request(
         URL("https://example.com/notfound"),
@@ -800,8 +800,8 @@ async def test_async_mock_handler_with_fallback():
     router = MockRouter()
     Mock.given(path("/health")).respond(Response(status=200, text="OK")).mount(router)
 
-    fallback = MockHandler(fallback_router)
-    handler = MockHandler(router, next_handler=fallback)
+    fallback = MockMiddleware(fallback_router)
+    handler = MockMiddleware(router, next_handler=fallback)
 
     request = Request(
         URL("https://example.com/notfound"),

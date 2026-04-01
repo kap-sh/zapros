@@ -14,10 +14,10 @@ from zapros._async_client import (
     AsyncClient,
 )
 from zapros._handlers._cookies import (
-    CookieHandler,
+    CookieMiddleware,
 )
 from zapros._handlers._mock import (
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 
@@ -62,8 +62,8 @@ def mock_builder(request, mock_server):
 @pytest_asyncio.fixture
 async def async_mock_client() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
     router = MockRouter()
-    mock_handler = MockHandler(router=router)
-    cookie_handler = CookieHandler(mock_handler)
+    mock_handler = MockMiddleware(router=router)
+    cookie_handler = CookieMiddleware(mock_handler)
     async with AsyncClient(handler=cookie_handler) as client:
         yield client, router
 
@@ -71,6 +71,6 @@ async def async_mock_client() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
 @pytest_asyncio.fixture
 async def async_mock_client_no_cookies() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
     router = MockRouter()
-    mock_handler = MockHandler(router=router)
+    mock_handler = MockMiddleware(router=router)
     async with AsyncClient(handler=mock_handler) as client:
         yield client, router

@@ -18,7 +18,7 @@ from zapros import (
     Part,
 )
 from zapros._handlers._cookies import (
-    CookieHandler,
+    CookieMiddleware,
 )
 
 
@@ -525,7 +525,7 @@ async def test_cookies_with_handler(
         "session=abc123; Path=/",
     )
 
-    cookie_handler = CookieHandler(handler)
+    cookie_handler = CookieMiddleware(handler)
 
     async with AsyncClient(handler=cookie_handler) as client:
         response1 = await client.get(
@@ -566,4 +566,4 @@ async def test_with_websocket_upgrade(
         )
         assert response.status == 101
         assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "0", "upgrade": "websocket"})
-        assert response.context.get("handoff", {}).get("transport") is not None
+        assert response.context.get("handoff", {}).get("network_stream") is not None

@@ -4,11 +4,11 @@ from zapros import URL
 from zapros._errors import TooManyRedirectsError
 from zapros._handlers._mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros._handlers._redirect import (
-    RedirectHandler,
+    RedirectMiddleware,
 )
 from zapros._models import (
     Headers,
@@ -37,7 +37,7 @@ def create_recording_handler():
     class RecordingHandlerWrapper:
         def __init__(self):
             self.requests = requests
-            self.handler = MockHandler(router)
+            self.handler = MockMiddleware(router)
 
         def handle(self, request: Request) -> Response:
             return self.handler.handle(request)
@@ -71,8 +71,8 @@ def test_redirect_301_preserves_method():
         )
     ).mount(router)
 
-    mock_handler = MockHandler(router)
-    handler = RedirectHandler(mock_handler)
+    mock_handler = MockMiddleware(router)
+    handler = RedirectMiddleware(mock_handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -94,9 +94,9 @@ def test_redirect_301_follows():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
 
-    redirect_handler = RedirectHandler(handler)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -118,8 +118,8 @@ def test_redirect_302_follows():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -141,8 +141,8 @@ def test_redirect_307_preserves_method():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -165,8 +165,8 @@ def test_redirect_308_preserves_method():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -188,8 +188,8 @@ def test_redirect_301_converts_post_to_get():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -211,8 +211,8 @@ def test_redirect_302_converts_post_to_get():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -234,8 +234,8 @@ def test_redirect_303_converts_to_get():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -251,8 +251,8 @@ def test_redirect_no_location_header():
     router = MockRouter()
     Mock.given(path("/initial")).respond(Response(status=301)).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -274,8 +274,8 @@ def test_redirect_max_redirects():
         ).mount(router)
     Mock.given(path("/step15")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler, max_redirects=5)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler, max_redirects=5)
 
     request = Request(
         URL("https://example.com/step0"),
@@ -295,8 +295,8 @@ def test_redirect_updates_host_header():
     )
     Mock.given(host("other.com")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -318,8 +318,8 @@ def test_redirect_strips_authorization():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -347,8 +347,8 @@ def test_redirect_chain():
     ).mount(router)
     Mock.given(path("/third")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/first"),
@@ -374,8 +374,8 @@ def test_redirect_preserves_query_string():
     )
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial?foo=bar"),
@@ -397,8 +397,8 @@ async def test_async_redirect():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -421,8 +421,8 @@ async def test_async_redirect_307_preserves_method():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -438,8 +438,8 @@ def test_redirect_non_redirect_status_passes_through():
     router = MockRouter()
     Mock.given(path("/")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/"),
@@ -461,8 +461,8 @@ def test_redirect_with_custom_port():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com:8080/initial"),
@@ -487,8 +487,8 @@ def test_redirect_absolute_url():
     )
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -509,8 +509,8 @@ def test_redirect_head_method_preserved():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -535,8 +535,8 @@ def test_redirect_delete_preserved_on_307():
     )
     Mock.given(path("/new-location")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/resource"),
@@ -557,8 +557,8 @@ def test_redirect_delete_preserved_on_301():
     ).mount(router)
     Mock.given(path("/new-location")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/resource"),
@@ -579,8 +579,8 @@ def test_redirect_relative_path():
     ).mount(router)
     Mock.given(path("/api/v2/resource")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/api/v1/resource"),
@@ -613,8 +613,8 @@ def test_redirect_query_only():
     router = MockRouter()
     Mock().callback(handle_with_counter).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/search?page=1"),
@@ -648,8 +648,8 @@ def test_redirect_fragment_only():
     router = MockRouter()
     Mock().callback(handle_with_counter).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/page"),
@@ -671,8 +671,8 @@ def test_redirect_complex_relative():
     ).mount(router)
     Mock.given(path("/docs/new/file")).respond(Response(status=200, text="OK")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/docs/old"),
@@ -693,8 +693,8 @@ def test_redirect_fragment_inheritance():
     ).once().mount(router)
     Mock().given(path("/new-page")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/page#old"),
@@ -715,8 +715,8 @@ def test_redirect_fragment_override():
     ).once().mount(router)
     Mock().given(path("/new-page")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/page#old"),
@@ -737,8 +737,8 @@ def test_redirect_fragment_none():
     ).once().mount(router)
     Mock().given(path("/new-page")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/page"),
@@ -759,8 +759,8 @@ def test_redirect_fragment_to_empty():
     ).once().mount(router)
     Mock().given(path("/new-page")).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/page#old"),
@@ -781,8 +781,8 @@ def test_redirect_301_put_preserved():
     ).mount(router)
     Mock.given(path("/final")).respond(Response(status=200)).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -816,8 +816,8 @@ def test_redirect_302_delete_preserved():
     router = MockRouter()
     Mock().callback(handle_with_method_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -854,8 +854,8 @@ def test_redirect_303_delete_to_get():
     router = MockRouter()
     Mock().callback(handle_with_method_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -889,8 +889,8 @@ def test_redirect_303_head_preserved():
     router = MockRouter()
     Mock().callback(handle_with_method_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -924,8 +924,8 @@ def test_redirect_strips_cookie():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -961,8 +961,8 @@ def test_redirect_strips_if_none_match():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -998,8 +998,8 @@ def test_redirect_strips_origin():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -1035,8 +1035,8 @@ def test_redirect_strips_content_encoding_on_get():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -1073,8 +1073,8 @@ def test_redirect_preserves_content_type_on_307():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -1111,8 +1111,8 @@ def test_redirect_preserves_custom_headers():
     router = MockRouter()
     Mock().callback(handle_with_header_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -1155,8 +1155,8 @@ def test_redirect_303_removes_body():
     router = MockRouter()
     Mock().callback(handle_with_body_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),
@@ -1192,8 +1192,8 @@ def test_redirect_307_preserves_body():
     router = MockRouter()
     Mock().callback(handle_with_body_tracking).mount(router)
 
-    handler = MockHandler(router)
-    redirect_handler = RedirectHandler(handler)
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
 
     request = Request(
         URL("https://example.com/initial"),

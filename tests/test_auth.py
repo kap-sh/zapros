@@ -5,7 +5,7 @@ import pytest
 from zapros import AsyncClient, Client
 from zapros._handlers._mock import (
     Mock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros._models import Response
@@ -22,7 +22,7 @@ def test_bearer_token_sync():
     ).respond(Response(status=200)).mount(router)
 
     with Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="test-token",
     ) as client:
         response = client.get(
@@ -42,7 +42,7 @@ async def test_bearer_token_async():
     ).respond(Response(status=200)).mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="test-token",
     ) as client:
         response = await client.get(
@@ -66,7 +66,7 @@ def test_basic_auth_sync():
     ).respond(Response(status=200)).mount(router)
 
     with Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(username, password),
     ) as client:
         response = client.get(
@@ -91,7 +91,7 @@ async def test_basic_auth_async():
     ).respond(Response(status=200)).mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(username, password),
     ) as client:
         response = await client.get(
@@ -104,7 +104,7 @@ def test_no_auth_sync():
     router = MockRouter()
     Mock.given(path("/api")).respond(Response(status=200)).mount(router)
 
-    with Client(handler=MockHandler(router)) as client:
+    with Client(handler=MockMiddleware(router)) as client:
         response = client.get(
             "https://api.example.com/api",
         )
@@ -116,7 +116,7 @@ async def test_no_auth_async():
     router = MockRouter()
     Mock.given(path("/api")).respond(Response(status=200)).mount(router)
 
-    async with AsyncClient(handler=MockHandler(router)) as client:
+    async with AsyncClient(handler=MockMiddleware(router)) as client:
         response = await client.get(
             "https://api.example.com/api",
         )
@@ -135,7 +135,7 @@ def test_bearer_with_default_headers_sync():
     ).respond(Response(status=200)).mount(router)
 
     with Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="token123",
         default_headers={"x-custom": "value"},
     ) as client:
@@ -158,7 +158,7 @@ async def test_bearer_with_default_headers_async():
     ).respond(Response(status=200)).mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="token123",
         default_headers={"x-custom": "value"},
     ) as client:
@@ -178,7 +178,7 @@ def test_with_handler_preserves_bearer_sync():
     ).respond(Response(status=200)).mount(router)
 
     client = Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="my-token",
     )
 
@@ -201,7 +201,7 @@ async def test_with_handler_preserves_bearer_async():
     ).respond(Response(status=200)).mount(router)
 
     client = AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="my-token",
     )
 
@@ -228,7 +228,7 @@ def test_with_handler_preserves_basic_auth_sync():
     ).respond(Response(status=200)).mount(router)
 
     client = Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(username, password),
     )
 
@@ -256,7 +256,7 @@ async def test_with_handler_preserves_basic_auth_async():
     ).respond(Response(status=200)).mount(router)
 
     client = AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(username, password),
     )
 
@@ -277,7 +277,7 @@ def test_per_request_bearer_sync():
         )
     ).respond(Response(status=200)).mount(router)
 
-    with Client(handler=MockHandler(router)) as client:
+    with Client(handler=MockMiddleware(router)) as client:
         response = client.get(
             "https://api.example.com/api",
             auth="request-token",
@@ -295,7 +295,7 @@ async def test_per_request_bearer_async():
         )
     ).respond(Response(status=200)).mount(router)
 
-    async with AsyncClient(handler=MockHandler(router)) as client:
+    async with AsyncClient(handler=MockMiddleware(router)) as client:
         response = await client.get(
             "https://api.example.com/api",
             auth="request-token",
@@ -317,7 +317,7 @@ def test_per_request_basic_auth_sync():
         )
     ).respond(Response(status=200)).mount(router)
 
-    with Client(handler=MockHandler(router)) as client:
+    with Client(handler=MockMiddleware(router)) as client:
         response = client.get(
             "https://api.example.com/api",
             auth=(username, password),
@@ -340,7 +340,7 @@ async def test_per_request_basic_auth_async():
         )
     ).respond(Response(status=200)).mount(router)
 
-    async with AsyncClient(handler=MockHandler(router)) as client:
+    async with AsyncClient(handler=MockMiddleware(router)) as client:
         response = await client.get(
             "https://api.example.com/api",
             auth=(username, password),
@@ -358,7 +358,7 @@ def test_per_request_overrides_client_bearer_sync():
     ).respond(Response(status=200)).mount(router)
 
     with Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="client-token",
     ) as client:
         response = client.get(
@@ -379,7 +379,7 @@ async def test_per_request_overrides_client_bearer_async():
     ).respond(Response(status=200)).mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth="client-token",
     ) as client:
         response = await client.get(
@@ -404,7 +404,7 @@ def test_per_request_overrides_client_basic_auth_sync():
     ).respond(Response(status=200)).mount(router)
 
     with Client(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(
             "client_user",
             "client_pass",
@@ -433,7 +433,7 @@ async def test_per_request_overrides_client_basic_auth_async():
     ).respond(Response(status=200)).mount(router)
 
     async with AsyncClient(
-        handler=MockHandler(router),
+        handler=MockMiddleware(router),
         auth=(
             "client_user",
             "client_pass",

@@ -10,11 +10,11 @@ from hishel import (
 
 from zapros import Client
 from zapros._handlers._caching import (
-    CachingHandler,
+    CacheMiddleware,
 )
 from zapros._handlers._mock import (
     Mock as ZaprosMock,
-    MockHandler,
+    MockMiddleware,
     MockRouter,
 )
 from zapros._models import Response
@@ -29,9 +29,9 @@ def test_cache_miss_then_hit():
         )
     ).expect(1).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.get(
@@ -60,9 +60,9 @@ def test_cache_context_fields():
         )
     ).once().mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.get(
@@ -95,9 +95,9 @@ def test_cache_respects_no_cache_directive():
         )
     ).expect(2).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.get(
@@ -123,9 +123,9 @@ def test_cache_ttl_in_context():
         )
     ).once().mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.get(
@@ -171,9 +171,9 @@ def test_cache_body_key():
         )
     ).expect(2).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.post(
@@ -202,10 +202,10 @@ def test_specification_policy():
         )
     ).once().mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     in_memory_storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
     policy = SpecificationPolicy()
-    caching_handler = CachingHandler(
+    caching_handler = CacheMiddleware(
         handler,
         storage=in_memory_storage,
         policy=policy,
@@ -233,10 +233,10 @@ def test_filter_policy():
     router = MockRouter()
     ZaprosMock().respond(Response(status=200, headers={})).expect(1).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     in_memory_storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
     policy = FilterPolicy()
-    caching_handler = CachingHandler(
+    caching_handler = CacheMiddleware(
         handler,
         storage=in_memory_storage,
         policy=policy,
@@ -269,9 +269,9 @@ def test_different_urls_not_cached_together():
         )
     ).expect(2).mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(handler, storage=storage)
+    caching_handler = CacheMiddleware(handler, storage=storage)
 
     with Client(handler=caching_handler) as client:
         response1 = client.get(
@@ -296,9 +296,9 @@ def test_cache_post_request_with_body_key():
         )
     ).once().mount(router)
 
-    handler = MockHandler(router)
+    handler = MockMiddleware(router)
     storage = SyncSqliteStorage(connection=sqlite3.connect(":memory:"))
-    caching_handler = CachingHandler(
+    caching_handler = CacheMiddleware(
         handler,
         storage=storage,
         policy=FilterPolicy(),
