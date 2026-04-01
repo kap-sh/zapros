@@ -1,5 +1,4 @@
 import json as json_module
-import socket
 from collections.abc import (
     AsyncIterator as ABCAsyncIterator,
     Iterator as ABCIterator,
@@ -104,7 +103,7 @@ class ResponseCachingContext(TypedDict, total=False):
 
 
 class ResponseHandoffContext(TypedDict, total=False):
-    transport: Union[socket.socket, AsyncBaseNetworkStream | BaseNetworkStream]
+    network_stream: AsyncBaseNetworkStream | BaseNetworkStream
 
 
 class ResponseContext(TypedDict, total=False):

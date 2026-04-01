@@ -604,7 +604,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     status=status,
                     headers=resp_headers,
                     content=None,
-                    context={"handoff": ResponseHandoffContext(transport=conn.stream)},
+                    context={"handoff": ResponseHandoffContext(network_stream=conn.stream)},
                 )
 
         except BaseException:
