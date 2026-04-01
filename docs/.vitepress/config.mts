@@ -79,6 +79,7 @@ export default defineConfig({
           { text: "Redirects", link: "/redirects" },
           { text: "Retries", link: "/retries" },
           { text: "Caching", link: "/caching" },
+          { text: "Proxies", link: "/proxies" },
           { text: "Handlers", link: "/handlers" },
         ],
       },

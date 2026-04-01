@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import ssl
 import time
 import warnings
@@ -281,11 +282,20 @@ class StdNetworkHandler(BaseHandler):
         assert proxy_context is not None
         if is_secure:
             target = f"{host}:{port}".encode("ascii")
+            connect_headers = [("Host", get_authority_value(host, str(port)))]
+
+            if proxy_url.username or proxy_url.password:
+                username = proxy_url.username or ""
+                password = proxy_url.password or ""
+                credentials = f"{username}:{password}".encode("utf-8")
+                auth_value = base64.b64encode(credentials).decode("ascii")
+                connect_headers.append(("Proxy-Authorization", f"Basic {auth_value}"))
+
             self._send_request_headers(
                 conn,
                 "CONNECT",
                 target,
-                [("Host", get_authority_value(host, str(port)))],
+                connect_headers,
             )
 
             status, _ = self._receive_response_headers(conn, read_timeout=connect_timeout)
@@ -528,6 +538,21 @@ class StdNetworkHandler(BaseHandler):
             target = _encode_target(request.url.pathname, request.url.search[1:])
         body = self._prepare_body(request)
         headers = list(request.headers.list())
+
+        proxy_context = request.context.get("network", {}).get("proxy")
+        if use_full_url and proxy_context is not None:
+            proxy_url_value = proxy_context.get("url")
+            if proxy_url_value is not None:
+                proxy_url = URL(proxy_url_value) if isinstance(proxy_url_value, str) else proxy_url_value
+                if proxy_url.username or proxy_url.password:
+                    import base64
+
+                    username = proxy_url.username or ""
+                    password = proxy_url.password or ""
+                    credentials = f"{username}:{password}".encode("utf-8")
+                    auth_value = base64.b64encode(credentials).decode("ascii")
+                    headers.append(("Proxy-Authorization", f"Basic {auth_value}"))
+
         request_wants_close = _header_has_token(headers, "connection", "close")
 
         try:
