@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.0](https://github.com/kap-sh/zapros/compare/zapros-v0.4.0...zapros-v0.5.0) (2026-04-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* deprecate `atext` and `ajson` helpers
+
+### Features
+
+* add ZaprosError ([e7ecaea](https://github.com/kap-sh/zapros/commit/e7ecaeaa8d19be2527ea1cc513e942f42ff686af))
+* expose `AsyncIOTransport` and `SyncTransport` classes ([0b6ef8a](https://github.com/kap-sh/zapros/commit/0b6ef8aba4bf646694647afd045f9d1d070a25ea))
+
+
+### Documentation
+
+* add docs for std handlers ([eac0ca1](https://github.com/kap-sh/zapros/commit/eac0ca1ccea26d17967626ef21e85065e9ff59fc))
+
+
+### Code Refactoring
+
+* deprecate `atext` and `ajson` helpers ([0ed8d08](https://github.com/kap-sh/zapros/commit/0ed8d08a1a2ce78434778d9f05fd9edec32bcf6c))
+
 ## [0.4.0](https://github.com/kap-sh/zapros/compare/zapros-v0.3.0...zapros-v0.4.0) (2026-04-04)
 
 
