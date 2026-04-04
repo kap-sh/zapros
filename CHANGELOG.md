@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.4.0](https://github.com/kap-sh/zapros/compare/zapros-v0.3.0...zapros-v0.4.0) (2026-04-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **types:** improve handler type annotations and deprecate misnamed middlewares
+
+### Features
+
+* add `ProxyMiddleware` ([495053e](https://github.com/kap-sh/zapros/commit/495053ee43e3c3009cc861f36e8ec4a0c0c074e3))
+* **io:** add pluggable network transports ([408ddde](https://github.com/kap-sh/zapros/commit/408dddeb30c509c19403fc49a15209df181319e8))
+* **io:** properly handle TLS-in-TLS upgrades ([408ddde](https://github.com/kap-sh/zapros/commit/408dddeb30c509c19403fc49a15209df181319e8))
+
+
+### Bug Fixes
+
+* **handlers:** handle 101 websocket upgrade responses ([035eb2e](https://github.com/kap-sh/zapros/commit/035eb2eae3e18cef4f00b322448c6801077e41a4))
+* make connection pooling proxy-aware ([3c64504](https://github.com/kap-sh/zapros/commit/3c64504b7369f2cf9e682815f1ae99de20f88034))
+* **pool:** narrow down some broad type catches ([db5cb6c](https://github.com/kap-sh/zapros/commit/db5cb6c02ecb0513747be1afa273b286619f186c))
+* **proxies:** respect credentials in the proxy url ([5852aa6](https://github.com/kap-sh/zapros/commit/5852aa611887158a4284d5c65185e1c73d7e403e))
+* remove body-related arguments from get and head methods ([37fc100](https://github.com/kap-sh/zapros/commit/37fc100c020df6b36cc5334dc11b8ec54ec3a82c))
+* return usable handoff transport for 101 responses ([78a0a1e](https://github.com/kap-sh/zapros/commit/78a0a1e5096995f007a7454528b1ced15ed7aba0))
+* **types:** correct `next_handler` type annotations in handlers ([f174810](https://github.com/kap-sh/zapros/commit/f17481082522d8276d5969d753fd9b631a112f55))
+* **types:** improve handler type annotations and deprecate misnamed middlewares ([2376086](https://github.com/kap-sh/zapros/commit/2376086b4e4c385cbb9f970d8d3853ca189a353a))
+
+
+### Documentation
+
+* add docs for proxies ([5852aa6](https://github.com/kap-sh/zapros/commit/5852aa611887158a4284d5c65185e1c73d7e403e))
+
 ## [0.3.0](https://github.com/kap-sh/zapros/compare/zapros-v0.2.3...zapros-v0.3.0) (2026-03-21)
 
 
