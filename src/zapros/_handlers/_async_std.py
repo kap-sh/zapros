@@ -366,12 +366,13 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         headers: list[tuple[str, str]],
         content_length: int,
         read_timeout: float | None = None,
-        CONTENT_LENGTH_MAX_LENGTH = 100000
+        write_timeout: float | None = None,
+        CONTENT_LENGTH_MAX_LENGTH: int = 100000
     ) -> None:
         if content_length > CONTENT_LENGTH_MAX_LENGTH: # указать размер откудато хз откуда
             headers.append(("Content-Length", str(content_length)))
             headers.append(("Expect", "100-continue"))
-            await self._send_request_headers(conn, method, target, headers)
+            await self._send_request_headers(conn, method, target, headers, write_timeout)
             status, resp_headers = await self._receive_response_headers(
                 conn,
                 read_timeout=read_timeout,
@@ -587,6 +588,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     request.method,
                     target,
                     headers,
+                    write_timeout=phase_timeout(write_timeout),
                     read_timeout=phase_timeout(read_timeout),
                     content_length=len(body)
                 )
@@ -613,6 +615,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     request.method,
                     target,
                     headers,
+                    write_timeout=phase_timeout(write_timeout),
                     read_timeout=phase_timeout(read_timeout),
                     content_length=len(body)
                 )
