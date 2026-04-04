@@ -329,7 +329,6 @@ class Client:
 
         return response
 
-    @overload
     def get(
         self,
         url: str | URL,
@@ -344,121 +343,14 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
-        json: Any,
-    ) -> Response: ...
-
-    @overload
-    def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ],
-    ) -> Response: ...
-
-    @overload
-    def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        body: bytes | Stream,
-    ) -> Response: ...
-
-    @overload
-    def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        multipart: "Multipart",
-    ) -> Response: ...
-
-    @overload
-    def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-    ) -> Response: ...
-
-    def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        json: Any | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        body: bytes | Stream | None = None,
-        multipart: "Multipart | None" = None,
     ) -> Response:
-        return self.request(  # type: ignore[call-overload]
+        return self.request(
             "GET",
             url,
             headers=headers,
             params=params,
             auth=auth,
             context=context,
-            json=json,
-            form=form,
-            body=body,
-            multipart=multipart,
         )
 
     @overload
@@ -989,7 +881,6 @@ class Client:
             multipart=multipart,
         )
 
-    @overload
     def head(
         self,
         url: str | URL,
@@ -1004,121 +895,14 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
-        json: Any,
-    ) -> Response: ...
-
-    @overload
-    def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ],
-    ) -> Response: ...
-
-    @overload
-    def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        body: bytes | Stream,
-    ) -> Response: ...
-
-    @overload
-    def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        multipart: "Multipart",
-    ) -> Response: ...
-
-    @overload
-    def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-    ) -> Response: ...
-
-    def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        json: Any | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        body: bytes | Stream | None = None,
-        multipart: "Multipart | None" = None,
     ) -> Response:
-        return self.request(  # type: ignore[call-overload]
+        return self.request(
             "HEAD",
             url,
             headers=headers,
             params=params,
             auth=auth,
             context=context,
-            json=json,
-            form=form,
-            body=body,
-            multipart=multipart,
         )
 
     @overload

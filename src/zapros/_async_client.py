@@ -330,7 +330,6 @@ class AsyncClient:
 
         return response
 
-    @overload
     async def get(
         self,
         url: str | URL,
@@ -345,121 +344,14 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
-        json: Any,
-    ) -> Response: ...
-
-    @overload
-    async def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ],
-    ) -> Response: ...
-
-    @overload
-    async def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        body: bytes | AsyncStream,
-    ) -> Response: ...
-
-    @overload
-    async def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        multipart: "Multipart",
-    ) -> Response: ...
-
-    @overload
-    async def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-    ) -> Response: ...
-
-    async def get(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        json: Any | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        body: bytes | AsyncStream | None = None,
-        multipart: "Multipart | None" = None,
     ) -> Response:
-        return await self.request(  # type: ignore[call-overload]
+        return await self.request(
             "GET",
             url,
             headers=headers,
             params=params,
             auth=auth,
             context=context,
-            json=json,
-            form=form,
-            body=body,
-            multipart=multipart,
         )
 
     @overload
@@ -990,7 +882,6 @@ class AsyncClient:
             multipart=multipart,
         )
 
-    @overload
     async def head(
         self,
         url: str | URL,
@@ -1005,121 +896,14 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
-        json: Any,
-    ) -> Response: ...
-
-    @overload
-    async def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ],
-    ) -> Response: ...
-
-    @overload
-    async def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        body: bytes | AsyncStream,
-    ) -> Response: ...
-
-    @overload
-    async def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        multipart: "Multipart",
-    ) -> Response: ...
-
-    @overload
-    async def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-    ) -> Response: ...
-
-    async def head(
-        self,
-        url: str | URL,
-        *,
-        headers: Mapping[str, str] | Headers | None = None,
-        params: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        auth: str | tuple[str, str] | None = None,
-        context: RequestContext | None = None,
-        json: Any | None = None,
-        form: Union[
-            str,
-            Iterable[Sequence[str]],
-            Mapping[str, Union[str, Sequence[str]]],
-            URLSearchParams,
-        ]
-        | None = None,
-        body: bytes | AsyncStream | None = None,
-        multipart: "Multipart | None" = None,
     ) -> Response:
-        return await self.request(  # type: ignore[call-overload]
+        return await self.request(
             "HEAD",
             url,
             headers=headers,
             params=params,
             auth=auth,
             context=context,
-            json=json,
-            form=form,
-            body=body,
-            multipart=multipart,
         )
 
     @overload
