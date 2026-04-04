@@ -137,11 +137,9 @@ class AsyncIOTransport(AsyncBaseTransport):
     def __init__(
         self,
         *,
-        ssl_context: ssl.SSLContext,
-        tunnel_ssl_context: ssl.SSLContext,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
-        self.ssl_context = ssl_context
-        self.tunnel_ssl_context = tunnel_ssl_context
+        self.ssl_context = DEFAULT_SSL_CONTEXT if ssl_context is None else ssl_context
 
     async def aconnect(
         self,
@@ -157,7 +155,7 @@ class AsyncIOTransport(AsyncBaseTransport):
                 reader, writer = await asyncio.open_connection(
                     host,
                     port,
-                    ssl=self.tunnel_ssl_context if tls else None,
+                    ssl=self.ssl_context if tls else None,
                     server_hostname=server_hostname if tls else None,
                     happy_eyeballs_delay=0.25,
                     interleave=1,
@@ -167,7 +165,7 @@ class AsyncIOTransport(AsyncBaseTransport):
                     asyncio.open_connection(
                         host,
                         port,
-                        ssl=self.tunnel_ssl_context if tls else None,
+                        ssl=self.ssl_context if tls else None,
                         server_hostname=server_hostname if tls else None,
                         happy_eyeballs_delay=0.25,
                         interleave=1,

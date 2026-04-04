@@ -214,9 +214,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             )
         self.ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
 
-        self.transport = transport or AsyncIOTransport(
-            ssl_context=self.ssl_context, tunnel_ssl_context=self.ssl_context
-        )
+        self.transport = transport or AsyncIOTransport(ssl_context=self.ssl_context)
 
         # Total timeout means: start of ahandle() until response headers received.
         self.total_timeout = total_timeout

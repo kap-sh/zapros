@@ -2,7 +2,7 @@ import socket
 import ssl
 from typing import Any, Callable, TypeVar
 
-from zapros._constants import DEFAULT_READ_SIZE
+from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 from zapros._handlers._exc_map import map_connect_exceptions, map_read_exceptions, map_write_exceptions
 from zapros._io._base import BaseNetworkStream, BaseTransport
 
@@ -117,11 +117,9 @@ class SyncTransport(BaseTransport):
     def __init__(
         self,
         *,
-        ssl_context: ssl.SSLContext,
-        tunnel_ssl_context: ssl.SSLContext,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
-        self.ssl_context = ssl_context
-        self.tunnel_ssl_context = tunnel_ssl_context
+        self.ssl_context = DEFAULT_SSL_CONTEXT if ssl_context is None else ssl_context
 
     def connect(
         self,
@@ -137,7 +135,7 @@ class SyncTransport(BaseTransport):
 
         try:
             if tls:
-                sock = self.tunnel_ssl_context.wrap_socket(
+                sock = self.ssl_context.wrap_socket(
                     sock,
                     server_hostname=server_hostname,
                 )
