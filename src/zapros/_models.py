@@ -19,9 +19,10 @@ from typing import (
     overload,
 )
 
+import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
 
-from zapros._errors import AsyncSyncMismatchError
+from zapros._errors import AsyncSyncMismatchError, ResponseNotRead
 from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
 from zapros._multidict import (
     CIMultiDict,
@@ -500,6 +501,7 @@ class Response:
                 return part[8:].strip().strip('"')
         return "utf-8"
 
+    @property
     def json(self) -> Any:
         """
         Reads the response body (if it has not already been read), decodes it using
@@ -507,8 +509,9 @@ class Response:
 
         Returns the deserialized Python object.
         """
-        return json_module.loads(self.text())
+        return json_module.loads(self.text)
 
+    @typing_extensions.deprecated("Use `.aread()` and then `.json` instead")
     async def ajson(self) -> Any:
         """
         Asynchronously reads the response body (if it has not already been read),
@@ -523,15 +526,26 @@ class Response:
         decode, and parse the body in a single call instead of calling `.aread()`
         and then `.json()` manually.
         """
-        return json_module.loads(await self.atext())
+        return json_module.loads(self.text)
 
+    @property
     def text(self) -> str:
         """
         Reads the entire response body (if it has not already been read),
         decodes it using the response encoding, and returns it as a string.
         """
-        return self.read().decode(self.encoding)
+        if self.content is not None and not isinstance(self.content, bytes):
+            raise ResponseNotRead(
+                "Response body has not been read yet. Call `.read()` or "
+                "`.aread()`first to read the body before accessing `.text`.",
+            )
 
+        if self.content is None:
+            return ""
+
+        return self.content.decode(self.encoding)
+
+    @typing_extensions.deprecated("Use `.aread()` and then `.text` instead")
     async def atext(self) -> str:
         """
         Asynchronously reads the entire response body (if it has not already been read),

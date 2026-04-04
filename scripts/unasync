@@ -48,7 +48,6 @@ SUBS = [
     ("ahandle", "handle"),
     ("aconnect", "connect"),
     ("aread", "read"),
-    ("atext", "text"),
     ("async_iter_bytes", "iter_bytes"),
     ("async_iter_raw", "iter_raw"),
     ("async_next", "next"),

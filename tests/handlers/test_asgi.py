@@ -116,7 +116,7 @@ async def test_basic_get(litestar_app):
     async with AsyncClient(handler=handler) as client:
         response = await client.get("http://testserver/")
         assert response.status == snapshot(200)
-        assert await response.atext() == snapshot("Hello, World!")
+        assert response.text == snapshot("Hello, World!")
 
 
 async def test_json_response(
@@ -131,7 +131,7 @@ async def test_json_response(
             "http://testserver/json",
         )
         assert response.status == snapshot(200)
-        data = await response.ajson()
+        data = response.json
         assert data == snapshot(
             {
                 "message": "Hello",
@@ -154,7 +154,7 @@ async def test_post_json(litestar_app):
             },
         )
         assert response.status == snapshot(201)
-        data = await response.ajson()
+        data = response.json
         assert data == snapshot(
             {
                 "echoed": {
@@ -181,7 +181,7 @@ async def test_query_params(
             },
         )
         assert response.status == snapshot(200)
-        data = await response.ajson()
+        data = response.json
         assert data == snapshot(
             {
                 "name": "alice",
@@ -203,7 +203,7 @@ async def test_custom_headers(
             headers={"X-Custom-Header": "test-value"},
         )
         assert response.status == snapshot(200)
-        data = await response.ajson()
+        data = response.json
         assert "x-custom-header" in data["received_headers"]
         assert data["received_headers"]["x-custom-header"] == snapshot("test-value")
 
@@ -263,7 +263,7 @@ async def test_lifespan_disabled(
         response = await client.get(
             "http://testserver/state",
         )
-        data = await response.ajson()
+        data = response.json
         assert data == snapshot({"startup_value": "not set"})
 
 
@@ -279,7 +279,7 @@ async def test_lifespan_enabled(
             response = await client.get(
                 "http://testserver/state",
             )
-            data = await response.ajson()
+            data = response.json
             assert data == snapshot({"startup_value": "initialized"})
     finally:
         await handler.aclose()
@@ -327,7 +327,7 @@ async def test_root_path():
             "http://testserver/api/test",
         )
         assert response.status == snapshot(200)
-        data = await response.ajson()
+        data = response.json
         assert data == snapshot({"path": "ok"})
 
 

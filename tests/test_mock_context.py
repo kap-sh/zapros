@@ -43,20 +43,20 @@ async def test_multiple_mocks():
                 "https://api.example.com/users",
             )
             assert response.status == 200
-            assert response.json() == [{"id": 1}]
+            assert response.json == [{"id": 1}]
 
             response = await client.post(
                 "https://api.example.com/posts",
                 json={"title": "Test"},
             )
             assert response.status == 201
-            assert response.json() == {"id": 1}
+            assert response.json == {"id": 1}
 
             response = await client.get(
                 "https://api.example.com/health",
             )
             assert response.status == 200
-            assert response.text() == "OK"
+            assert response.text == "OK"
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_context_manager_with_headers():
                 headers=headers,
             )
             assert response.status == 200
-            assert response.json() == {"authenticated": True}
+            assert response.json == {"authenticated": True}
 
 
 @pytest.mark.asyncio
@@ -94,7 +94,7 @@ async def test_context_manager_with_query():
                 "https://api.example.com/search?q=test&page=1",
             )
             assert response.status == 200
-            assert response.json() == {"results": []}
+            assert response.json == {"results": []}
 
 
 @pytest.mark.asyncio
@@ -108,7 +108,7 @@ async def test_context_manager_first_match_wins():
                 "https://api.example.com/api",
             )
             assert response.status == 200
-            assert response.text() == "First"
+            assert response.text == "First"
 
 
 @pytest.mark.asyncio
@@ -221,21 +221,21 @@ async def test_different_methods():
                 "https://api.example.com/api",
             )
             assert response.status == 200
-            assert response.json() == {"method": "GET"}
+            assert response.json == {"method": "GET"}
 
             response = await client.post(
                 "https://api.example.com/api",
                 json={},
             )
             assert response.status == 201
-            assert response.json() == {"method": "POST"}
+            assert response.json == {"method": "POST"}
 
             response = await client.put(
                 "https://api.example.com/api",
                 json={},
             )
             assert response.status == 200
-            assert response.json() == {"method": "PUT"}
+            assert response.json == {"method": "PUT"}
 
             response = await client.request(
                 "DELETE",
@@ -267,10 +267,10 @@ async def test_different_hosts():
                 "https://api1.example.com/data",
             )
             assert response.status == 200
-            assert response.json() == {"host": "api1"}
+            assert response.json == {"host": "api1"}
 
             response = await client.get(
                 "https://api2.example.com/data",
             )
             assert response.status == 200
-            assert response.json() == {"host": "api2"}
+            assert response.json == {"host": "api2"}

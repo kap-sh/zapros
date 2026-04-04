@@ -88,7 +88,7 @@ async def test_replays_from_cassette_without_hitting_network(
         response = await client.get(
             "http://example.com/replay",
         )
-        text = await response.atext()
+        text = response.text
 
     assert response.status == 200
     assert text == "from cassette"
@@ -215,7 +215,7 @@ async def test_mode_none_replays_matched_request(
         response = await client.get(
             "http://example.com/match",
         )
-        text = await response.atext()
+        text = response.text
 
     assert response.status == 200
     assert text == "matched"
@@ -259,12 +259,12 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
         old_response = await client.get(
             "http://example.com/old-path",
         )
-        old_text = await old_response.atext()
+        old_text = old_response.text
 
         new_response = await client.get(
             "http://example.com/new-path",
         )
-        new_text = await new_response.atext()
+        new_text = new_response.text
 
     assert old_response.status == 200
     assert old_text == "old-cached"
@@ -313,7 +313,7 @@ async def test_mode_all_always_hits_network(
         response = await client.get(
             "http://example.com/path",
         )
-        text = await response.atext()
+        text = response.text
 
     assert response.status == 201
     assert text == "fresh"
@@ -399,8 +399,8 @@ async def test_allow_playback_repeats(
         r2 = await client.get(
             "http://example.com/repeatable",
         )
-        t1 = await r1.atext()
-        t2 = await r2.atext()
+        t1 = r1.text
+        t2 = r2.text
 
     assert r1.status == 200
     assert r2.status == 200
@@ -516,7 +516,7 @@ async def test_url_query_param_normalization(
         response = await client.get(
             "http://example.com/search?b=2&a=1",
         )
-        text = await response.atext()
+        text = response.text
 
     assert response.status == 200
     assert text == "normalized"
@@ -583,7 +583,7 @@ def test_replays_from_cassette_sync(
         response = client.get(
             "http://example.com/sync-replay",
         )
-        text = response.text()
+        text = response.text
 
     assert response.status == 200
     assert text == "sync-cached"
@@ -642,9 +642,9 @@ def test_mode_new_episodes_sync(
         )
 
     assert old_response.status == 200
-    assert old_response.text() == "sync-old-cached"
+    assert old_response.text == "sync-old-cached"
     assert new_response.status == 201
-    assert new_response.text() == "sync-new-recorded"
+    assert new_response.text == "sync-new-recorded"
 
     data = json.loads((tmp_path / "test.json").read_text())
     assert len(data) == 2
@@ -675,7 +675,7 @@ async def test_json_body_stored_as_object(
         response = await client.get(
             "http://example.com/api/user",
         )
-        body = await response.ajson()
+        body = response.json
 
     assert response.status == 200
     assert body == {"id": 123, "name": "John", "active": True}
@@ -711,7 +711,7 @@ def test_json_body_stored_as_object_sync(
         response = client.get(
             "http://example.com/api/data",
         )
-        body = response.json()
+        body = response.json
 
     assert response.status == 200
     assert body == [1, 2, 3, 4, 5]
@@ -803,7 +803,7 @@ async def test_compressed_json_stored_decompressed(
         response = await client.get(
             "http://example.com/api/user",
         )
-        body = await response.ajson()
+        body = response.json
 
     assert response.status == 200
     assert body == json_obj
@@ -852,7 +852,7 @@ async def test_compressed_text_stored_decompressed(
         response = await client.get(
             "http://example.com/text",
         )
-        body = await response.atext()
+        body = response.text
 
     assert response.status == 200
     assert body == text_content

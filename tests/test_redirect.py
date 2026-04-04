@@ -105,7 +105,7 @@ def test_redirect_301_follows():
     response = redirect_handler.handle(request)
 
     assert response.status == 200
-    assert response.text() == "OK"
+    assert response.text == "OK"
 
 
 def test_redirect_302_follows():
@@ -128,7 +128,7 @@ def test_redirect_302_follows():
     response = redirect_handler.handle(request)
 
     assert response.status == 200
-    assert response.text() == "OK"
+    assert response.text == "OK"
 
 
 def test_redirect_307_preserves_method():
@@ -357,7 +357,7 @@ def test_redirect_chain():
     response = redirect_handler.handle(request)
 
     assert response.status == 200
-    assert response.text() == "OK"
+    assert response.text == "OK"
 
 
 def test_redirect_preserves_query_string():
@@ -407,7 +407,7 @@ async def test_async_redirect():
     response = await redirect_handler.ahandle(request)
 
     assert response.status == 200
-    assert response.text() == "OK"
+    assert response.text == "OK"
 
 
 @pytest.mark.asyncio
@@ -448,7 +448,7 @@ def test_redirect_non_redirect_status_passes_through():
     response = redirect_handler.handle(request)
 
     assert response.status == 200
-    assert response.text() == "OK"
+    assert response.text == "OK"
 
 
 def test_redirect_with_custom_port():

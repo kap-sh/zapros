@@ -54,7 +54,7 @@ async def test_basic(
             f"{async_mock_server.url}/echo",
         )
 
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 GET /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -79,7 +79,7 @@ async def test_json_body(
                 "num": 42,
             },
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -109,7 +109,7 @@ async def test_json_nested(
                 "tags": ["a", "b"],
             },
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -136,7 +136,7 @@ async def test_form_body(
                 "password": "secret",
             },
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -160,7 +160,7 @@ async def test_form_url_encoding(
             f"{async_mock_server.url}/echo",
             form={"message": "hello world"},
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -192,7 +192,7 @@ async def test_multipart_body(
             f"{async_mock_server.url}/echo",
             multipart=mp,
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -238,7 +238,7 @@ async def test_multipart_multiple_fields(
             f"{async_mock_server.url}/echo",
             multipart=mp,
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -278,7 +278,7 @@ async def test_bytes_body(
             f"{async_mock_server.url}/echo",
             body=b"raw binary data",
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -304,7 +304,7 @@ async def test_query_params(
                 "page": "1",
             },
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 GET /echo?q=hello&page=1 HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -328,7 +328,7 @@ async def test_custom_headers(
                 "Authorization": "Bearer token123",
             },
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 GET /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -351,7 +351,7 @@ async def test_put_method(
             f"{async_mock_server.url}/echo",
             json={"name": "updated"},
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 PUT /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -375,7 +375,7 @@ async def test_delete_method(
             "DELETE",
             f"{async_mock_server.url}/echo",
         )
-        assert await response.atext() == snapshot("""\
+        assert response.text == snapshot("""\
 DELETE /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -409,7 +409,8 @@ async def test_stream_context_manager(
             f"{async_mock_server.url}/echo",
         ) as response:
             assert response.status == snapshot(200)
-            assert await response.atext() == snapshot("""\
+            await response.aread()
+            assert response.text == snapshot("""\
 GET /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -449,7 +450,8 @@ async def test_stream_json_body(
             f"{async_mock_server.url}/echo",
             json={"stream": True},
         ) as response:
-            assert await response.atext() == snapshot("""\
+            await response.aread()
+            assert response.text == snapshot("""\
 POST /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
@@ -510,7 +512,7 @@ async def test_cookies_without_handler(
         response2 = await client.get(
             f"{async_mock_server.url}/echo",
         )
-        text = await response2.atext()
+        text = response2.text
         assert "cookie:" not in text.lower()
 
 
@@ -538,7 +540,7 @@ async def test_cookies_with_handler(
         response2 = await client.get(
             f"{async_mock_server.url}/echo",
         )
-        text = await response2.atext()
+        text = response2.text
         assert "cookie: session=abc123" in text.lower()
 
 

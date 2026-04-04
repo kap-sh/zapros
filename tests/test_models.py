@@ -616,7 +616,7 @@ class TestResponse:
 
     def test_response_text_method(self):
         response = Response(200, content=b"Hello, World!")
-        text = response.text()
+        text = response.text
         assert text == "Hello, World!"
 
     def test_response_text_with_encoding(self):
@@ -625,26 +625,13 @@ class TestResponse:
             headers={"Content-Type": "text/plain; charset=latin-1"},
             content="Hëllo".encode("latin-1"),
         )
-        text = response.text()
+        text = response.text
         assert text == "Hëllo"
-
-    @pytest.mark.asyncio
-    async def test_response_atext_method(self):
-        response = Response(200, content=b"Hello, World!")
-        text = await response.atext()
-        assert text == "Hello, World!"
 
     def test_response_json_method(self):
         data = {"key": "value"}
         response = Response(200, content=json_module.dumps(data).encode("utf-8"))
-        result = response.json()
-        assert result == data
-
-    @pytest.mark.asyncio
-    async def test_response_ajson_method(self):
-        data = {"key": "value"}
-        response = Response(200, content=json_module.dumps(data).encode("utf-8"))
-        result = await response.ajson()
+        result = response.json
         assert result == data
 
     def test_response_encoding_from_content_type(self):

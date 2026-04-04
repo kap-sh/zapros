@@ -92,7 +92,7 @@ async def test_basic_cookie_set_and_send(
     response2 = await client.get(
         "http://example.com/echo",
     )
-    text = await response2.atext()
+    text = response2.text
     assert "cookie: session=abc123" in text.lower()
 
 
@@ -116,7 +116,7 @@ async def test_cookie_with_max_age_attribute(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = await response2.atext()
+    text = response2.text
     assert "cookie: session=abc123" in text.lower()
 
 
@@ -140,7 +140,7 @@ async def test_cookie_with_secure_attribute_http_not_sent(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = await response2.atext()
+    text = response2.text
     assert "cookie:" not in text.lower()
 
 
@@ -164,7 +164,7 @@ async def test_cookie_with_httponly_attribute(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = await response2.atext()
+    text = response2.text
     assert "cookie: session=abc123" in text.lower()
 
 
@@ -199,7 +199,7 @@ async def test_multiple_cookies_in_response(
     )
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "session=abc123" in text
     assert "user=john" in text
 
@@ -224,7 +224,7 @@ async def test_cookie_header_not_include_attributes(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "session=abc123" in text
     assert "domain=" not in text
     assert "expires=" not in text
@@ -254,7 +254,7 @@ async def test_cookie_path_matching_exact(
     response2 = await client.get(
         "http://example.com/api/data",
     )
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie: session=abc123" in text
 
 
@@ -280,7 +280,7 @@ async def test_cookie_path_mismatch_not_sent(
     response2 = await client.get(
         "http://example.com/other",
     )
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie:" not in text
 
 
@@ -304,7 +304,7 @@ async def test_cookie_default_path(
     response2 = await client.get(
         "http://example.com/api/data",
     )
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie: session=abc123" in text
 
 
@@ -338,7 +338,7 @@ async def test_cookie_replacement_same_name_domain_path(
     )
 
     response = await client.get("http://example.com/echo")
-    text = (await response.atext()).lower()
+    text = (response.text).lower()
     assert "session=newvalue" in text
     assert "oldvalue" not in text
 
@@ -363,7 +363,7 @@ async def test_cookie_special_characters_in_value(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "token=abc%20123%40def" in text
 
 
@@ -387,7 +387,7 @@ async def test_cookie_empty_value(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "session=" in text
 
 
@@ -411,7 +411,7 @@ async def test_cookie_max_age_zero_expires_cookie(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie:" not in text
 
 
@@ -443,7 +443,7 @@ async def test_cookie_persists_across_multiple_requests(
         response = await client.get(
             f"http://example.com{path_val}",
         )
-        text = (await response.atext()).lower()
+        text = (response.text).lower()
         assert "cookie: session=abc123" in text
 
 
@@ -477,7 +477,7 @@ async def test_different_cookies_for_different_paths(
     )
 
     response = await client.get("http://example.com/echo")
-    text = (await response.atext()).lower()
+    text = (response.text).lower()
     assert "cookie1=value1" in text
     assert "cookie2=value2" in text
 
@@ -503,7 +503,7 @@ async def test_cookie_without_handler_not_sent(
     assert "set-cookie" in [k.lower() for k in response1.headers.keys()]
 
     response2 = await client.get("http://example.com/echo")
-    text = await response2.atext()
+    text = response2.text
     assert "cookie:" not in text.lower()
 
 
@@ -529,7 +529,7 @@ async def test_cookie_path_prefix_with_trailing_slash_matches_subpath(
     response2 = await client.get(
         "http://example.com/api/sub/path",
     )
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie: session=abc123" in text
 
 
@@ -555,7 +555,7 @@ async def test_cookie_path_prefix_without_trailing_slash_matches_exact(
     response2 = await client.get(
         "http://example.com/apiother",
     )
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie:" not in text
 
 
@@ -578,7 +578,7 @@ async def test_cookie_session_cookie(
     )
 
     response = await client.get("http://example.com/echo")
-    text = (await response.atext()).lower()
+    text = (response.text).lower()
     assert "session=abc123" in text
 
 
@@ -612,7 +612,7 @@ async def test_cookie_with_expires_in_future(
     response2 = await client.get("http://example.com/echo")
     assert response2.status == 200
 
-    text = await response2.atext()
+    text = response2.text
     assert "cookie: session=abc123" in text.lower()
 
 
@@ -636,7 +636,7 @@ async def test_cookie_with_expires_in_past(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie:" not in text
 
 
@@ -660,5 +660,5 @@ async def test_cookie_same_site_attribute(
     assert response1.status == 200
 
     response2 = await client.get("http://example.com/echo")
-    text = (await response2.atext()).lower()
+    text = (response2.text).lower()
     assert "cookie: session=abc123" in text

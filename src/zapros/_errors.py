@@ -68,3 +68,9 @@ class AuthenticationError(Exception):
     """Base class for all authentication-related errors."""
 
     pass
+
+
+class ResponseNotRead(Exception):
+    """Raised when attempting to access response body content that hasn't been read yet."""
+
+    pass
