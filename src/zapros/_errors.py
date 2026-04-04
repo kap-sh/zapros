@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 
-class AsyncSyncMismatchError(Exception):
+class ZaprosError(Exception):
+    """Base class for all Zapros errors."""
+
+    pass
+
+
+class AsyncSyncMismatchError(ZaprosError):
     """Raised when an asynchronous handler or function is used in a synchronous context, or vice versa."""
 
     def __init__(self, message: str) -> None:
@@ -10,7 +16,7 @@ class AsyncSyncMismatchError(Exception):
         )
 
 
-class ConnectionError(Exception):
+class ConnectionError(ZaprosError):
     """Raised when a connection cannot be established or is lost."""
 
     pass
@@ -22,7 +28,7 @@ class DNSResolutionError(ConnectionError):
     pass
 
 
-class TimeoutError(Exception):
+class TimeoutError(ZaprosError):
     """Base class for all Zapros timeout errors."""
 
     pass
@@ -58,19 +64,19 @@ class PoolTimeoutError(TimeoutError):
     pass
 
 
-class TooManyRedirectsError(Exception):
+class TooManyRedirectsError(ZaprosError):
     """Raised when the maximum number of redirects is exceeded."""
 
     pass
 
 
-class AuthenticationError(Exception):
+class AuthenticationError(ZaprosError):
     """Base class for all authentication-related errors."""
 
     pass
 
 
-class ResponseNotRead(Exception):
+class ResponseNotRead(ZaprosError):
     """Raised when attempting to access response body content that hasn't been read yet."""
 
     pass
