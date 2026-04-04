@@ -21,7 +21,7 @@ class ExpectError(Exception):
 
     def __init__(self) -> None:
         super().__init__(
-            "Raised when a connection cannot be established or is lost."
+            "Server cannot receive a large request."
         )
     pass
 
