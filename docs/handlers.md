@@ -1,4 +1,4 @@
-# Handlers
+# Custom Handlers
 
 Handlers are the core extension point in Zapros. Every request passes through a handler chain before reaching the network. You can write custom transport handlers to change *how* requests are sent, or middleware handlers to intercept and transform requests and responses.
 

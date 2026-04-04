@@ -36,10 +36,10 @@ async def main():
     )
 
     async with AsyncClient(handler=handler) as client:
-        response = await client.get(
-            "https://api.github.com/users/octocat",
-        )
-        print(await response.ajson())
+         response = await client.get(
+             "https://api.github.com/users/octocat",
+         )
+         print(response.json)
 
 
 asyncio.run(main())
@@ -68,7 +68,7 @@ with Client(handler=handler) as client:
     response = client.get(
         "https://api.github.com/users/octocat",
     )
-    print(response.json())
+    print(response.json)
 ```
 
 :::

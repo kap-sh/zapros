@@ -50,25 +50,4 @@ async def main():
     )
 ```
 
-### Using sync `.json()` to read and parse a streaming response
-
-```python
-from zapros import AsyncClient
-
-client = AsyncClient()
-
-
-async def main():
-    async with client.stream(
-        "POST",
-        "https://httpbin.org/post",
-    ) as response:
-        response.json()
-```
-
-**Note:** The synchronous `.json()` method works on responses from `AsyncClient` if the response is not streamed, but raises `AsyncSyncMismatchError` if it's streamed.
-
-The helper method `.ajson()` allows you to read and parse the response in one step and works for both streamed and non-streamed responses.
-
-This design simplifies writing custom handlers, where all responses are streaming. It provides a consistent way to read and parse both sync and async responses with a single method.
 

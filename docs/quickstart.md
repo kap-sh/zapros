@@ -22,7 +22,7 @@ async def main():
         )
         print(response.status)
         print(response.headers["content-type"])
-        print(await response.atext())
+         print(response.text)
 
 
 asyncio.run(main())
@@ -37,7 +37,7 @@ with Client() as client:
     )
     print(response.status)
     print(response.headers["content-type"])
-    print(response.text())
+     print(response.text)
 ```
 
 :::

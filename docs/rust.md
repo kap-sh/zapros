@@ -29,7 +29,7 @@ from zapros import AsyncClient, AsyncPyreqwestHandler
 async with AsyncClient(handler=AsyncPyreqwestHandler()) as client:
     response = await client.get("https://api.example.com/users")
     print(response.status)
-    print(await response.text())
+    print(response.text)
 ```
 
 ```python [Sync]
@@ -39,7 +39,7 @@ from zapros import Client, PyreqwestHandler
 with Client(handler=PyreqwestHandler()) as client:
     response = client.get("https://api.example.com/users")
     print(response.status)
-    print(response.text())
+    print(response.text)
 ```
 
 :::

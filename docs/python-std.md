@@ -15,7 +15,7 @@ from zapros import AsyncClient
 
 async with AsyncClient() as client:
     response = await client.get("https://api.example.com/data")
-    print(await response.text)
+    print(response.text)
 ```
 
 ```python [Sync]

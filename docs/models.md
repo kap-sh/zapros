@@ -221,8 +221,8 @@ async with AsyncClient() as client:
     response = await client.get("https://httpbin.org/json")
 
     data = await response.aread()  # bytes
-    text = await response.atext()  # str
-    json_data = await response.ajson()  # parsed JSON
+     text = response.text  # str
+     json_data = response.json  # parsed JSON
 ```
 
 ```python [Sync]
@@ -230,8 +230,8 @@ with Client() as client:
     response = client.get("https://httpbin.org/json")
 
     data = response.read()  # bytes
-    text = response.text()  # str
-    json_data = response.json()  # parsed JSON
+    text = response.text  # str
+    json_data = response.json  # parsed JSON
 ```
 
 :::
@@ -244,7 +244,7 @@ response.headers[
 ]  # "text/html; charset=iso-8859-1"
 response.encoding  # "iso-8859-1"
 
-response.text()  # Decoded with iso-8859-1
+response.text  # Decoded with iso-8859-1
 ```
 
 If no charset is specified, defaults to `utf-8`.

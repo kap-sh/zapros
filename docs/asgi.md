@@ -1,6 +1,6 @@
-# ASGI Applications
+# asgi
 
-The **AsgiHandler** allows you to test ASGI applications (such as FastAPI, Litestar, Starlette, etc.) without making actual network requests. It acts as a bridge between Zapros and any ASGI-compliant application.
+The **AsgiHandler** lets Zapros talk directly to ASGI apps such as FastAPI, Litestar, and Starlette without making real network requests.
 
 ## Basic Usage
 
@@ -19,8 +19,8 @@ app = Litestar(route_handlers=[hello])
 handler = AsgiHandler(app)
 
 async with AsyncClient(handler=handler) as client:
-    response = await client.get("http://testserver/hello")
-    print(await response.ajson())
+     response = await client.get("http://testserver/hello")
+     print(response.json)
 ```
 
 ## Configuration Options
@@ -74,10 +74,10 @@ app = Litestar(
 handler = AsgiHandler(app, enable_lifespan=True)
 try:
     async with AsyncClient(handler=handler) as client:
-        response = await client.get(
-            "http://testserver/state",
-        )
-        print(await response.ajson())
+         response = await client.get(
+             "http://testserver/state",
+         )
+         print(response.json)
 finally:
     await handler.aclose()
 ```

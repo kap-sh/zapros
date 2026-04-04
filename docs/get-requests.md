@@ -74,7 +74,7 @@ async with AsyncClient() as client:
     print(
         response.headers["content-type"]
     )  # application/json
-    print(await response.atext())  # response body as string
+     print(response.text)  # response body as string
 ```
 
 ```python [Sync]
@@ -85,7 +85,7 @@ with Client() as client:
     print(
         response.headers["content-type"]
     )  # application/json
-    print(response.text())  # response body as string
+     print(response.text)  # response body as string
 ```
 
 :::

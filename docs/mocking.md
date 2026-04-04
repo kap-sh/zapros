@@ -867,7 +867,7 @@ async def main():
         response = await client.get(
             "https://api.example.com/data",
         )
-        assert (await response.ajson()) == {"key": "value"}
+         assert response.json == {"key": "value"}
 
 
 asyncio.run(main())
@@ -892,7 +892,7 @@ with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/data",
     )
-    assert response.json() == {"key": "value"}
+    assert response.json == {"key": "value"}
 ```
 
 :::
@@ -925,7 +925,7 @@ async def main():
         response = await client.get(
             "https://api.example.com/hello",
         )
-        assert await response.atext() == "Hello World"
+         assert response.text == "Hello World"
 
 
 asyncio.run(main())
@@ -950,7 +950,7 @@ with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
         "https://api.example.com/hello",
     )
-    assert response.text() == "Hello World"
+    assert response.text == "Hello World"
 ```
 
 :::
