@@ -16,6 +16,16 @@ class ConnectionError(Exception):
     pass
 
 
+class ExpectError(Exception):
+    """ Raised when a server cannot receive a large request. """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Raised when a connection cannot be established or is lost."
+        )
+    pass
+
+
 class DNSResolutionError(ConnectionError):
     """Raised when DNS resolution fails."""
 
