@@ -13,6 +13,8 @@ from zapros._handlers._retries import (
     RetryHandler as RetryHandler,  # type: ignore[reportDeprecated]
     RetryMiddleware as RetryMiddleware,
 )
+from zapros._io._asyncio import AsyncIOStream as AsyncIOStream, AsyncIOTransport as AsyncIOTransport
+from zapros._io._sync import SyncStream as SyncStream, SyncTransport as SyncTransport
 
 from ._async_client import (
     AsyncClient as AsyncClient,
@@ -30,6 +32,7 @@ from ._errors import (
     TooManyRedirectsError as TooManyRedirectsError,
     TotalTimeoutError as TotalTimeoutError,
     WriteTimeoutError as WriteTimeoutError,
+    ZaprosError as ZaprosError,
 )
 from ._handlers._asgi import (
     AsgiHandler as AsgiHandler,
