@@ -63,10 +63,11 @@ export default defineConfig({
         ],
       },
       {
-        text: "Runtime",
+        text: "Handlers",
         items: [
-          { text: "Browser Support", link: "/browser" },
-          { text: "ASGI Applications", link: "/asgi" },
+          { text: "Standard Library", link: "/python-std" },
+          { text: "Browser", link: "/browser" },
+          { text: "asgi", link: "/asgi" },
           { text: "Rust", link: "/rust" },
         ],
       },
@@ -75,12 +76,10 @@ export default defineConfig({
         items: [
           { text: "Authentication", link: "/authentication" },
           { text: "Cookies", link: "/cookies" },
-          { text: "Timeouts", link: "/timeouts" },
           { text: "Redirects", link: "/redirects" },
           { text: "Retries", link: "/retries" },
           { text: "Caching", link: "/caching" },
-          { text: "Proxies", link: "/proxies" },
-          { text: "Handlers", link: "/handlers" },
+          { text: "Custom Handlers", link: "/handlers" },
         ],
       },
       {
