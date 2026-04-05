@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from zapros._models import Response
+
 
 class ZaprosError(Exception):
     """Base class for all Zapros errors."""
@@ -80,3 +85,13 @@ class ResponseNotRead(ZaprosError):
     """Raised when attempting to access response body content that hasn't been read yet."""
 
     pass
+
+
+class StatusCodeError(ZaprosError):
+    """Might be raised when a response has an error status code."""
+
+    def __init__(self, response: "Response", message: str | None = None) -> None:
+        self.response = response
+        if message is None:
+            message = f"Error status code: {response.status}"
+        super().__init__(message)

@@ -22,7 +22,7 @@ from typing import (
 import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
 
-from zapros._errors import AsyncSyncMismatchError, ResponseNotRead
+from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError
 from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
 from zapros._multidict import (
     CIMultiDict,
@@ -456,6 +456,16 @@ class Response:
         elif isinstance(self.content, (ABCIterator, ABCAsyncIterator)):
             if "transfer-encoding" not in self.headers and "content-length" not in self.headers:
                 self.headers.add("Transfer-Encoding", "chunked")
+
+    def raise_for_status(self) -> None:
+        """
+        Raises a `StatusCodeError` if the response status code is in the 4xx or 5xx range.
+        """
+        if 400 <= self.status < 600:
+            raise StatusCodeError(
+                self,
+                f"HTTP error status code: {self.status}",
+            )
 
     def _set_static_content(self, data: bytes, *, content_type: str) -> None:
         self.content = data

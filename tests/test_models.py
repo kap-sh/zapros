@@ -16,6 +16,7 @@ from zapros import (
     Response,
     ResponseContext,
 )
+from zapros._errors import StatusCodeError
 
 
 class StreamWrapper(ClosableStream):
@@ -1003,3 +1004,13 @@ class TestResponse:
         response = Response(200, content=stream)
         list(response.iter_bytes())
         assert isinstance(response.content, bytes)
+
+    def test_raise_for_status_with_success(self):
+        response = Response(200)
+        response.raise_for_status()
+
+    def test_raise_for_status_with_client_error(self):
+        response = Response(404)
+        with pytest.raises(StatusCodeError) as exc_info:
+            response.raise_for_status()
+        assert exc_info.value.response == response

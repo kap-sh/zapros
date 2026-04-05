@@ -28,6 +28,7 @@ from ._errors import (
     ConnectTimeoutError as ConnectTimeoutError,
     PoolTimeoutError as PoolTimeoutError,
     ReadTimeoutError as ReadTimeoutError,
+    StatusCodeError as StatusCodeError,
     TimeoutError as TimeoutError,
     TooManyRedirectsError as TooManyRedirectsError,
     TotalTimeoutError as TotalTimeoutError,
