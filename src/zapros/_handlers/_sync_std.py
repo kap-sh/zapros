@@ -7,7 +7,7 @@ import warnings
 from collections.abc import (
     Iterator as ABCIterator,
 )
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import h11
 from pywhatwgurl import URL
@@ -17,6 +17,15 @@ from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 from zapros._io._sync import SyncTransport
 from zapros._io._base import BaseNetworkStream, BaseTransport
 from zapros._utils import get_authority_value, get_pool_key
+
+if TYPE_CHECKING:
+    from socksio import ProtocolError, socks5
+else:
+    try:
+        from socksio import ProtocolError, socks5
+    except ImportError:
+        socks5 = None
+        ProtocolError = None
 
 from .._sync_pool import ConnPool
 from .._base_pool import PoolKey
@@ -68,6 +77,131 @@ def _min_timeout(a: float | None, b: float | None) -> float | None:
     if b is None:
         return a
     return min(a, b)
+
+
+def _init_socks5_connection(
+    stream: BaseNetworkStream,
+    *,
+    host: str,
+    port: int,
+    username: str | None = None,
+    password: str | None = None,
+    timeout: float | None = None,
+) -> None:
+    if socks5 is None:
+        raise RuntimeError(
+            "SOCKS5 proxy support requires the 'socksio' package. Install it with: pip install 'zapros[socks]'"
+        )
+
+    if (username is None) ^ (password is None):
+        raise ValueError("username and password must be provided together")
+
+    auth: tuple[bytes, bytes] | None = None
+    if username is not None and password is not None:
+        username_bytes = username.encode("utf-8")
+        password_bytes = password.encode("utf-8")
+
+        if not username_bytes or not password_bytes:
+            raise ValueError(
+                "username and password must be non-empty when using SOCKS5 username/password authentication"
+            )
+        if len(username_bytes) > 255 or len(password_bytes) > 255:
+            raise ValueError("username and password must be at most 255 bytes when UTF-8 encoded")
+
+        auth = (username_bytes, password_bytes)
+
+    target_host = host
+
+    conn = socks5.SOCKS5Connection()
+
+    def _read_exactly(num_bytes: int) -> bytes:
+        buf = bytearray()
+        while len(buf) < num_bytes:
+            chunk = stream.read(num_bytes - len(buf), timeout=timeout)
+            if not chunk:
+                raise ConnectionError("SOCKS5 proxy closed the connection during handshake")
+            buf += chunk
+        return bytes(buf)
+
+    def _read_socks5_reply_bytes() -> bytes:
+        # VER, REP, RSV, ATYP
+        header = _read_exactly(4)
+        atyp = header[3]
+
+        if atyp == 0x01:  # IPv4
+            addr_bytes = _read_exactly(4)
+        elif atyp == 0x03:  # DOMAINNAME
+            name_len = _read_exactly(1)
+            addr_bytes = name_len + _read_exactly(name_len[0])
+        elif atyp == 0x04:  # IPv6
+            addr_bytes = _read_exactly(16)
+        else:
+            raise ConnectionError(f"Invalid SOCKS5 address type in reply: 0x{atyp:02x}")
+
+        port_bytes = _read_exactly(2)
+        return header + addr_bytes + port_bytes
+
+    auth_method = (
+        socks5.SOCKS5AuthMethod.NO_AUTH_REQUIRED if auth is None else socks5.SOCKS5AuthMethod.USERNAME_PASSWORD
+    )
+
+    # Method negotiation
+    conn.send(socks5.SOCKS5AuthMethodsRequest([auth_method]))  # type: ignore[reportUnknownMemberType]
+    stream.write_all(conn.data_to_send(), timeout=timeout)
+
+    try:
+        response = conn.receive_data(_read_exactly(2))
+    except ProtocolError as exc:
+        raise ConnectionError("Invalid SOCKS5 auth response") from exc
+
+    if not isinstance(response, socks5.SOCKS5AuthReply):
+        raise ConnectionError("Invalid SOCKS5 auth response")
+
+    if response.method == socks5.SOCKS5AuthMethod.NO_ACCEPTABLE_METHODS:
+        raise ConnectionError("SOCKS5 proxy did not accept any offered authentication method")
+
+    if response.method != auth_method:
+        raise ConnectionError("SOCKS5 proxy rejected authentication method")
+
+    # Username/password sub-negotiation
+    if response.method == socks5.SOCKS5AuthMethod.USERNAME_PASSWORD:
+        if auth is None:
+            raise ConnectionError(
+                "SOCKS5 proxy requested username/password authentication, but no credentials were provided"
+            )
+
+        username_bytes, password_bytes = auth
+        conn.send(socks5.SOCKS5UsernamePasswordRequest(username_bytes, password_bytes))  # type: ignore[reportUnknownMemberType]
+        stream.write_all(conn.data_to_send(), timeout=timeout)
+
+        try:
+            response = conn.receive_data(_read_exactly(2))
+        except ProtocolError as exc:
+            raise ConnectionError("Invalid SOCKS5 username/password response") from exc
+
+        if not isinstance(response, socks5.SOCKS5UsernamePasswordReply):
+            raise ConnectionError("Invalid SOCKS5 username/password response")
+        if not response.success:
+            raise ConnectionError("SOCKS5 username/password authentication failed")
+
+    # CONNECT request
+    conn.send(  # type: ignore[reportUnknownMemberType]
+        socks5.SOCKS5CommandRequest.from_address(
+            socks5.SOCKS5Command.CONNECT,
+            (target_host, port),
+        )
+    )
+    stream.write_all(conn.data_to_send(), timeout=timeout)
+
+    try:
+        response = conn.receive_data(_read_socks5_reply_bytes())
+    except ProtocolError as exc:
+        raise ConnectionError("Invalid SOCKS5 connect response") from exc
+
+    if not isinstance(response, socks5.SOCKS5Reply):
+        raise ConnectionError("Invalid SOCKS5 connect response")
+    if response.reply_code != socks5.SOCKS5ReplyCode.SUCCEEDED:
+        raise ConnectionError(f"SOCKS5 proxy connection failed with code: {response.reply_code}")
 
 
 class Conn:
@@ -256,9 +390,16 @@ class StdNetworkHandler(BaseHandler):
 
         if proxy_url is not None:
             proxy_url = URL(proxy_url) if isinstance(proxy_url, str) else proxy_url
-            connect_host = proxy_url.hostname
-            connect_port = int(proxy_url.port) if proxy_url.port != "" else 80
-            use_tls = proxy_url.protocol in ("https:", "wss:")
+            is_socks5 = proxy_url.protocol in ("socks5:", "socks5h:")
+
+            if is_socks5:
+                connect_host = proxy_url.hostname
+                connect_port = int(proxy_url.port) if proxy_url.port != "" else 1080
+                use_tls = False
+            else:
+                connect_host = proxy_url.hostname
+                connect_port = int(proxy_url.port) if proxy_url.port != "" else 80
+                use_tls = proxy_url.protocol in ("https:", "wss:")
         else:
             connect_host = host
             connect_port = port
@@ -272,12 +413,30 @@ class StdNetworkHandler(BaseHandler):
             timeout=connect_timeout,
         )
 
+        if proxy_url is not None and proxy_url.protocol in ("socks5:", "socks5h:"):
+            _init_socks5_connection(
+                stream,
+                host=host,
+                port=port,
+                username=proxy_url.username or None,
+                password=proxy_url.password or None,
+            )
+
+            if is_secure:
+                server_hostname = proxy_context.get("server_hostname") if proxy_context else None
+                server_hostname = server_hostname or host
+                stream.start_tls(server_hostname=server_hostname)
+
         conn = Conn(stream)
 
         if proxy_url is None:
             return conn
 
         assert proxy_context is not None
+
+        if proxy_url.protocol in ("socks5:", "socks5h:"):
+            return conn
+
         if is_secure:
             target = f"{host}:{port}".encode("ascii")
             connect_headers = [("Host", get_authority_value(host, str(port)))]

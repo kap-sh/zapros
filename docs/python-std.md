@@ -141,6 +141,12 @@ Authenticated proxies use the same `url` field with credentials embedded in the 
 export https_proxy="http://username:password@proxy.example.com:8080"
 ```
 
+SOCKS5 proxies are also supported. To use SOCKS5 proxies, install Zapros with the `socks` feature:
+
+```bash
+pip install zapros[socks]
+```
+
 ## SSL Configuration
 
 To set a custom SSL context, pass it to the transport:
