@@ -10,6 +10,7 @@ import h11
 from .._errors import (
     ConnectionError,
     ConnectTimeoutError,
+    DNSResolutionError,
     ReadTimeoutError,
     WriteTimeoutError,
 )
@@ -21,6 +22,8 @@ def map_connect_exceptions() -> Iterator[None]:
         yield
     except (asyncio.TimeoutError, socket.timeout) as e:
         raise ConnectTimeoutError("Connection timed out") from e
+    except socket.gaierror as e:
+        raise DNSResolutionError(f"DNS resolution failed: {e}") from e
     except OSError as e:
         if e.errno in (60, 110):
             raise ConnectTimeoutError("Connection timed out") from e
