@@ -33,6 +33,12 @@ class DNSResolutionError(ConnectionError):
     pass
 
 
+class SSLError(ConnectionError):
+    """Raised when an SSL/TLS handshake fails."""
+
+    pass
+
+
 class TimeoutError(ZaprosError):
     """Base class for all Zapros timeout errors."""
 

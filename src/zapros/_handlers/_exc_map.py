@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import socket
+import ssl
 from collections.abc import Iterator
 
 import h11
@@ -12,6 +13,7 @@ from .._errors import (
     ConnectTimeoutError,
     DNSResolutionError,
     ReadTimeoutError,
+    SSLError,
     WriteTimeoutError,
 )
 
@@ -24,6 +26,8 @@ def map_connect_exceptions() -> Iterator[None]:
         raise ConnectTimeoutError("Connection timed out") from e
     except socket.gaierror as e:
         raise DNSResolutionError(f"DNS resolution failed: {e}") from e
+    except ssl.SSLError as e:
+        raise SSLError(f"SSL error during connection: {e}") from e
     except OSError as e:
         if e.errno in (60, 110):
             raise ConnectTimeoutError("Connection timed out") from e
