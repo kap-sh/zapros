@@ -138,24 +138,6 @@ class Headers(MutableMapping[str, str]):
     ) -> None:
         self._headers: CIMultiDict[str] = CIMultiDict(headers or ())
 
-    def __getitem__(self, key: str) -> str:
-        return self._headers[key]
-
-    def __setitem__(self, key: str, value: str) -> None:
-        self._headers[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        del self._headers[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._headers)
-
-    def __len__(self) -> int:
-        return len(self._headers)
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({list(self._headers.items())!r})"
-
     def getall(self, key: str) -> list[str]:
         return self._headers.getall(key)
 
@@ -173,6 +155,24 @@ class Headers(MutableMapping[str, str]):
 
     def list(self) -> list[tuple[str, str]]:
         return list(self._headers.items())
+
+    def __getitem__(self, key: str) -> str:
+        return self._headers[key]
+
+    def __setitem__(self, key: str, value: str) -> None:
+        self._headers[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._headers[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._headers)
+
+    def __len__(self) -> int:
+        return len(self._headers)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({list(self._headers.items())!r})"
 
 
 class Request:
@@ -355,15 +355,15 @@ class Request:
                     "chunked",
                 )
 
-    def __repr__(self) -> str:
-        return f"Request(method={self.method!r}, url={str(self.url)!r})"
-
     def is_replayable(self) -> bool:
         if self.body is None:
             return True
         if isinstance(self.body, bytes):
             return True
         return False
+
+    def __repr__(self) -> str:
+        return f"Request(method={self.method!r}, url={str(self.url)!r})"
 
 
 class Response:
@@ -466,41 +466,6 @@ class Response:
                 self,
                 f"HTTP error status code: {self.status}",
             )
-
-    def _set_static_content(self, data: bytes, *, content_type: str) -> None:
-        self.content = data
-
-        self.headers.pop("Content-Encoding", None)
-
-        if "Content-Type" not in self.headers:
-            self.headers["Content-Type"] = content_type
-
-    def _get_content_decoder(self) -> ContentDecoder:
-        if self._decoder is not None:
-            return self._decoder
-
-        encoding_header = self.headers.get("Content-Encoding")
-        if not encoding_header:
-            self._decoder = IdentityDecoder()
-            return self._decoder
-
-        encodings = [enc.strip().lower() for enc in encoding_header.split(",")]
-        decoders: list[ContentDecoder] = []
-
-        for encoding in encodings:
-            if encoding in SUPPORTED_DECODERS:
-                decoders.append(SUPPORTED_DECODERS[encoding]())
-            elif encoding and encoding != "identity":
-                pass
-
-        if not decoders:
-            self._decoder = IdentityDecoder()
-        elif len(decoders) == 1:
-            self._decoder = decoders[0]
-        else:
-            self._decoder = MultiDecoder(decoders)
-
-        return self._decoder
 
     @property
     def encoding(self) -> str:
@@ -617,22 +582,17 @@ class Response:
             )
 
         decoder = self._get_content_decoder()
-        decoded_chunks: list[bytes] = []
+        chunker = ByteChunker(chunk_size)
 
         for raw_chunk in self.content:
             decoded_chunk = decoder.decode(raw_chunk)
             if decoded_chunk:
-                decoded_chunks.append(decoded_chunk)
+                yield from chunker.feed(decoded_chunk)
 
         final_decoded = decoder.flush()
         if final_decoded:
-            decoded_chunks.append(final_decoded)
+            yield from chunker.feed(final_decoded)
 
-        body = b"".join(decoded_chunks)
-        self.content = body
-
-        chunker = ByteChunker(chunk_size)
-        yield from chunker.feed(body)
         remaining = chunker.flush()
         if remaining:
             yield remaining
@@ -663,23 +623,19 @@ class Response:
             )
 
         decoder = self._get_content_decoder()
-        decoded_chunks: list[bytes] = []
+        chunker = ByteChunker(chunk_size)
 
         async for raw_chunk in self.content:
             decoded_chunk = decoder.decode(raw_chunk)
             if decoded_chunk:
-                decoded_chunks.append(decoded_chunk)
+                for chunk in chunker.feed(decoded_chunk):
+                    yield chunk
 
         final_decoded = decoder.flush()
         if final_decoded:
-            decoded_chunks.append(final_decoded)
+            for chunk in chunker.feed(final_decoded):
+                yield chunk
 
-        body = b"".join(decoded_chunks)
-        self.content = body
-
-        chunker = ByteChunker(chunk_size)
-        for chunk in chunker.feed(body):
-            yield chunk
         remaining = chunker.flush()
         if remaining:
             yield remaining
@@ -688,6 +644,9 @@ class Response:
         self,
         chunk_size: int | None = None,
     ) -> Iterator[bytes]:
+        """
+        Iterates over the raw (compressed) response body in chunks of the specified size.
+        """
         if chunk_size is None:
             chunk_size = CHUNK_SIZE
 
@@ -748,16 +707,22 @@ class Response:
             yield remaining
 
     def read(self) -> bytes:
-        if not isinstance(self.content, bytes):
-            for _ in self.iter_bytes():
-                ...
-        return self.content  # type: ignore[return-value]
+        if isinstance(self.content, bytes):
+            return self.content
+        chunks: list[bytes] = []
+        for chunk in self.iter_bytes():
+            chunks.append(chunk)
+        self.content = b"".join(chunks)
+        return self.content
 
     async def aread(self) -> bytes:
-        if not isinstance(self.content, bytes):
-            async for _ in self.async_iter_bytes():
-                pass
-        return self.content  # type: ignore[return-value]
+        if isinstance(self.content, bytes):
+            return self.content
+        chunks: list[bytes] = []
+        async for chunk in self.async_iter_bytes():
+            chunks.append(chunk)
+        self.content = b"".join(chunks)
+        return self.content
 
     def close(self) -> None:
         if self._stream_to_close is None:
@@ -778,6 +743,41 @@ class Response:
 
         await self._stream_to_close.aclose()
         self._stream_to_close = None
+
+    def _set_static_content(self, data: bytes, *, content_type: str) -> None:
+        self.content = data
+
+        self.headers.pop("Content-Encoding", None)
+
+        if "Content-Type" not in self.headers:
+            self.headers["Content-Type"] = content_type
+
+    def _get_content_decoder(self) -> ContentDecoder:
+        if self._decoder is not None:
+            return self._decoder
+
+        encoding_header = self.headers.get("Content-Encoding")
+        if not encoding_header:
+            self._decoder = IdentityDecoder()
+            return self._decoder
+
+        encodings = [enc.strip().lower() for enc in encoding_header.split(",")]
+        decoders: list[ContentDecoder] = []
+
+        for encoding in encodings:
+            if encoding in SUPPORTED_DECODERS:
+                decoders.append(SUPPORTED_DECODERS[encoding]())
+            elif encoding and encoding != "identity":
+                pass
+
+        if not decoders:
+            self._decoder = IdentityDecoder()
+        elif len(decoders) == 1:
+            self._decoder = decoders[0]
+        else:
+            self._decoder = MultiDecoder(decoders)
+
+        return self._decoder
 
     def __repr__(self) -> str:
         return f"Response(status={self.status!r})"

@@ -897,7 +897,45 @@ class TestResponse:
         result = b"".join(chunks)
         assert result == b"chunk1chunk2"
         content = response.read()
-        assert content == b"chunk1chunk2"
+        assert content == b""
+
+    def test_response_iter_bytes_does_not_buffer_content(self):
+        stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
+        response = Response(200, content=stream)
+        for _ in response.iter_bytes():
+            assert not isinstance(response.content, bytes)
+        assert not isinstance(response.content, bytes)
+
+    def test_response_iter_raw_does_not_buffer_content(self):
+        stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
+        response = Response(200, content=stream)
+        for _ in response.iter_raw():
+            assert not isinstance(response.content, bytes)
+        assert not isinstance(response.content, bytes)
+
+    @pytest.mark.asyncio
+    async def test_response_async_iter_bytes_does_not_buffer_content(self):
+        async def gen():
+            yield b"chunk1"
+            yield b"chunk2"
+
+        stream = AsyncStreamWrapper(gen())
+        response = Response(200, content=stream)
+        async for _ in response.async_iter_bytes():
+            assert not isinstance(response.content, bytes)
+        assert not isinstance(response.content, bytes)
+
+    @pytest.mark.asyncio
+    async def test_response_async_iter_raw_does_not_buffer_content(self):
+        async def gen():
+            yield b"chunk1"
+            yield b"chunk2"
+
+        stream = AsyncStreamWrapper(gen())
+        response = Response(200, content=stream)
+        async for _ in response.async_iter_raw():
+            assert not isinstance(response.content, bytes)
+        assert not isinstance(response.content, bytes)
 
     def test_response_close_bytes_content(self):
         response = Response(200, content=b"Hello, World!")
@@ -999,11 +1037,12 @@ class TestResponse:
             pass
         assert stream._closed is True
 
-    def test_response_stream_consumption_caching(self):
+    def test_response_read_caches_stream_as_bytes(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
-        list(response.iter_bytes())
+        response.read()
         assert isinstance(response.content, bytes)
+        assert response.content == b"chunk1chunk2"
 
     def test_raise_for_status_with_success(self):
         response = Response(200)
