@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.1](https://github.com/kap-sh/zapros/compare/zapros-v0.5.0...zapros-v0.5.1) (2026-04-08)
+
+
+### Features
+
+* add support for socks proxy ([550a483](https://github.com/kap-sh/zapros/commit/550a483c8f2064fb7a4a2909f23bcf0b055acdf0))
+* **api:** add DNSResolutionError ([e88f282](https://github.com/kap-sh/zapros/commit/e88f2824a0d61f26a8410004a7bbd1c2bed2286a))
+* **api:** add SSLError ([6763281](https://github.com/kap-sh/zapros/commit/6763281b1b40227e671435bc2a8008e3facf527c))
+* **api:** add support for Response.raise_for_status ([a4f6784](https://github.com/kap-sh/zapros/commit/a4f678447f645481352da0a7b97c90cb5ace730e))
+* replace unasync script with ry ([6761cd1](https://github.com/kap-sh/zapros/commit/6761cd175160d95713de1436216fa2ed8e977c6d))
+
+
+### Bug Fixes
+
+* do not buffer the response data in `iter_bytes` ([ef93fd1](https://github.com/kap-sh/zapros/commit/ef93fd19229cf8268cdded23eaa23a4b4018c1a9))
+
 ## [0.5.0](https://github.com/kap-sh/zapros/compare/zapros-v0.4.0...zapros-v0.5.0) (2026-04-04)
 
 
