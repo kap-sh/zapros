@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import (
-    AsyncIterator as ABCAsyncIterator,
+    AsyncIterator,
 )
 from typing import TYPE_CHECKING
 
@@ -100,7 +100,7 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
             req_builder = req_builder.body_bytes(request.body)
         elif isinstance(
             request.body,
-            ABCAsyncIterator,
+            AsyncIterator,
         ):
             req_builder = req_builder.body_stream(request.body)
 

@@ -1,14 +1,12 @@
 import json as json_module
 from collections.abc import (
-    AsyncIterator as ABCAsyncIterator,
-    Iterator as ABCIterator,
+    AsyncIterator,
+    Iterator,
 )
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncIterator,
     Iterable,
-    Iterator,
     Mapping,
     MutableMapping,
     Sequence,
@@ -345,8 +343,8 @@ class Request:
         elif isinstance(
             request_body,
             (
-                ABCIterator,
-                ABCAsyncIterator,
+                Iterator,
+                AsyncIterator,
             ),
         ):
             if "transfer-encoding" not in self.headers and "content-length" not in self.headers:
@@ -453,7 +451,7 @@ class Response:
         if isinstance(self.content, bytes):
             if "content-length" not in self.headers:
                 self.headers.add("Content-Length", str(len(self.content)))
-        elif isinstance(self.content, (ABCIterator, ABCAsyncIterator)):
+        elif isinstance(self.content, (Iterator, AsyncIterator)):
             if "transfer-encoding" not in self.headers and "content-length" not in self.headers:
                 self.headers.add("Transfer-Encoding", "chunked")
 
@@ -535,18 +533,7 @@ class Response:
         """
         return (await self.aread()).decode(self.encoding)
 
-    def iter_text(
-        self,
-        chunk_size: int | None = None,
-    ) -> Iterator[str]:
-        decoder = TextDecoder(encoding=self.encoding)
-        for chunk in self.iter_bytes(chunk_size):
-            yield decoder.decode(chunk)
-        remaining = decoder.flush()
-        if remaining:
-            yield remaining
-
-    async def async_iter_text(
+    async def async_iter_text(  # unasync: generate
         self,
         chunk_size: int | None = None,
     ) -> AsyncIterator[str]:
@@ -557,47 +544,18 @@ class Response:
         if remaining:
             yield remaining
 
-    def iter_bytes(
+    def iter_text(  # unasync: generated
         self,
         chunk_size: int | None = None,
-    ) -> Iterator[bytes]:
-        if chunk_size is None:
-            chunk_size = CHUNK_SIZE
-
-        if isinstance(self.content, bytes):
-            chunker = ByteChunker(chunk_size)
-            yield from chunker.feed(self.content)
-            remaining = chunker.flush()
-            if remaining:
-                yield remaining
-            return
-
-        if self.content is None:
-            self.content = b""
-            return
-
-        if not isinstance(self.content, ABCIterator):
-            raise AsyncSyncMismatchError(
-                "The stream is not synchronous, try using `async_iter_bytes` instead of `iter_bytes`."
-            )
-
-        decoder = self._get_content_decoder()
-        chunker = ByteChunker(chunk_size)
-
-        for raw_chunk in self.content:
-            decoded_chunk = decoder.decode(raw_chunk)
-            if decoded_chunk:
-                yield from chunker.feed(decoded_chunk)
-
-        final_decoded = decoder.flush()
-        if final_decoded:
-            yield from chunker.feed(final_decoded)
-
-        remaining = chunker.flush()
+    ) -> Iterator[str]:
+        decoder = TextDecoder(encoding=self.encoding)
+        for chunk in self.iter_bytes(chunk_size):
+            yield decoder.decode(chunk)
+        remaining = decoder.flush()
         if remaining:
             yield remaining
 
-    async def async_iter_bytes(
+    async def async_iter_bytes(  # unasync: generate
         self,
         chunk_size: int | None = None,
     ) -> AsyncIterator[bytes]:
@@ -617,10 +575,8 @@ class Response:
             self.content = b""
             return
 
-        if not isinstance(self.content, ABCAsyncIterator):
-            raise AsyncSyncMismatchError(
-                "The stream is not asynchronous, try using `iter_bytes` instead of `async_iter_bytes`."
-            )
+        if not isinstance(self.content, AsyncIterator):
+            raise AsyncSyncMismatchError("Can't call `async_iter_bytes` in this context")
 
         decoder = self._get_content_decoder()
         chunker = ByteChunker(chunk_size)
@@ -640,41 +596,48 @@ class Response:
         if remaining:
             yield remaining
 
-    def iter_raw(
+    def iter_bytes(  # unasync: generated
         self,
         chunk_size: int | None = None,
     ) -> Iterator[bytes]:
-        """
-        Iterates over the raw (compressed) response body in chunks of the specified size.
-        """
         if chunk_size is None:
             chunk_size = CHUNK_SIZE
 
         if isinstance(self.content, bytes):
             chunker = ByteChunker(chunk_size)
-            yield from chunker.feed(self.content)
+            for chunk in chunker.feed(self.content):
+                yield chunk
             remaining = chunker.flush()
             if remaining:
                 yield remaining
             return
 
         if self.content is None:
+            self.content = b""
             return
 
-        if isinstance(self.content, ABCAsyncIterator):
-            raise AsyncSyncMismatchError(
-                "The stream is not synchronous, try using `async_iter_raw` instead of `iter_raw`."
-            )
+        if not isinstance(self.content, Iterator):
+            raise AsyncSyncMismatchError("Can't call `iter_bytes` in this context")
 
+        decoder = self._get_content_decoder()
         chunker = ByteChunker(chunk_size)
+
         for raw_chunk in self.content:
-            for chunk in chunker.feed(raw_chunk):
+            decoded_chunk = decoder.decode(raw_chunk)
+            if decoded_chunk:
+                for chunk in chunker.feed(decoded_chunk):
+                    yield chunk
+
+        final_decoded = decoder.flush()
+        if final_decoded:
+            for chunk in chunker.feed(final_decoded):
                 yield chunk
+
         remaining = chunker.flush()
         if remaining:
             yield remaining
 
-    async def async_iter_raw(
+    async def async_iter_raw(  # unasync: generate
         self,
         chunk_size: int | None = None,
     ) -> AsyncIterator[bytes]:
@@ -693,10 +656,8 @@ class Response:
         if self.content is None:
             return
 
-        if not isinstance(self.content, ABCAsyncIterator):
-            raise AsyncSyncMismatchError(
-                "The stream is not asynchronous, try using `iter_raw` instead of `async_iter_raw`."
-            )
+        if not isinstance(self.content, AsyncIterator):
+            raise AsyncSyncMismatchError("Can't call `async_iter_raw` in this context.")
 
         chunker = ByteChunker(chunk_size)
         async for raw_chunk in self.content:
@@ -706,16 +667,37 @@ class Response:
         if remaining:
             yield remaining
 
-    def read(self) -> bytes:
-        if isinstance(self.content, bytes):
-            return self.content
-        chunks: list[bytes] = []
-        for chunk in self.iter_bytes():
-            chunks.append(chunk)
-        self.content = b"".join(chunks)
-        return self.content
+    def iter_raw(  # unasync: generated
+        self,
+        chunk_size: int | None = None,
+    ) -> Iterator[bytes]:
+        if chunk_size is None:
+            chunk_size = CHUNK_SIZE
 
-    async def aread(self) -> bytes:
+        if isinstance(self.content, bytes):
+            chunker = ByteChunker(chunk_size)
+            for chunk in chunker.feed(self.content):
+                yield chunk
+            remaining = chunker.flush()
+            if remaining:
+                yield remaining
+            return
+
+        if self.content is None:
+            return
+
+        if not isinstance(self.content, Iterator):
+            raise AsyncSyncMismatchError("Can't call `iter_raw` in this context.")
+
+        chunker = ByteChunker(chunk_size)
+        for raw_chunk in self.content:
+            for chunk in chunker.feed(raw_chunk):
+                yield chunk
+        remaining = chunker.flush()
+        if remaining:
+            yield remaining
+
+    async def aread(self) -> bytes:  # unasync: generate
         if isinstance(self.content, bytes):
             return self.content
         chunks: list[bytes] = []
@@ -724,24 +706,33 @@ class Response:
         self.content = b"".join(chunks)
         return self.content
 
-    def close(self) -> None:
+    def read(self) -> bytes:  # unasync: generated
+        if isinstance(self.content, bytes):
+            return self.content
+        chunks: list[bytes] = []
+        for chunk in self.iter_bytes():
+            chunks.append(chunk)
+        self.content = b"".join(chunks)
+        return self.content
+
+    async def aclose(self) -> None:  # unasync: generate
         if self._stream_to_close is None:
             return
 
-        if isinstance(self._stream_to_close, AsyncClosableStream):
-            raise AsyncSyncMismatchError("The stream is not synchronous, use `aclose()` instead.")
-
-        self._stream_to_close.close()
-        self._stream_to_close = None
-
-    async def aclose(self) -> None:
-        if self._stream_to_close is None:
-            return
-
-        if isinstance(self._stream_to_close, ClosableStream):
-            raise AsyncSyncMismatchError("The stream is not asynchronous, use `close()` instead.")
+        if not isinstance(self._stream_to_close, AsyncClosableStream):
+            raise AsyncSyncMismatchError("Can't call `aclose` in this context")
 
         await self._stream_to_close.aclose()
+        self._stream_to_close = None
+
+    def close(self) -> None:  # unasync: generated
+        if self._stream_to_close is None:
+            return
+
+        if not isinstance(self._stream_to_close, ClosableStream):
+            raise AsyncSyncMismatchError("Can't call `close` in this context")
+
+        self._stream_to_close.close()
         self._stream_to_close = None
 
     def _set_static_content(self, data: bytes, *, content_type: str) -> None:

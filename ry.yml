@@ -1,0 +1,267 @@
+version: 1
+
+defaults:
+  include:
+    - package: std
+    - package: zapros-public
+    - package: zapros-internal
+
+packages:
+  zapros-public:
+    rules:
+      - id: async-client
+        kind: regex
+        match: '\bAsyncClient\b'
+        replace: 'Client'
+
+      - id: async-base-handler
+        kind: regex
+        match: '\bAsyncBaseHandler\b'
+        replace: 'BaseHandler'
+
+      - id: async-base-middleware
+        kind: regex
+        match: '\bAsyncBaseMiddleware\b'
+        replace: 'BaseMiddleware'
+
+      - id: async-iter-bytes
+        kind: regex
+        match: '\basync_iter_bytes\b'
+        replace: 'iter_bytes'
+
+      - id: async-iter-text
+        kind: regex
+        match: '\basync_iter_text\b'
+        replace: 'iter_text'
+
+      - id: async-iter-raw
+        kind: regex
+        match: '\basync_iter_raw\b'
+        replace: 'iter_raw'
+
+      - id: async-iter-next
+        kind: regex
+        match: '\basync_iter_next\b'
+        replace: 'iter_next'
+
+      - id: aclose
+        kind: regex
+        match: '\baclose\b'
+        replace: 'close'
+
+      - id: aread
+        kind: regex
+        match: '\baread\b'
+        replace: 'read'
+
+  zapros-internal:
+    rules:
+      - id: ahandle
+        kind: regex
+        match: '\bahandle\b'
+        replace: 'handle'
+
+      - id: aconnect
+        kind: regex
+        match: '\baconnect\b'
+        replace: 'connect'
+
+      - id: aconnect-tcp
+        kind: regex
+        match: '\baconnect_tcp\b'
+        replace: 'connect_tcp'
+
+      - id: async-next
+        kind: regex
+        match: '\basync_next\b'
+        replace: 'next'
+
+      - id: handle-async-request
+        kind: regex
+        match: '\bhandle_async_request\b'
+        replace: 'handle_request'
+
+      - id: wrap-with-async-middleware
+        kind: regex
+        match: '\bwrap_with_async_middleware\b'
+        replace: 'wrap_with_middleware'
+
+      - id: async-pyreqwest-handler
+        kind: regex
+        match: '\bAsyncPyreqwestHandler\b'
+        replace: 'PyreqwestHandler'
+
+      - id: async-std-network-handler
+        kind: regex
+        match: '\bAsyncStdNetworkHandler\b'
+        replace: 'StdNetworkHandler'
+
+      - id: async-iterable
+        kind: regex
+        match: '\bAsyncIterable\b'
+        replace: 'Iterable'
+
+      - id: async-idle-pool-connection
+        kind: regex
+        match: '\bAsyncIdlePoolConnection\b'
+        replace: 'IdlePoolConnection'
+
+      - id: async-pool-connection
+        kind: regex
+        match: '\bAsyncPoolConnection\b'
+        replace: 'PoolConnection'
+
+      - id: async-closable-stream
+        kind: regex
+        match: '\bAsyncClosableStream\b'
+        replace: 'ClosableStream'
+
+      - id: async-base-network-stream
+        kind: regex
+        match: '\bAsyncBaseNetworkStream\b'
+        replace: 'BaseNetworkStream'
+
+      - id: async-base-transport
+        kind: regex
+        match: '\bAsyncBaseTransport\b'
+        replace: 'BaseTransport'
+
+      - id: async-conn-pool
+        kind: regex
+        match: '\bAsyncConnPool\b'
+        replace: 'ConnPool'
+
+      - id: async-conn
+        kind: regex
+        match: '\bAsyncConn\b'
+        replace: 'Conn'
+
+      - id: async-pyreqwest-stream
+        kind: regex
+        match: '\bAsyncPyreqwestStream\b'
+        replace: 'PyreqwestStream'
+
+      - id: async-std-stream
+        kind: regex
+        match: '\bAsyncStdStream\b'
+        replace: 'StdStream'
+
+      - id: async-stream
+        kind: regex
+        match: '\bAsyncStream\b'
+        replace: 'Stream'
+
+      - id: async-pyodide-handler
+        kind: regex
+        match: '\bAsyncPyodideHandler\b'
+        replace: 'PyodideHandler'
+
+      - id: async-io-transport
+        kind: regex
+        match: '\bAsyncIOTransport\b'
+        replace: 'SyncTransport'
+
+      - id: import-sync-transport
+        kind: regex
+        match: 'from zapros\._io\._asyncio import SyncTransport'
+        replace: 'from zapros._io._sync import SyncTransport'
+
+      - id: zapros-async-io
+        kind: regex
+        match: 'zapros\._async_io'
+        replace: 'zapros._sync_io'
+
+      - id: dot-async-io
+        kind: regex
+        match: '\._async_io'
+        replace: '._sync_io'
+
+      - id: zapros-async-base
+        kind: regex
+        match: 'zapros\._async_base'
+        replace: 'zapros._sync_base'
+
+      - id: dot-async-base
+        kind: regex
+        match: '\._async_base'
+        replace: '._sync_base'
+
+      - id: zapros-async-pool
+        kind: regex
+        match: 'zapros\._async_pool'
+        replace: 'zapros._sync_pool'
+
+      - id: dot-async-pool
+        kind: regex
+        match: '\._async_pool'
+        replace: '._sync_pool'
+
+      - id: wait-with-timeout
+        kind: regex
+        match: 'self\._wait_with_timeout\((.*)\)'
+        replace: 'self._cond.wait($1)'
+
+      - id: client-builder
+        kind: regex
+        match: '\bClientBuilder\b'
+        replace: 'SyncClientBuilder'
+
+      - id: pyreqwest-response-import
+        kind: regex
+        match: 'from pyreqwest\.response import Response as PyreqwestResponse'
+        replace: 'from pyreqwest.response import SyncResponse as PyreqwestResponse'
+
+      - id: response-as-pyreqwest
+        kind: regex
+        match: 'Response as PyreqwestResponse'
+        replace: 'SyncResponse as PyreqwestResponse'
+
+      - id: pytest-asyncio
+        kind: regex
+        match: '\bpytest_asyncio\b'
+        replace: 'pytest'
+
+      - id: async-mock-server-function
+        kind: regex
+        match: '\basync_mock_server\b'
+        replace: 'mock_server'
+
+      - id: async-mock-builder
+        kind: regex
+        match: '\basync_mock_builder\b'
+        replace: 'mock_builder'
+
+      - id: async-mock-connection
+        kind: regex
+        match: 'MockAsyncConnection'
+        replace: 'MockConnection'
+
+      - id: async-mock-server-class
+        kind: regex
+        match: '\bAsyncMockServer\b'
+        replace: 'MockServer'
+
+targets:
+  - input: src/zapros/_handlers/_async_base.py
+    output: src/zapros/_handlers/_sync_base.py
+
+  - input: src/zapros/_handlers/_async_pyreqwest.py
+    output: src/zapros/_handlers/_sync_pyreqwest.py
+
+  - input: src/zapros/_handlers/_async_std.py
+    output: src/zapros/_handlers/_sync_std.py
+
+  - input: src/zapros/_async_client.py
+    output: src/zapros/_sync_client.py
+
+  - input: src/zapros/_async_pool.py
+    output: src/zapros/_sync_pool.py
+
+  - input: tests/handlers/test_async_basic.py
+    output: tests/handlers/test_sync_basic.py
+
+  - input: tests/handlers/test_async_proxy.py
+    output: tests/handlers/test_sync_proxy.py
+
+  - input: tests/test_async_pool.py
+    output: tests/test_sync_pool.py

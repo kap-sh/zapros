@@ -731,7 +731,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_bytes())
-        assert "using `async_iter_bytes`" in str(exc_info.value)
+        assert "Can't call `iter_bytes`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_async_iter_bytes_from_bytes(self):
@@ -785,7 +785,7 @@ class TestResponse:
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_bytes():
                 pass
-        assert "using `iter_bytes`" in str(exc_info.value)
+        assert "Can't call `async_iter_bytes`" in str(exc_info.value)
 
     def test_response_iter_raw_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -815,7 +815,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_raw())
-        assert "using `async_iter_raw`" in str(exc_info.value)
+        assert "Can't call `iter_raw`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_async_iter_raw_from_bytes(self):
@@ -851,7 +851,7 @@ class TestResponse:
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_raw():
                 pass
-        assert "using `iter_raw`" in str(exc_info.value)
+        assert "Can't call `async_iter_raw`" in str(exc_info.value)
 
     def test_response_iter_text_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -959,7 +959,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             response.close()
-        assert "use `aclose()`" in str(exc_info.value)
+        assert "Can't call `close`" in str(exc_info.value)
 
     def test_response_close_after_stream_consumed(self):
         stream = StreamWrapper(iter([b"chunk"]))
@@ -999,7 +999,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             await response.aclose()
-        assert "use `close()`" in str(exc_info.value)
+        assert "Can't call `aclose`" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_response_aclose_after_stream_consumed(self):

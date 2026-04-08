@@ -3,7 +3,7 @@
 set -e
 
 echo "==> Generating sync code from async"
-scripts/unasync
+ry --fix src
 
 echo "==> Fixing code style with ruff"
 uv run ruff check --fix src tests

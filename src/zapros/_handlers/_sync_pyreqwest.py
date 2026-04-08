@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import (
-    Iterator as ABCIterator,
+    Iterator,
 )
 from typing import TYPE_CHECKING
 
@@ -100,7 +100,7 @@ class PyreqwestHandler(BaseHandler):
             req_builder = req_builder.body_bytes(request.body)
         elif isinstance(
             request.body,
-            ABCIterator,
+            Iterator,
         ):
             req_builder = req_builder.body_stream(request.body)
 
