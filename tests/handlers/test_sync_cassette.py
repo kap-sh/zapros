@@ -7,10 +7,9 @@ import pytest
 from pywhatwgurl import URL
 
 from zapros import (
-    AsyncClient,
+    Client,
     Cassette,
     CassetteMiddleware,
-    Client,
     UnhandledRequestError,
 )
 from zapros._handlers._mock import Mock
@@ -22,7 +21,8 @@ from zapros.mock import (
 )
 
 
-async def test_records_interaction_to_file(
+
+def test_records_interaction_to_file(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -38,8 +38,8 @@ async def test_records_interaction_to_file(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/record",
         )
 
@@ -54,7 +54,8 @@ async def test_records_interaction_to_file(
     assert data[0]["response"]["body"] == "recorded"
 
 
-async def test_replays_from_cassette_without_hitting_network(
+
+def test_replays_from_cassette_without_hitting_network(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -70,8 +71,8 @@ async def test_replays_from_cassette_without_hitting_network(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
+    with Client(handler=record_handler) as client:
+        client.get(
             "http://example.com/replay",
         )
 
@@ -84,8 +85,8 @@ async def test_replays_from_cassette_without_hitting_network(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=replay_handler) as client:
-        response = await client.get(
+    with Client(handler=replay_handler) as client:
+        response = client.get(
             "http://example.com/replay",
         )
         text = response.text
@@ -94,7 +95,8 @@ async def test_replays_from_cassette_without_hitting_network(
     assert text == "from cassette"
 
 
-async def test_mode_once_records_when_no_cassette(
+
+def test_mode_once_records_when_no_cassette(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -110,8 +112,8 @@ async def test_mode_once_records_when_no_cassette(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        await client.get(
+    with Client(handler=handler) as client:
+        client.get(
             "http://example.com/once",
         )
 
@@ -121,7 +123,8 @@ async def test_mode_once_records_when_no_cassette(
     assert data[0]["response"]["body"] == "once-recorded"
 
 
-async def test_mode_once_does_not_record_when_cassette_exists(
+
+def test_mode_once_does_not_record_when_cassette_exists(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -137,8 +140,8 @@ async def test_mode_once_does_not_record_when_cassette_exists(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=first_handler) as client:
-        await client.get(
+    with Client(handler=first_handler) as client:
+        client.get(
             "http://example.com/existing",
         )
 
@@ -155,14 +158,15 @@ async def test_mode_once_does_not_record_when_cassette_exists(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=second_handler) as client:
+    with Client(handler=second_handler) as client:
         with pytest.raises(UnhandledRequestError):
-            await client.get(
+            client.get(
                 "http://example.com/new-path",
             )
 
 
-async def test_mode_none_raises_for_unmatched_request(
+
+def test_mode_none_raises_for_unmatched_request(
     tmp_path: Path,
 ) -> None:
     cassette = Cassette()
@@ -174,14 +178,15 @@ async def test_mode_none_raises_for_unmatched_request(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
+    with Client(handler=handler) as client:
         with pytest.raises(UnhandledRequestError):
-            await client.get(
+            client.get(
                 "http://example.com/missing",
             )
 
 
-async def test_mode_none_replays_matched_request(
+
+def test_mode_none_replays_matched_request(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -197,8 +202,8 @@ async def test_mode_none_replays_matched_request(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
+    with Client(handler=record_handler) as client:
+        client.get(
             "http://example.com/match",
         )
 
@@ -211,8 +216,8 @@ async def test_mode_none_replays_matched_request(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=replay_handler) as client:
-        response = await client.get(
+    with Client(handler=replay_handler) as client:
+        response = client.get(
             "http://example.com/match",
         )
         text = response.text
@@ -221,7 +226,8 @@ async def test_mode_none_replays_matched_request(
     assert text == "matched"
 
 
-async def test_mode_new_episodes_replays_existing_and_records_new(
+
+def test_mode_new_episodes_replays_existing_and_records_new(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -237,8 +243,8 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
+    with Client(handler=record_handler) as client:
+        client.get(
             "http://example.com/old-path",
         )
 
@@ -255,13 +261,13 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=new_episodes_handler) as client:
-        old_response = await client.get(
+    with Client(handler=new_episodes_handler) as client:
+        old_response = client.get(
             "http://example.com/old-path",
         )
         old_text = old_response.text
 
-        new_response = await client.get(
+        new_response = client.get(
             "http://example.com/new-path",
         )
         new_text = new_response.text
@@ -275,7 +281,8 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
     assert len(data) == 2
 
 
-async def test_mode_all_always_hits_network(
+
+def test_mode_all_always_hits_network(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -291,8 +298,8 @@ async def test_mode_all_always_hits_network(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=first_handler) as client:
-        await client.get(
+    with Client(handler=first_handler) as client:
+        client.get(
             "http://example.com/path",
         )
 
@@ -309,8 +316,8 @@ async def test_mode_all_always_hits_network(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=second_handler) as client:
-        response = await client.get(
+    with Client(handler=second_handler) as client:
+        response = client.get(
             "http://example.com/path",
         )
         text = response.text
@@ -322,7 +329,8 @@ async def test_mode_all_always_hits_network(
     assert len(data) == 2
 
 
-async def test_playback_marks_played_back(
+
+def test_playback_marks_played_back(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -338,8 +346,8 @@ async def test_playback_marks_played_back(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
+    with Client(handler=record_handler) as client:
+        client.get(
             "http://example.com/once-only",
         )
 
@@ -352,17 +360,18 @@ async def test_playback_marks_played_back(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=replay_handler) as client:
-        await client.get(
+    with Client(handler=replay_handler) as client:
+        client.get(
             "http://example.com/once-only",
         )
         with pytest.raises(UnhandledRequestError):
-            await client.get(
+            client.get(
                 "http://example.com/once-only",
             )
 
 
-async def test_allow_playback_repeats(
+
+def test_allow_playback_repeats(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -378,8 +387,8 @@ async def test_allow_playback_repeats(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
+    with Client(handler=record_handler) as client:
+        client.get(
             "http://example.com/repeatable",
         )
 
@@ -392,11 +401,11 @@ async def test_allow_playback_repeats(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=replay_handler) as client:
-        r1 = await client.get(
+    with Client(handler=replay_handler) as client:
+        r1 = client.get(
             "http://example.com/repeatable",
         )
-        r2 = await client.get(
+        r2 = client.get(
             "http://example.com/repeatable",
         )
         t1 = r1.text
@@ -408,7 +417,8 @@ async def test_allow_playback_repeats(
     assert t2 == "repeat"
 
 
-async def test_modifier_transforms_cassette_request_key(
+
+def test_modifier_transforms_cassette_request_key(
     tmp_path: Path,
 ) -> None:
     from zapros import (
@@ -437,8 +447,8 @@ async def test_modifier_transforms_cassette_request_key(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        await client.get(
+    with Client(handler=handler) as client:
+        client.get(
             "http://example.com/api?token=secret123",
         )
 
@@ -446,7 +456,8 @@ async def test_modifier_transforms_cassette_request_key(
     assert data[0]["request"]["uri"] == "http://example.com/api"
 
 
-async def test_modifier_transforms_network_response(
+
+def test_modifier_transforms_network_response(
     tmp_path: Path,
 ) -> None:
     from zapros import Response
@@ -471,8 +482,8 @@ async def test_modifier_transforms_network_response(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/transform",
         )
 
@@ -482,7 +493,8 @@ async def test_modifier_transforms_network_response(
     assert data[0]["response"]["status"] == 999
 
 
-async def test_url_query_param_normalization(
+
+def test_url_query_param_normalization(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -498,76 +510,9 @@ async def test_url_query_param_normalization(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=record_handler) as client:
-        await client.get(
-            "http://example.com/search?a=1&b=2",
-        )
-
-    replay_cassette = Cassette()
-    replay_handler = CassetteMiddleware(
-        replay_cassette,
-        MockMiddleware(router=MockRouter()),
-        mode="none",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
-    async with AsyncClient(handler=replay_handler) as client:
-        response = await client.get(
-            "http://example.com/search?b=2&a=1",
-        )
-        text = response.text
-
-    assert response.status == 200
-    assert text == "normalized"
-
-
-def test_records_interaction_to_file_sync(
-    tmp_path: Path,
-) -> None:
-    router = MockRouter()
-    Mock.given(path("/sync-record")).respond(Response(status=200, text="sync-recorded")).mount(router)
-    mock_handler = MockMiddleware(router=router)
-
-    cassette = Cassette()
-    handler = CassetteMiddleware(
-        cassette,
-        mock_handler,
-        mode="all",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
-    with Client(handler=handler) as client:
-        response = client.get(
-            "http://example.com/sync-record",
-        )
-
-    assert response.status == 200
-    data = json.loads((tmp_path / "test.json").read_text())
-    assert len(data) == 1
-    assert data[0]["response"]["body"] == "sync-recorded"
-
-
-def test_replays_from_cassette_sync(
-    tmp_path: Path,
-) -> None:
-    router = MockRouter()
-    Mock.given(path("/sync-replay")).respond(Response(status=200, text="sync-cached")).mount(router)
-    mock_handler = MockMiddleware(router=router)
-
-    cassette = Cassette()
-    record_handler = CassetteMiddleware(
-        cassette,
-        mock_handler,
-        mode="all",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
     with Client(handler=record_handler) as client:
         client.get(
-            "http://example.com/sync-replay",
+            "http://example.com/search?a=1&b=2",
         )
 
     replay_cassette = Cassette()
@@ -581,76 +526,16 @@ def test_replays_from_cassette_sync(
 
     with Client(handler=replay_handler) as client:
         response = client.get(
-            "http://example.com/sync-replay",
+            "http://example.com/search?b=2&a=1",
         )
         text = response.text
 
     assert response.status == 200
-    assert text == "sync-cached"
+    assert text == "normalized"
 
 
-def test_mode_new_episodes_sync(
-    tmp_path: Path,
-) -> None:
-    router = MockRouter()
-    Mock.given(path("/sync-old")).respond(
-        Response(
-            status=200,
-            text="sync-old-cached",
-        )
-    ).mount(router)
-    mock_handler = MockMiddleware(router=router)
 
-    cassette = Cassette()
-    record_handler = CassetteMiddleware(
-        cassette,
-        mock_handler,
-        mode="all",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
-    with Client(handler=record_handler) as client:
-        client.get(
-            "http://example.com/sync-old",
-        )
-
-    router2 = MockRouter()
-    Mock.given(path("/sync-new")).respond(
-        Response(
-            status=201,
-            text="sync-new-recorded",
-        )
-    ).mount(router2)
-    mock_handler2 = MockMiddleware(router=router2)
-
-    cassette2 = Cassette()
-    new_episodes_handler = CassetteMiddleware(
-        cassette2,
-        mock_handler2,
-        mode="new_episodes",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
-    with Client(handler=new_episodes_handler) as client:
-        old_response = client.get(
-            "http://example.com/sync-old",
-        )
-        new_response = client.get(
-            "http://example.com/sync-new",
-        )
-
-    assert old_response.status == 200
-    assert old_response.text == "sync-old-cached"
-    assert new_response.status == 201
-    assert new_response.text == "sync-new-recorded"
-
-    data = json.loads((tmp_path / "test.json").read_text())
-    assert len(data) == 2
-
-
-async def test_json_body_stored_as_object(
+def test_json_body_stored_as_object(
     tmp_path: Path,
 ) -> None:
     router = MockRouter()
@@ -671,8 +556,8 @@ async def test_json_body_stored_as_object(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/api/user",
         )
         body = response.json
@@ -686,43 +571,8 @@ async def test_json_body_stored_as_object(
     assert isinstance(data[0]["response"]["body"], dict)
 
 
-def test_json_body_stored_as_object_sync(
-    tmp_path: Path,
-) -> None:
-    router = MockRouter()
-    Mock.given(path("/api/data")).respond(
-        Response(
-            status=200,
-            json=[1, 2, 3, 4, 5],
-        )
-    ).mount(router)
-    mock_handler = MockMiddleware(router=router)
 
-    cassette = Cassette()
-    handler = CassetteMiddleware(
-        cassette,
-        mock_handler,
-        mode="all",
-        cassette_dir=str(tmp_path),
-        cassette_name="test",
-    )
-
-    with Client(handler=handler) as client:
-        response = client.get(
-            "http://example.com/api/data",
-        )
-        body = response.json
-
-    assert response.status == 200
-    assert body == [1, 2, 3, 4, 5]
-
-    data = json.loads((tmp_path / "test.json").read_text())
-    assert len(data) == 1
-    assert data[0]["response"]["body"] == [1, 2, 3, 4, 5]
-    assert isinstance(data[0]["response"]["body"], list)
-
-
-async def test_binary_body_stored_as_base64(
+def test_binary_body_stored_as_base64(
     tmp_path: Path,
 ) -> None:
     import base64
@@ -750,11 +600,11 @@ async def test_binary_body_stored_as_base64(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/image",
         )
-        body = await response.aread()
+        body = response.read()
 
     assert response.status == 200
     assert body == binary_data
@@ -765,7 +615,8 @@ async def test_binary_body_stored_as_base64(
     assert isinstance(data[0]["response"]["body"], str)
 
 
-async def test_compressed_json_stored_decompressed(
+
+def test_compressed_json_stored_decompressed(
     tmp_path: Path,
 ) -> None:
     import gzip
@@ -799,8 +650,8 @@ async def test_compressed_json_stored_decompressed(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/api/user",
         )
         body = response.json
@@ -815,7 +666,8 @@ async def test_compressed_json_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-async def test_compressed_text_stored_decompressed(
+
+def test_compressed_text_stored_decompressed(
     tmp_path: Path,
 ) -> None:
     import gzip
@@ -848,8 +700,8 @@ async def test_compressed_text_stored_decompressed(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/text",
         )
         body = response.text
@@ -864,7 +716,8 @@ async def test_compressed_text_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-async def test_compressed_binary_stored_decompressed(
+
+def test_compressed_binary_stored_decompressed(
     tmp_path: Path,
 ) -> None:
     import base64
@@ -898,11 +751,11 @@ async def test_compressed_binary_stored_decompressed(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/image",
         )
-        body = await response.aread()
+        body = response.read()
 
     assert response.status == 200
     assert body == binary_data
@@ -913,7 +766,8 @@ async def test_compressed_binary_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-async def test_empty_body_stored_as_null(
+
+def test_empty_body_stored_as_null(
     tmp_path: Path,
 ) -> None:
     from zapros import Response
@@ -937,8 +791,8 @@ async def test_empty_body_stored_as_null(
         cassette_name="test",
     )
 
-    async with AsyncClient(handler=handler) as client:
-        response = await client.get(
+    with Client(handler=handler) as client:
+        response = client.get(
             "http://example.com/empty",
         )
 

@@ -1,11 +1,11 @@
-import sqlite3
 import time
 
+import sqlite3
 import pytest
 from hishel import (
+    SyncSqliteStorage,
     FilterPolicy,
     SpecificationPolicy,
-    SyncSqliteStorage,
 )
 
 from zapros import Client
@@ -18,6 +18,7 @@ from zapros._handlers._mock import (
     MockRouter,
 )
 from zapros._models import Response
+
 
 
 def test_cache_miss_then_hit():
@@ -49,6 +50,7 @@ def test_cache_miss_then_hit():
         assert caching2.get("from_cache") is True
 
         router.verify()
+
 
 
 def test_cache_context_fields():
@@ -86,6 +88,7 @@ def test_cache_context_fields():
         assert "created_at" in caching2
 
 
+
 def test_cache_respects_no_cache_directive():
     router = MockRouter()
     ZaprosMock().respond(
@@ -114,6 +117,7 @@ def test_cache_respects_no_cache_directive():
 
 
 @pytest.mark.xfail(reason="investigate hishel's ttl handling")
+
 def test_cache_ttl_in_context():
     router = MockRouter()
     ZaprosMock().respond(
@@ -162,6 +166,7 @@ def test_cache_ttl_in_context():
         assert caching2.get("from_cache") is False
 
 
+
 def test_cache_body_key():
     router = MockRouter()
     ZaprosMock().respond(
@@ -191,6 +196,7 @@ def test_cache_body_key():
         assert response2.status == 200
 
         router.verify()
+
 
 
 def test_specification_policy():
@@ -229,6 +235,7 @@ def test_specification_policy():
         router.verify()
 
 
+
 def test_filter_policy():
     router = MockRouter()
     ZaprosMock().respond(Response(status=200, headers={})).expect(1).mount(router)
@@ -260,6 +267,7 @@ def test_filter_policy():
         router.verify()
 
 
+
 def test_different_urls_not_cached_together():
     router = MockRouter()
     ZaprosMock().respond(
@@ -285,6 +293,7 @@ def test_different_urls_not_cached_together():
         assert response2.status == 200
 
         router.verify()
+
 
 
 def test_cache_post_request_with_body_key():

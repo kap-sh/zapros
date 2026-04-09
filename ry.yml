@@ -265,3 +265,21 @@ targets:
 
   - input: tests/test_async_pool.py
     output: tests/test_sync_pool.py
+
+  - input: tests/test_async_auth.py
+    output: tests/test_sync_auth.py
+
+  - input: tests/handlers/test_async_cassette.py
+    output: tests/handlers/test_sync_cassette.py
+
+  - input: tests/handlers/test_async_caching.py
+    output: tests/handlers/test_sync_caching.py
+    rules:
+      - id: anysqlite-to-sqlite3
+        kind: regex
+        match: '\banysqlite\b'
+        replace: 'sqlite3'
+      - id: async-sqlite-storage
+        kind: regex
+        match: '\bAsyncSqliteStorage\b'
+        replace: 'SyncSqliteStorage'

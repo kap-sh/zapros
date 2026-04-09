@@ -59,7 +59,7 @@ dev = [
     "pyright>=1.1.404",
     "pywhatwgurl>=0.1.0",
     "hishel[async]>=1.1.9",
-    "ry-cli>=0.1.0",
+    "ry-cli==0.2.0",
 ]
 
 [tool.pytest.ini_options]
@@ -78,6 +78,9 @@ exclude = [
     "src/zapros/_handlers/_sync_std.py",
     "tests/test_sync_pool.py",
     "tests/handlers/test_sync_proxy.py",
+    "tests/test_sync_auth.py",
+    "tests/handlers/test_sync_cassette.py",
+    "tests/handlers/test_sync_caching.py",
 ]
 
 [tool.ruff.lint]
