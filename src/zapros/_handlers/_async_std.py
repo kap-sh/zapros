@@ -10,6 +10,7 @@ from collections.abc import (
 from typing import TYPE_CHECKING, cast
 
 import h11
+from faker.providers.isbn import MAX_LENGTH
 from pywhatwgurl import URL
 from typing_extensions import override
 
@@ -31,7 +32,7 @@ from .._async_pool import AsyncConnPool
 from .._base_pool import PoolKey
 from .._errors import (
     ConnectionError,
-    TotalTimeoutError,
+    TotalTimeoutError, ExpectError,
 )
 from .._models import (
     AsyncClosableStream,
@@ -513,6 +514,30 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         with map_read_exceptions():
             return await conn.stream.read(n, timeout=read_timeout)
 
+
+    async def _expect_for_large_request(
+        self,
+        conn: AsyncConn,
+        method: str,
+        target: bytes,
+        headers: list[tuple[str, str]],
+        content_length: int,
+        read_timeout: float | None = None,
+        write_timeout: float | None = None,
+        CONTENT_LENGTH_MAX_LENGTH: int = 100000
+    ) -> None:
+        if content_length > CONTENT_LENGTH_MAX_LENGTH: # указать размер откудато хз откуда
+            headers.append(("Content-Length", str(content_length)))
+            headers.append(("Expect", "100-continue"))
+            await self._send_request_headers(conn, method, target, headers, write_timeout)
+            status, resp_headers = await self._receive_response_headers(
+                conn,
+                read_timeout=read_timeout,
+            )
+            if status != 417:
+                raise ExpectError()
+
+
     async def _send_request_headers(
         self,
         conn: AsyncConn,
@@ -716,6 +741,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             # When using a pooled connection, we might noticed that it was closed by the server when it was idle.
             # In that case, we need to create a new connection and retry the request once.
             try:
+                await self._expect_for_large_request(conn,
+                    request.method,
+                    target,
+                    headers,
+                    write_timeout=phase_timeout(write_timeout),
+                    read_timeout=phase_timeout(read_timeout),
+                    content_length=len(body)
+                )
                 await self._send_request_headers(
                     conn,
                     request.method,
@@ -734,6 +767,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     host,
                     port,
                     connect_timeout=phase_timeout(connect_timeout),
+                )
+                await self._expect_for_large_request(conn,
+                    request.method,
+                    target,
+                    headers,
+                    write_timeout=phase_timeout(write_timeout),
+                    read_timeout=phase_timeout(read_timeout),
+                    content_length=len(body)
                 )
                 await self._send_request_headers(
                     conn,
