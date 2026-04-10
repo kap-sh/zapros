@@ -89,8 +89,8 @@ class AnySemaphore:
         self._ensure_semaphore()
         assert self._semaphore is not None
         if hasattr(self._semaphore, "_value"):
-            return self._semaphore._value
-        return self._semaphore.value
+            return self._semaphore._value  # type: ignore[reportPrivateUsage]
+        return self._semaphore.value  # type: ignore[reportPrivateUsage]
 
     async def __aenter__(self) -> "AnySemaphore":
         await self.acquire()

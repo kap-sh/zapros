@@ -51,7 +51,7 @@ class AsyncConnPool:
             else:
                 state.refs -= 1
 
-            if state.refs == 0 and state.idle is None and state.semaphore._value >= self._max_connections_per_host:
+            if state.refs == 0 and state.idle is None and state.semaphore._value >= self._max_connections_per_host:  # type: ignore[reportPrivateUsage]
                 self._states.pop(key, None)
 
     async def _take_idle_connection(
