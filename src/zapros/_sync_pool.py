@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import time
-from threading import Semaphore
 from collections import deque
 from dataclasses import dataclass
 
 from ._base_pool import IdlePoolConnection, PoolConnection, PoolKey
-from threading import Lock
+from threading import Lock, Semaphore
 
 
 @dataclass
@@ -52,7 +51,7 @@ class ConnPool:
             else:
                 state.refs -= 1
 
-            if state.refs == 0 and state.idle is None and state.semaphore._value >= self._max_connections_per_host:
+            if state.refs == 0 and state.idle is None and state.semaphore._value >= self._max_connections_per_host:  # type: ignore[reportPrivateUsage]
                 self._states.pop(key, None)
 
     def _take_idle_connection(
