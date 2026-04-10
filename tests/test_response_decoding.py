@@ -284,7 +284,6 @@ def test_response_read_then_iter():
     assert result == original
 
 
-@pytest.mark.asyncio
 async def test_response_async_iter_bytes_gzip():
     original = b"Hello, World! This is a test message for gzip compression."
     compressed = gzip.compress(original)
@@ -303,7 +302,6 @@ async def test_response_async_iter_bytes_gzip():
     assert result == original
 
 
-@pytest.mark.asyncio
 async def test_response_async_iter_bytes_streaming():
     original = b"Hello, World! This is a test message for gzip compression."
     compressed = gzip.compress(original)
@@ -333,7 +331,6 @@ async def test_response_async_iter_bytes_streaming():
     assert result == original
 
 
-@pytest.mark.asyncio
 async def test_response_async_iter_raw():
     original = b"Hello, World! This is a test message for gzip compression."
     compressed = gzip.compress(original)
@@ -353,7 +350,6 @@ async def test_response_async_iter_raw():
     assert result.startswith(b"\x1f\x8b")
 
 
-@pytest.mark.asyncio
 async def test_response_aread():
     original = b"Hello, World! This is a test message for gzip compression."
     compressed = gzip.compress(original)
@@ -375,7 +371,6 @@ async def test_response_aread():
     assert content2 is content
 
 
-@pytest.mark.asyncio
 async def test_response_aread_then_async_iter():
     original = b"Hello, World! This is a test message for gzip compression."
     compressed = gzip.compress(original)

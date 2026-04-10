@@ -1,8 +1,7 @@
-from asyncio import sleep
-
 import pytest
 
 from zapros._async_pool import AsyncConnPool
+from zapros._compat import anysleep
 
 
 class MockAsyncConnection:
@@ -18,7 +17,7 @@ class MockAsyncConnection:
         self._closed = True
         if self._fail_on_close:
             raise RuntimeError(f"Connection {self.conn_id} failed to close")
-        await sleep(0)
+        await anysleep(0)
 
     @property
     def is_closed(self) -> bool:
@@ -42,14 +41,12 @@ async def get_state(pool: AsyncConnPool, key):
         return pool._states.get(key)
 
 
-@pytest.mark.asyncio
 async def test_acquire_with_no_idle_returns_none(pool):
     key = ("http", "example.com", 80)
     conn = await pool.acquire(key)
     assert conn is None
 
 
-@pytest.mark.asyncio
 async def test_release_and_reacquire_connection(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockAsyncConnection(conn_id=1)
@@ -61,7 +58,6 @@ async def test_release_and_reacquire_connection(pool):
     assert conn.close_count == 0
 
 
-@pytest.mark.asyncio
 async def test_release_without_reuse_closes_connection(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockAsyncConnection(conn_id=1)
@@ -73,21 +69,19 @@ async def test_release_without_reuse_closes_connection(pool):
     assert mock_conn.is_closed
 
 
-@pytest.mark.asyncio
 async def test_expired_connection_not_reused(pool):
     pool._max_age = 0.1
     key = ("http", "example.com", 80)
     mock_conn = MockAsyncConnection(conn_id=1)
 
     await pool.release(key, mock_conn, reuse=True)
-    await sleep(0.15)
+    await anysleep(0.15)
 
     conn = await pool.acquire(key)
     assert conn is None
     assert mock_conn.is_closed
 
 
-@pytest.mark.asyncio
 async def test_non_reusable_connection_discarded(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockAsyncConnection(conn_id=1, reusable=False)
@@ -99,7 +93,6 @@ async def test_non_reusable_connection_discarded(pool):
     assert mock_conn.is_closed
 
 
-@pytest.mark.asyncio
 async def test_stale_connections_closed_before_returning_reusable(pool):
     pool._max_age = 0.05
     key = ("http", "example.com", 80)
@@ -117,7 +110,6 @@ async def test_stale_connections_closed_before_returning_reusable(pool):
     assert stale_conn.close_count == 1
 
 
-@pytest.mark.asyncio
 async def test_max_idle_connections_enforced(pool):
     key = ("http", "example.com", 80)
     connections = [MockAsyncConnection(conn_id=i) for i in range(10)]
@@ -137,7 +129,7 @@ async def test_max_idle_connections_enforced(pool):
     assert closed_count == 5
 
 
-# @pytest.mark.asyncio
+#
 # async def test_acquire_semaphore_limits_concurrent_connections():
 #     pool = AsyncConnPool(max_connections_per_host=2)
 #     key = ("http", "example.com", 80)
@@ -169,7 +161,6 @@ async def test_max_idle_connections_enforced(pool):
 #     acquire_task.cancel()
 
 
-@pytest.mark.asyncio
 async def test_semaphore_per_key():
     pool = AsyncConnPool(max_connections_per_host=2)
     key1 = ("http", "example.com", 80)
@@ -182,7 +173,6 @@ async def test_semaphore_per_key():
     assert conn is None
 
 
-@pytest.mark.asyncio
 async def test_close_all_closes_idle_connections(pool):
     key = ("http", "example.com", 80)
     connections = [MockAsyncConnection(conn_id=i) for i in range(5)]
@@ -197,7 +187,6 @@ async def test_close_all_closes_idle_connections(pool):
     assert len(pool._states) == 0
 
 
-@pytest.mark.asyncio
 async def test_acquire_when_closed_raises_error(pool):
     key = ("http", "example.com", 80)
     await pool.close_all()
@@ -206,7 +195,6 @@ async def test_acquire_when_closed_raises_error(pool):
         await pool.acquire(key)
 
 
-@pytest.mark.asyncio
 async def test_release_when_closed_discards_connection(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockAsyncConnection(conn_id=1)
@@ -217,14 +205,12 @@ async def test_release_when_closed_discards_connection(pool):
     assert mock_conn.is_closed
 
 
-@pytest.mark.asyncio
 async def test_close_all_idempotent(pool):
     await pool.close_all()
     await pool.close_all()
     assert pool._closed
 
 
-@pytest.mark.asyncio
 async def test_connection_close_failure_handled_gracefully(pool):
     key = ("http", "example.com", 80)
     failing_conn = MockAsyncConnection(conn_id=1, fail_on_close=True)
@@ -233,7 +219,6 @@ async def test_connection_close_failure_handled_gracefully(pool):
     assert failing_conn.close_count == 1
 
 
-@pytest.mark.asyncio
 async def test_multiple_keys_isolated(pool):
     key1 = ("http", "example.com", 80)
     key2 = ("https", "example.com", 443)
@@ -256,7 +241,6 @@ async def test_multiple_keys_isolated(pool):
     assert acquired3 is conn3
 
 
-@pytest.mark.asyncio
 async def test_lifo_order_for_idle_connections(pool):
     key = ("http", "example.com", 80)
     connections = [MockAsyncConnection(conn_id=i) for i in range(3)]
@@ -273,7 +257,7 @@ async def test_lifo_order_for_idle_connections(pool):
     assert acquired_connections == list(reversed(connections))
 
 
-# @pytest.mark.asyncio
+#
 # async def test_concurrent_acquire_release_stress():
 #     pool = AsyncConnPool(max_connections_per_host=20, max_idle_per_host=10)
 #     key = ("http", "example.com", 80)
@@ -295,7 +279,6 @@ async def test_lifo_order_for_idle_connections(pool):
 #     await pool.close_all()
 
 
-@pytest.mark.asyncio
 async def test_connection_expiry_during_mixed_operations():
     pool = AsyncConnPool(max_connections_per_host=5, max_idle_seconds=0.1)
     key = ("http", "example.com", 80)
@@ -303,7 +286,7 @@ async def test_connection_expiry_during_mixed_operations():
     old_conn = MockAsyncConnection(conn_id=1)
     await pool.release(key, old_conn, reuse=True)
 
-    await sleep(0.15)
+    await anysleep(0.15)
 
     new_conn = MockAsyncConnection(conn_id=2)
     await pool.release(key, new_conn, reuse=True)
@@ -316,7 +299,6 @@ async def test_connection_expiry_during_mixed_operations():
     assert old_conn.is_closed
 
 
-@pytest.mark.asyncio
 async def test_partial_reusable_connections():
     pool = AsyncConnPool()
     key = ("http", "example.com", 80)
@@ -340,7 +322,6 @@ async def test_partial_reusable_connections():
     assert connections[0].is_closed
 
 
-@pytest.mark.asyncio
 async def test_semaphore_release_on_acquire_failure(pool):
     key = ("http", "example.com", 80)
 
@@ -357,7 +338,7 @@ async def test_semaphore_release_on_acquire_failure(pool):
     assert len(pool._states) == 0
 
 
-# @pytest.mark.asyncio
+#
 # async def test_many_keys_concurrent_operations():
 #     pool = AsyncConnPool(max_connections_per_host=5)
 #     keys = [("http", f"host{i}.com", 80) for i in range(20)]
@@ -379,7 +360,6 @@ async def test_semaphore_release_on_acquire_failure(pool):
 #     await pool.close_all()
 
 
-@pytest.mark.asyncio
 async def test_rapid_acquire_release_same_connection():
     pool = AsyncConnPool()
     key = ("http", "example.com", 80)
@@ -391,7 +371,6 @@ async def test_rapid_acquire_release_same_connection():
         assert acquired is conn
 
 
-@pytest.mark.asyncio
 async def test_empty_idle_queue_after_stale_connections(pool):
     pool._max_age = 0.05
     key = ("http", "example.com", 80)
@@ -400,7 +379,7 @@ async def test_empty_idle_queue_after_stale_connections(pool):
     for conn in connections:
         await pool.release(key, conn, reuse=True)
 
-    await sleep(0.1)
+    await anysleep(0.1)
 
     acquired = await pool.acquire(key)
     assert acquired is None
@@ -408,7 +387,6 @@ async def test_empty_idle_queue_after_stale_connections(pool):
     assert key not in pool._states
 
 
-@pytest.mark.asyncio
 async def test_release_reservation_for_nonexistent_key():
     pool = AsyncConnPool()
     key = ("http", "example.com", 80)
@@ -418,7 +396,6 @@ async def test_release_reservation_for_nonexistent_key():
     assert key not in pool._states
 
 
-@pytest.mark.asyncio
 async def test_close_all_clears_semaphores(pool):
     keys = [("http", f"host{i}.com", 80) for i in range(5)]
 
@@ -432,7 +409,6 @@ async def test_close_all_clears_semaphores(pool):
     assert len(pool._states) == 0
 
 
-@pytest.mark.asyncio
 async def test_semaphore_entry_removed_after_reservation_released():
     pool = AsyncConnPool()
     key = ("http", "example.com", 80)
@@ -447,7 +423,7 @@ async def test_semaphore_entry_removed_after_reservation_released():
     assert key not in pool._states
 
 
-# @pytest.mark.asyncio
+#
 # async def test_high_load_no_deadlock():
 #     pool = AsyncConnPool(max_connections_per_host=10, max_idle_per_host=5)
 #     key = ("http", "example.com", 80)
@@ -473,7 +449,6 @@ async def test_semaphore_entry_removed_after_reservation_released():
 #     await pool.close_all()
 
 
-@pytest.mark.asyncio
 async def test_acquire_all_connections_then_release():
     pool = AsyncConnPool(max_connections_per_host=3)
     key = ("http", "example.com", 80)

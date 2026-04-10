@@ -16,6 +16,7 @@ from typing_extensions import override
 from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 from zapros._io._sync import SyncTransport
 from zapros._io._base import BaseNetworkStream, BaseTransport
+from zapros._io._trio import TrioTransport
 from zapros._utils import get_authority_value, get_pool_key
 
 if TYPE_CHECKING:
@@ -26,6 +27,14 @@ else:
     except ImportError:
         socks5 = None
         ProtocolError = None
+
+if TYPE_CHECKING:
+    import trio
+else:
+    try:
+        import trio
+    except ImportError:
+        trio = None
 
 from .._sync_pool import ConnPool
 from .._base_pool import PoolKey
@@ -40,7 +49,6 @@ from .._models import (
     ResponseHandoffContext,
 )
 from ._sync_base import BaseHandler
-from ._exc_map import map_socket_read_exceptions, map_write_exceptions
 
 
 def _encode_target(path: str, query: str) -> bytes:
@@ -256,10 +264,6 @@ class StdStream(ClosableStream):
     def __iter__(self) -> StdStream:
         return self
 
-    def _read(self, n: int) -> bytes:
-        with map_socket_read_exceptions():
-            return self._conn.stream.read(n, timeout=self._read_timeout)
-
     def _drain_no_body_end_of_message(self) -> None:
         if self._eof or not self._no_body_response:
             return
@@ -286,7 +290,7 @@ class StdStream(ClosableStream):
                 event = self._conn.h11.next_event()
 
                 if event is h11.NEED_DATA:
-                    data = self._read(DEFAULT_READ_SIZE)
+                    data = self._conn.stream.read(DEFAULT_READ_SIZE, timeout=self._read_timeout)
                     if not data:
                         self._conn.h11.receive_data(b"")
                         continue
@@ -348,7 +352,7 @@ class StdNetworkHandler(BaseHandler):
             )
         self.ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
 
-        self.transport = transport or SyncTransport(ssl_context=self.ssl_context)
+        self._transport = transport
 
         # Total timeout means: start of handle() until response headers received.
         self.total_timeout = total_timeout
@@ -374,6 +378,17 @@ class StdNetworkHandler(BaseHandler):
         if remaining <= 0:
             raise TotalTimeoutError("Operation timed out")
         return remaining
+
+    @property
+    def transport(self) -> BaseTransport:
+        if self._transport is not None:
+            return self._transport
+
+        default_transport = (
+            SyncTransport(ssl_context=self.ssl_context)
+        )
+        self._transport = default_transport
+        return self._transport
 
     def _new_conn(
         self,
@@ -483,26 +498,6 @@ class StdNetworkHandler(BaseHandler):
             return True
         return False
 
-    def _write_all(
-        self,
-        conn: Conn,
-        data: bytes,
-        *,
-        write_timeout: float | None = None,
-    ) -> None:
-        with map_write_exceptions():
-            conn.stream.write_all(data, timeout=write_timeout)
-
-    def _read(
-        self,
-        conn: Conn,
-        n: int,
-        *,
-        read_timeout: float | None = None,
-    ) -> bytes:
-        with map_socket_read_exceptions():
-            return conn.stream.read(n, timeout=read_timeout)
-
     def _send_request_headers(
         self,
         conn: Conn,
@@ -523,10 +518,9 @@ class StdNetworkHandler(BaseHandler):
                 for k, v in headers
             ],
         )
-        self._write_all(
-            conn,
+        conn.stream.write_all(
             conn.h11.send(event),
-            write_timeout=write_timeout,
+            timeout=write_timeout,
         )
 
     def _send_request_body(
@@ -538,26 +532,24 @@ class StdNetworkHandler(BaseHandler):
     ) -> None:
         if isinstance(body, bytes):
             if body:
-                self._write_all(
-                    conn,
+                conn.stream.write_all(
                     conn.h11.send(h11.Data(data=body)),
-                    write_timeout=write_timeout,
+                    timeout=write_timeout,
                 )
         elif isinstance(body, Iterator):
             for chunk in body:
                 if chunk:
-                    self._write_all(
-                        conn,
+                    conn.stream.write_all(
                         conn.h11.send(h11.Data(data=chunk)),
-                        write_timeout=write_timeout,
+                        timeout=write_timeout,
                     )
+        elif body is None:
+            pass
         else:
             raise TypeError(f"Unsupported body type: {body.__class__.__name__}")
-
-        self._write_all(
-            conn,
+        conn.stream.write_all(
             conn.h11.send(h11.EndOfMessage()),
-            write_timeout=write_timeout,
+            timeout=write_timeout,
         )
 
     def _receive_response_headers(
@@ -570,11 +562,7 @@ class StdNetworkHandler(BaseHandler):
             event = conn.h11.next_event()
 
             if event is h11.NEED_DATA:
-                data = self._read(
-                    conn,
-                    DEFAULT_READ_SIZE,
-                    read_timeout=read_timeout,
-                )
+                data = conn.stream.read(DEFAULT_READ_SIZE, timeout=read_timeout)
                 if not data:
                     raise ConnectionError("Connection closed while reading response headers")
                 conn.h11.receive_data(data)

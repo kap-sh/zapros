@@ -1,15 +1,8 @@
 from typing import AsyncIterator
 
 import pytest
-import pytest_asyncio
 
-from tests.mock._base import MockBuilder
-from tests.mock._mock_async import (
-    AsyncMockServer,
-)
-from tests.mock._mock_sync import (
-    MockServer,
-)
+from tests.mock_server import MockServer
 from zapros._async_client import (
     AsyncClient,
 )
@@ -22,17 +15,7 @@ from zapros._handlers._mock import (
 )
 
 
-@pytest_asyncio.fixture
-async def async_mock_server():
-    server = AsyncMockServer()
-    await server.start()
-    try:
-        yield server
-    finally:
-        await server.stop()
-
-
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_server():
     server = MockServer()
     server.start()
@@ -43,23 +26,6 @@ def mock_server():
 
 
 @pytest.fixture
-def async_mock_builder(request, async_mock_server):
-    builder = MockBuilder(
-        async_mock_server,
-        request.node.nodeid,
-    )
-    yield builder
-    async_mock_server.clear_mocks(request.node.nodeid)
-
-
-@pytest.fixture
-def mock_builder(request, mock_server):
-    builder = MockBuilder(mock_server, request.node.nodeid)
-    yield builder
-    mock_server.clear_mocks(request.node.nodeid)
-
-
-@pytest_asyncio.fixture
 async def async_mock_client() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
     router = MockRouter()
     mock_handler = MockMiddleware(router=router)
@@ -68,7 +34,7 @@ async def async_mock_client() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
         yield client, router
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def async_mock_client_no_cookies() -> AsyncIterator[tuple[AsyncClient, MockRouter]]:
     router = MockRouter()
     mock_handler = MockMiddleware(router=router)

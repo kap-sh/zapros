@@ -1,7 +1,5 @@
 import base64
 
-import pytest
-
 from zapros import Client
 from zapros._handlers._mock import (
     Mock,
@@ -10,7 +8,6 @@ from zapros._handlers._mock import (
 )
 from zapros._models import Response
 from zapros.matchers import path
-
 
 
 def test_bearer_token_async():
@@ -30,7 +27,6 @@ def test_bearer_token_async():
             "https://api.example.com/api",
         )
         assert response.status == 200
-
 
 
 def test_basic_auth_async():
@@ -57,7 +53,6 @@ def test_basic_auth_async():
         assert response.status == 200
 
 
-
 def test_no_auth_async():
     router = MockRouter()
     Mock.given(path("/api")).respond(Response(status=200)).mount(router)
@@ -67,7 +62,6 @@ def test_no_auth_async():
             "https://api.example.com/api",
         )
         assert response.status == 200
-
 
 
 def test_bearer_with_default_headers_async():
@@ -92,7 +86,6 @@ def test_bearer_with_default_headers_async():
         assert response.status == 200
 
 
-
 def test_with_handler_preserves_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -113,7 +106,6 @@ def test_with_handler_preserves_bearer_async():
     assert response.status == 200
 
     client.close()
-
 
 
 def test_with_handler_preserves_basic_auth_async():
@@ -143,7 +135,6 @@ def test_with_handler_preserves_basic_auth_async():
     client.close()
 
 
-
 def test_per_request_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -159,7 +150,6 @@ def test_per_request_bearer_async():
             auth="request-token",
         )
         assert response.status == 200
-
 
 
 def test_per_request_basic_auth_async():
@@ -184,7 +174,6 @@ def test_per_request_basic_auth_async():
         assert response.status == 200
 
 
-
 def test_per_request_overrides_client_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -203,7 +192,6 @@ def test_per_request_overrides_client_bearer_async():
             auth="request-token",
         )
         assert response.status == 200
-
 
 
 def test_per_request_overrides_client_basic_auth_async():

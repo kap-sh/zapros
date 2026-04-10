@@ -5,7 +5,7 @@ import ssl
 import time
 import warnings
 from collections.abc import (
-    Iterator as ABCIterator,
+    AsyncIterator,
 )
 from typing import TYPE_CHECKING, cast
 
@@ -16,6 +16,7 @@ from typing_extensions import override
 from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
+from zapros._io._trio import TrioTransport
 from zapros._utils import get_authority_value, get_pool_key
 
 if TYPE_CHECKING:
@@ -26,6 +27,14 @@ else:
     except ImportError:
         socks5 = None
         ProtocolError = None
+
+if TYPE_CHECKING:
+    import trio
+else:
+    try:
+        import trio
+    except ImportError:
+        trio = None
 
 from .._async_pool import AsyncConnPool
 from .._base_pool import PoolKey
@@ -40,7 +49,6 @@ from .._models import (
     ResponseHandoffContext,
 )
 from ._async_base import AsyncBaseHandler
-from ._exc_map import map_read_exceptions, map_write_exceptions
 
 
 def _encode_target(path: str, query: str) -> bytes:
@@ -256,10 +264,6 @@ class AsyncStdStream(AsyncClosableStream):
     def __aiter__(self) -> AsyncStdStream:
         return self
 
-    async def _read(self, n: int) -> bytes:
-        with map_read_exceptions():
-            return await self._conn.stream.read(n, timeout=self._read_timeout)
-
     def _drain_no_body_end_of_message(self) -> None:
         if self._eof or not self._no_body_response:
             return
@@ -286,7 +290,7 @@ class AsyncStdStream(AsyncClosableStream):
                 event = self._conn.h11.next_event()
 
                 if event is h11.NEED_DATA:
-                    data = await self._read(DEFAULT_READ_SIZE)
+                    data = await self._conn.stream.read(DEFAULT_READ_SIZE, timeout=self._read_timeout)
                     if not data:
                         self._conn.h11.receive_data(b"")
                         continue
@@ -348,7 +352,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             )
         self.ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
 
-        self.transport = transport or AsyncIOTransport(ssl_context=self.ssl_context)
+        self._transport = transport
 
         # Total timeout means: start of ahandle() until response headers received.
         self.total_timeout = total_timeout
@@ -374,6 +378,19 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         if remaining <= 0:
             raise TotalTimeoutError("Operation timed out")
         return remaining
+
+    @property
+    def transport(self) -> AsyncBaseTransport:
+        if self._transport is not None:
+            return self._transport
+
+        default_transport = (
+            AsyncIOTransport(ssl_context=self.ssl_context)
+            if not (trio and trio.lowlevel.in_trio_run())  # unasync: strip
+            else TrioTransport(ssl_context=self.ssl_context)  # unasync: strip
+        )
+        self._transport = default_transport
+        return self._transport
 
     async def _new_conn(
         self,
@@ -469,16 +486,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         return conn
 
     @staticmethod
-    def _prepare_body(
-        request: Request,
-    ) -> bytes | ABCIterator[bytes] | None:
-        if request.body is None:
-            return None
-        if isinstance(request.body, (bytes, ABCIterator)):
-            return request.body
-        raise NotImplementedError("Async request bodies are not supported by AsyncStdNetworkHandler")
-
-    @staticmethod
     def _response_has_no_body(
         method: str,
         status: int,
@@ -492,26 +499,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         if status in (204, 304):
             return True
         return False
-
-    async def _write_all(
-        self,
-        conn: AsyncConn,
-        data: bytes,
-        *,
-        write_timeout: float | None = None,
-    ) -> None:
-        with map_write_exceptions():
-            await conn.stream.write_all(data, timeout=write_timeout)
-
-    async def _read(
-        self,
-        conn: AsyncConn,
-        n: int,
-        *,
-        read_timeout: float | None = None,
-    ) -> bytes:
-        with map_read_exceptions():
-            return await conn.stream.read(n, timeout=read_timeout)
 
     async def _send_request_headers(
         self,
@@ -533,39 +520,38 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 for k, v in headers
             ],
         )
-        await self._write_all(
-            conn,
+        await conn.stream.write_all(
             conn.h11.send(event),
-            write_timeout=write_timeout,
+            timeout=write_timeout,
         )
 
     async def _send_request_body(
         self,
         conn: AsyncConn,
-        body: bytes | ABCIterator[bytes] | None,
+        body: bytes | AsyncIterator[bytes] | None,
         *,
         write_timeout: float | None = None,
     ) -> None:
         if isinstance(body, bytes):
             if body:
-                await self._write_all(
-                    conn,
+                await conn.stream.write_all(
                     conn.h11.send(h11.Data(data=body)),
-                    write_timeout=write_timeout,
+                    timeout=write_timeout,
                 )
-        elif isinstance(body, ABCIterator):
-            for chunk in body:
+        elif isinstance(body, AsyncIterator):
+            async for chunk in body:
                 if chunk:
-                    await self._write_all(
-                        conn,
+                    await conn.stream.write_all(
                         conn.h11.send(h11.Data(data=chunk)),
-                        write_timeout=write_timeout,
+                        timeout=write_timeout,
                     )
-
-        await self._write_all(
-            conn,
+        elif body is None:
+            pass
+        else:
+            raise TypeError(f"Unsupported body type: {body.__class__.__name__}")
+        await conn.stream.write_all(
             conn.h11.send(h11.EndOfMessage()),
-            write_timeout=write_timeout,
+            timeout=write_timeout,
         )
 
     async def _receive_response_headers(
@@ -578,11 +564,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             event = conn.h11.next_event()
 
             if event is h11.NEED_DATA:
-                data = await self._read(
-                    conn,
-                    DEFAULT_READ_SIZE,
-                    read_timeout=read_timeout,
-                )
+                data = await conn.stream.read(DEFAULT_READ_SIZE, timeout=read_timeout)
                 if not data:
                     raise ConnectionError("Connection closed while reading response headers")
                 conn.h11.receive_data(data)
@@ -693,7 +675,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             target = str(request.url).encode("ascii")
         else:
             target = _encode_target(request.url.pathname, request.url.search[1:])
-        body = self._prepare_body(request)
         headers = list(request.headers.list())
 
         proxy_context = request.context.get("network", {}).get("proxy")
@@ -743,9 +724,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     write_timeout=phase_timeout(write_timeout),
                 )
 
+            if not isinstance(request.body, (bytes, AsyncIterator)) and request.body is not None:
+                raise TypeError(f"Unsupported body type: {request.body.__class__.__name__}")
+
             await self._send_request_body(
                 conn,
-                body,
+                request.body,
                 write_timeout=phase_timeout(write_timeout),
             )
 

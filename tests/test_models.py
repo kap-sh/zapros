@@ -579,13 +579,11 @@ class TestResponse:
         assert content1 == content2
         assert content1 is content2
 
-    @pytest.mark.asyncio
     async def test_response_aread_bytes(self):
         response = Response(200, content=b"Hello, World!")
         content = await response.aread()
         assert content == b"Hello, World!"
 
-    @pytest.mark.asyncio
     async def test_response_aread_async_stream(self):
         async def gen():
             yield b"chunk1"
@@ -596,13 +594,11 @@ class TestResponse:
         content = await response.aread()
         assert content == b"chunk1chunk2"
 
-    @pytest.mark.asyncio
     async def test_response_aread_none_content(self):
         response = Response(200)
         content = await response.aread()
         assert content == b""
 
-    @pytest.mark.asyncio
     async def test_response_aread_caches_content(self):
         async def gen():
             yield b"chunk1"
@@ -733,14 +729,12 @@ class TestResponse:
             list(response.iter_bytes())
         assert "Can't call `iter_bytes`" in str(exc_info.value)
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
         chunks = [chunk async for chunk in response.async_iter_bytes()]
         result = b"".join(chunks)
         assert result == b"Hello, World!"
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_from_async_stream(self):
         async def gen():
             yield b"chunk1"
@@ -752,19 +746,16 @@ class TestResponse:
         result = b"".join(chunks)
         assert result == b"chunk1chunk2"
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_none_content(self):
         response = Response(200)
         chunks = [chunk async for chunk in response.async_iter_bytes()]
         assert chunks == []
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_custom_chunk_size(self):
         response = Response(200, content=b"Hello, World!")
         chunks = [chunk async for chunk in response.async_iter_bytes(chunk_size=5)]
         assert all(len(chunk) <= 5 for chunk in chunks)
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_gzip_decompression(self):
         original = b"Hello, World!"
         compressed = gzip.compress(original)
@@ -778,7 +769,6 @@ class TestResponse:
         result = b"".join(chunks)
         assert result == original
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
@@ -817,14 +807,12 @@ class TestResponse:
             list(response.iter_raw())
         assert "Can't call `iter_raw`" in str(exc_info.value)
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_raw_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
         chunks = [chunk async for chunk in response.async_iter_raw()]
         result = b"".join(chunks)
         assert result == b"Hello, World!"
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_raw_from_async_stream(self):
         original = b"Hello, World!"
         compressed = gzip.compress(original)
@@ -838,13 +826,11 @@ class TestResponse:
         result = b"".join(chunks)
         assert result == compressed
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_raw_none_content(self):
         response = Response(200)
         chunks = [chunk async for chunk in response.async_iter_raw()]
         assert chunks == []
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_raw_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
@@ -874,7 +860,6 @@ class TestResponse:
         chunks = list(response.iter_text(chunk_size=5))
         assert len(chunks) > 0
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_text_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
         chunks = [chunk async for chunk in response.async_iter_text()]
@@ -913,7 +898,6 @@ class TestResponse:
             assert not isinstance(response.content, bytes)
         assert not isinstance(response.content, bytes)
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_bytes_does_not_buffer_content(self):
         async def gen():
             yield b"chunk1"
@@ -925,7 +909,6 @@ class TestResponse:
             assert not isinstance(response.content, bytes)
         assert not isinstance(response.content, bytes)
 
-    @pytest.mark.asyncio
     async def test_response_async_iter_raw_does_not_buffer_content(self):
         async def gen():
             yield b"chunk1"
@@ -973,17 +956,14 @@ class TestResponse:
         response.close()
         response.close()
 
-    @pytest.mark.asyncio
     async def test_response_aclose_bytes_content(self):
         response = Response(200, content=b"Hello, World!")
         await response.aclose()
 
-    @pytest.mark.asyncio
     async def test_response_aclose_none_content(self):
         response = Response(200)
         await response.aclose()
 
-    @pytest.mark.asyncio
     async def test_response_aclose_async_stream(self):
         async def gen():
             yield b"chunk"
@@ -993,7 +973,6 @@ class TestResponse:
         await response.aclose()
         assert stream._closed is True
 
-    @pytest.mark.asyncio
     async def test_response_aclose_sync_stream_raises_typeerror(self):
         stream = StreamWrapper(iter([b"chunk"]))
         response = Response(200, content=stream)
@@ -1001,7 +980,6 @@ class TestResponse:
             await response.aclose()
         assert "Can't call `aclose`" in str(exc_info.value)
 
-    @pytest.mark.asyncio
     async def test_response_aclose_after_stream_consumed(self):
         async def gen():
             yield b"chunk"
@@ -1011,7 +989,6 @@ class TestResponse:
         await response.aread()
         await response.aclose()
 
-    @pytest.mark.asyncio
     async def test_response_aclose_idempotent(self):
         async def gen():
             yield b"chunk"
@@ -1027,7 +1004,6 @@ class TestResponse:
             pass
         assert stream._closed is True
 
-    @pytest.mark.asyncio
     async def test_response_async_context_manager(self):
         async def gen():
             yield b"chunk"

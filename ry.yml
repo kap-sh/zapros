@@ -223,7 +223,7 @@ packages:
 
       - id: async-mock-server-function
         kind: regex
-        match: '\basync_mock_server\b'
+        match: '\bmock_server\b'
         replace: 'mock_server'
 
       - id: async-mock-builder
@@ -256,6 +256,23 @@ targets:
 
   - input: src/zapros/_async_pool.py
     output: src/zapros/_sync_pool.py
+    rules:
+      - id: anylock-import
+        kind: regex
+        match: '\bfrom ._compat import AnyLock\b'
+        replace: 'from threading import Lock'
+      - id: anylock-anysemaphore-import
+        kind: regex
+        match: '\bfrom ._compat import AnyLock, AnySemaphore\b'
+        replace: 'from threading import Lock, Semaphore'
+      - id: anylock-to-lock
+        kind: regex
+        match: '\bAnyLock\b'
+        replace: 'Lock'
+      - id: anysemaphore-to-semaphore
+        kind: regex
+        match: '\bAnySemaphore\b'
+        replace: 'Semaphore'
 
   - input: tests/handlers/test_async_basic.py
     output: tests/handlers/test_sync_basic.py
@@ -265,6 +282,16 @@ targets:
 
   - input: tests/test_async_pool.py
     output: tests/test_sync_pool.py
+    rules:
+      - id: anysleep-import
+        kind: regex
+        match: '\bfrom zapros._compat import anysleep\b'
+        replace: 'from time import sleep'
+      - id: anysleep-to-sleep
+        kind: regex
+        match: '\banysleep\b'
+        replace: 'sleep'
+
 
   - input: tests/test_async_auth.py
     output: tests/test_sync_auth.py

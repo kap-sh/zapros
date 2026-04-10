@@ -561,7 +561,6 @@ def test_second_attempt_succeeds():
     router.verify()
 
 
-@pytest.mark.asyncio
 async def test_async_retry_on_503():
     router = MockRouter()
     ZaprosMock().respond(Response(status=503)).once().mount(router)
@@ -584,7 +583,6 @@ async def test_async_retry_on_503():
     router.verify()
 
 
-@pytest.mark.asyncio
 async def test_async_retry_on_network_exception():
     router = MockRouter()
     ZaprosMock().callback(ConnectionError("Network error")).once().mount(router)
@@ -607,7 +605,6 @@ async def test_async_retry_on_network_exception():
     router.verify()
 
 
-@pytest.mark.asyncio
 async def test_async_post_does_not_retry():
     router = MockRouter()
     mock = ZaprosMock().respond(Response(status=500)).once().mount(router)
@@ -630,7 +627,6 @@ async def test_async_post_does_not_retry():
     mock.verify()
 
 
-@pytest.mark.asyncio
 async def test_async_exponential_backoff():
     timestamps = []
 

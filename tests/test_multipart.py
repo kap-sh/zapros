@@ -259,7 +259,6 @@ def test_multipart_stream_iteration():
     assert b"".join(chunks).startswith(b"--b\r\n")
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_single_part():
     part = Part.async_stream(_TestAsyncStream(b"async value"))
     part.content_type = "text/plain; charset=utf-8"
@@ -277,7 +276,6 @@ async def test_async_multipart_stream_single_part():
     )
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_multiple_parts():
     part1 = Part.async_stream(_TestAsyncStream(b"value1"))
     part1.content_type = "text/plain; charset=utf-8"
@@ -302,7 +300,6 @@ async def test_async_multipart_stream_multiple_parts():
     )
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_with_file():
     part = Part.async_stream(_TestAsyncStream(b"binary data"))
     part.file_name("data.bin").mime_type("application/octet-stream")
@@ -320,7 +317,6 @@ async def test_async_multipart_stream_with_file():
     )
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_aclose():
     part1 = Part.bytes(b"data1")
     part2 = Part.bytes(b"data2")
@@ -398,7 +394,6 @@ def test_multipart_to_async_body():
     assert isinstance(result, bytes)
 
 
-@pytest.mark.asyncio
 async def test_multipart_to_async_body_iteration():
     mp = Multipart(boundary="async-b")
     mp.part("name", Part.text("test"))
@@ -450,7 +445,6 @@ def test_multipart_stream_proper_format():
     )
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_proper_format():
     mp = Multipart(boundary="B")
     mp.part("f", Part.text("v"))
@@ -496,7 +490,6 @@ def test_multipart_empty():
     assert result == snapshot(b"--empty--\r\n")
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_empty():
     mp = Multipart(boundary="empty")
     result = mp.to_async_body()
@@ -516,7 +509,6 @@ def test_multipart_stream_assertion_on_wrong_stream_type():
         list(stream)
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_assertion_on_wrong_stream_type():
     sync_part = Part.stream(_TestSyncStream(b"data"))
     parts = [("field", sync_part)]
@@ -542,7 +534,6 @@ def test_multipart_stream_close_assertion_on_wrong_stream_type():
         stream.close()
 
 
-@pytest.mark.asyncio
 async def test_async_multipart_stream_aclose_assertion_on_wrong_stream_type():
     sync_part = Part.stream(_TestSyncStream(b"data"))
     parts = [("field", sync_part)]

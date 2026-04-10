@@ -386,7 +386,6 @@ def test_redirect_preserves_query_string():
     assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_async_redirect():
     router = MockRouter()
     Mock.given(path("/initial")).respond(
@@ -410,7 +409,6 @@ async def test_async_redirect():
     assert response.text == "OK"
 
 
-@pytest.mark.asyncio
 async def test_async_redirect_307_preserves_method():
     router = MockRouter()
     Mock.given(path("/initial")).respond(

@@ -740,7 +740,6 @@ def test_mock_callback_exception_class():
         mock.handle(request)
 
 
-@pytest.mark.asyncio
 async def test_async_mock_handler_dispatch():
     router = MockRouter()
     Mock.given(path("/health")).respond(Response(status=200, text="OK")).mount(router)
@@ -768,7 +767,6 @@ async def test_async_mock_handler_dispatch():
     assert response.status == 201
 
 
-@pytest.mark.asyncio
 async def test_async_mock_handler_no_match():
     router = MockRouter()
     Mock.given(path("/health")).respond(Response(status=200, text="OK")).mount(router)
@@ -786,7 +784,6 @@ async def test_async_mock_handler_no_match():
         await handler.ahandle(request)
 
 
-@pytest.mark.asyncio
 async def test_async_mock_handler_with_fallback():
     fallback_router = MockRouter()
     Mock().callback(

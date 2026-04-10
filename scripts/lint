@@ -15,7 +15,7 @@ echo "==> Type checking with pyright"
 uv run --all-extras pyright src tests
 
 echo "==> Testing import without extras"
-uv run --with-editable . --no-project --no-extra async  --script - <<EOF
+uv run --with-editable . --no-dev --isolated --script - <<EOF
 import zapros
 print("Import successful")
 EOF

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import time
-from asyncio import Semaphore
 from collections import deque
 from dataclasses import dataclass
 
 from ._base_pool import AsyncIdlePoolConnection, AsyncPoolConnection, PoolKey
+from ._compat import AnyLock, AnySemaphore
 
 
 @dataclass
 class _HostState:
-    semaphore: Semaphore
+    semaphore: AnySemaphore
     refs: int = 0
     idle: deque[AsyncIdlePoolConnection] | None = None
 
@@ -28,7 +27,7 @@ class AsyncConnPool:
         self._max_idle_per_host = max_idle_per_host
         self._max_age = max_idle_seconds
 
-        self._lock = asyncio.Lock()
+        self._lock = AnyLock()
         self._states: dict[PoolKey, _HostState] = {}
         self._closed = False
 
@@ -36,7 +35,7 @@ class AsyncConnPool:
         async with self._lock:
             state = self._states.get(key)
             if state is None:
-                state = _HostState(semaphore=Semaphore(self._max_connections_per_host))
+                state = _HostState(semaphore=AnySemaphore(self._max_connections_per_host))
                 self._states[key] = state
 
             state.refs += 1
@@ -105,7 +104,7 @@ class AsyncConnPool:
 
             state = self._states.get(key)
             if state is None:
-                state = _HostState(semaphore=Semaphore(self._max_connections_per_host))
+                state = _HostState(semaphore=AnySemaphore(self._max_connections_per_host))
                 self._states[key] = state
 
             dq = state.idle

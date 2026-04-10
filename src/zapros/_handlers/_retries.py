@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import random
 import time
 from abc import abstractmethod
@@ -12,6 +11,7 @@ from typing import (
 
 import typing_extensions
 
+from zapros._compat import anysleep
 from zapros._handlers._common import (
     ensure_async_handler,
     ensure_sync_handler,
@@ -194,7 +194,7 @@ class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
                     self._backoff_jitter,
                 )
                 if wait > 0:
-                    await asyncio.sleep(wait)
+                    await anysleep(wait)
 
                 attempt += 1
 
@@ -217,7 +217,7 @@ class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
                     self._backoff_jitter,
                 )
                 if wait > 0:
-                    await asyncio.sleep(wait)
+                    await anysleep(wait)
 
                 attempt += 1
 

@@ -21,7 +21,6 @@ from zapros.mock import (
 )
 
 
-
 def test_records_interaction_to_file(
     tmp_path: Path,
 ) -> None:
@@ -52,7 +51,6 @@ def test_records_interaction_to_file(
     assert data[0]["request"]["uri"] == "http://example.com/record"
     assert data[0]["response"]["status"] == 200
     assert data[0]["response"]["body"] == "recorded"
-
 
 
 def test_replays_from_cassette_without_hitting_network(
@@ -95,7 +93,6 @@ def test_replays_from_cassette_without_hitting_network(
     assert text == "from cassette"
 
 
-
 def test_mode_once_records_when_no_cassette(
     tmp_path: Path,
 ) -> None:
@@ -121,7 +118,6 @@ def test_mode_once_records_when_no_cassette(
     data = json.loads((tmp_path / "test.json").read_text())
     assert len(data) == 1
     assert data[0]["response"]["body"] == "once-recorded"
-
 
 
 def test_mode_once_does_not_record_when_cassette_exists(
@@ -165,7 +161,6 @@ def test_mode_once_does_not_record_when_cassette_exists(
             )
 
 
-
 def test_mode_none_raises_for_unmatched_request(
     tmp_path: Path,
 ) -> None:
@@ -183,7 +178,6 @@ def test_mode_none_raises_for_unmatched_request(
             client.get(
                 "http://example.com/missing",
             )
-
 
 
 def test_mode_none_replays_matched_request(
@@ -224,7 +218,6 @@ def test_mode_none_replays_matched_request(
 
     assert response.status == 200
     assert text == "matched"
-
 
 
 def test_mode_new_episodes_replays_existing_and_records_new(
@@ -281,7 +274,6 @@ def test_mode_new_episodes_replays_existing_and_records_new(
     assert len(data) == 2
 
 
-
 def test_mode_all_always_hits_network(
     tmp_path: Path,
 ) -> None:
@@ -329,7 +321,6 @@ def test_mode_all_always_hits_network(
     assert len(data) == 2
 
 
-
 def test_playback_marks_played_back(
     tmp_path: Path,
 ) -> None:
@@ -368,7 +359,6 @@ def test_playback_marks_played_back(
             client.get(
                 "http://example.com/once-only",
             )
-
 
 
 def test_allow_playback_repeats(
@@ -417,7 +407,6 @@ def test_allow_playback_repeats(
     assert t2 == "repeat"
 
 
-
 def test_modifier_transforms_cassette_request_key(
     tmp_path: Path,
 ) -> None:
@@ -456,7 +445,6 @@ def test_modifier_transforms_cassette_request_key(
     assert data[0]["request"]["uri"] == "http://example.com/api"
 
 
-
 def test_modifier_transforms_network_response(
     tmp_path: Path,
 ) -> None:
@@ -491,7 +479,6 @@ def test_modifier_transforms_network_response(
 
     data = json.loads((tmp_path / "test.json").read_text())
     assert data[0]["response"]["status"] == 999
-
 
 
 def test_url_query_param_normalization(
@@ -534,7 +521,6 @@ def test_url_query_param_normalization(
     assert text == "normalized"
 
 
-
 def test_json_body_stored_as_object(
     tmp_path: Path,
 ) -> None:
@@ -569,7 +555,6 @@ def test_json_body_stored_as_object(
     assert len(data) == 1
     assert data[0]["response"]["body"] == {"id": 123, "name": "John", "active": True}
     assert isinstance(data[0]["response"]["body"], dict)
-
 
 
 def test_binary_body_stored_as_base64(
@@ -613,7 +598,6 @@ def test_binary_body_stored_as_base64(
     assert len(data) == 1
     assert data[0]["response"]["body"] == base64.b64encode(binary_data).decode("ascii")
     assert isinstance(data[0]["response"]["body"], str)
-
 
 
 def test_compressed_json_stored_decompressed(
@@ -666,7 +650,6 @@ def test_compressed_json_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-
 def test_compressed_text_stored_decompressed(
     tmp_path: Path,
 ) -> None:
@@ -716,7 +699,6 @@ def test_compressed_text_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-
 def test_compressed_binary_stored_decompressed(
     tmp_path: Path,
 ) -> None:
@@ -764,7 +746,6 @@ def test_compressed_binary_stored_decompressed(
     assert len(data) == 1
     assert data[0]["response"]["body"] == base64.b64encode(binary_data).decode("ascii")
     assert "content-encoding" not in data[0]["response"]["headers"]
-
 
 
 def test_empty_body_stored_as_null(

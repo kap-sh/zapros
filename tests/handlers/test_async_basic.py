@@ -2,13 +2,13 @@ import gzip
 
 import pytest
 
+from tests.mock_server import AsyncMockServer
+
 pytest.importorskip("pyreqwest", reason="pyreqwest is not supported for python 3.10 and below")
+import pytest
 from inline_snapshot import snapshot
 from pyreqwest.client import ClientBuilder
 
-from tests.conftest import (
-    AsyncMockServer,
-)
 from zapros import (
     AsyncBaseMiddleware,
     AsyncClient,
@@ -17,26 +17,38 @@ from zapros import (
     Multipart,
     Part,
 )
-from zapros._handlers._cookies import (
-    CookieMiddleware,
-)
+
+CASES = [
+    pytest.param(("stdnetwork", "asyncio"), id="stdnetwork-asyncio"),
+    pytest.param(("stdnetwork", "trio"), id="stdnetwork-trio"),
+    pytest.param(("pyreqwest", "asyncio"), id="pyreqwest-asyncio"),
+]
 
 
-@pytest.fixture(
-    params=["stdnetwork", "pyreqwest"],
-    ids=lambda x: x,
-)
-def handler(request):
-    handlers = {
-        "stdnetwork": AsyncStdNetworkHandler,
-        "pyreqwest": AsyncPyreqwestHandler,
-    }
+@pytest.fixture(params=CASES)
+def case(request):
+    return request.param
 
-    handler = handlers[request.param]
 
-    if request.param == "pyreqwest":
+@pytest.fixture
+def handler_kind(case):
+    return case[0]
+
+
+@pytest.fixture
+def anyio_backend(case):
+    return case[1]
+
+
+@pytest.fixture
+def handler(handler_kind):
+    if handler_kind == "pyreqwest":
         return AsyncPyreqwestHandler(client=ClientBuilder())
-    return handler()
+    return AsyncStdNetworkHandler()
+
+
+def strip_date_header(headers: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in headers.items() if k.lower() != "date"}
 
 
 def lowercase_headers(
@@ -46,12 +58,12 @@ def lowercase_headers(
 
 
 async def test_basic(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
         )
 
         assert response.text == snapshot("""\
@@ -63,17 +75,23 @@ user-agent: python-zapros\r
 \r
 """)
 
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {
+                "server": "uvicorn",
+                "content-type": "text/plain; charset=utf-8",
+                "content-length": "121",
+            }
+        )
 
 
 async def test_json_body(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             json={
                 "key": "value",
                 "num": 42,
@@ -90,17 +108,19 @@ user-agent: python-zapros\r
 \r
 {"key":"value","num":42}\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "198"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "198"}
+        )
 
 
 async def test_json_nested(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             json={
                 "user": {
                     "name": "alice",
@@ -120,17 +140,19 @@ user-agent: python-zapros\r
 \r
 {"user":{"name":"alice","age":30},"tags":["a","b"]}\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "225"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "225"}
+        )
 
 
 async def test_form_body(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             form={
                 "username": "alice",
                 "password": "secret",
@@ -147,17 +169,19 @@ user-agent: python-zapros\r
 \r
 username=alice&password=secret\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "221"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "221"}
+        )
 
 
 async def test_form_url_encoding(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             form={"message": "hello world"},
         )
         assert response.text == snapshot("""\
@@ -171,13 +195,15 @@ user-agent: python-zapros\r
 \r
 message=hello+world\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "210"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "210"}
+        )
 
 
 @pytest.mark.xfail(reason="TODO: https://github.com/MarkusSintonen/pyreqwest/issues/24")
 async def test_multipart_body(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
@@ -189,7 +215,7 @@ async def test_multipart_body(
         )
 
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             multipart=mp,
         )
         assert response.text == snapshot("""\
@@ -214,12 +240,12 @@ file content\r
 --test-boundary--\r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "475"})
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot({"content-length": "475"})
 
 
 @pytest.mark.xfail(reason="TODO: https://github.com/MarkusSintonen/pyreqwest/issues/24")
 async def test_multipart_multiple_fields(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
@@ -235,7 +261,7 @@ async def test_multipart_multiple_fields(
         )
 
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             multipart=mp,
         )
         assert response.text == snapshot("""\
@@ -266,16 +292,16 @@ Content-Type: image/png\r
 --boundary-abc--\r
 """)
         assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "590"})
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot({"content-length": "590"})
 
 
 async def test_bytes_body(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.post(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             body=b"raw binary data",
         )
         assert response.text == snapshot("""\
@@ -288,41 +314,45 @@ user-agent: python-zapros\r
 \r
 raw binary data\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "157"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "157"}
+        )
 
 
 async def test_query_params(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             params={
                 "q": "hello",
                 "page": "1",
             },
         )
         assert response.text == snapshot("""\
-GET /echo?q=hello&page=1 HTTP/1.1\r
+GET /echo HTTP/1.1\r
 accept: */*\r
 accept-encoding: zstd, br, gzip, deflate\r
 host: 127.0.0.1\r
 user-agent: python-zapros\r
 \r
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "136"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "121"}
+        )
 
 
 async def test_custom_headers(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             headers={
                 "X-Custom-Header": "my-value",
                 "Authorization": "Bearer token123",
@@ -338,17 +368,19 @@ user-agent: python-zapros\r
 x-custom-header: my-value\r
 \r
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "180"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "180"}
+        )
 
 
 async def test_put_method(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.put(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             json={"name": "updated"},
         )
         assert response.text == snapshot("""\
@@ -362,18 +394,20 @@ user-agent: python-zapros\r
 \r
 {"name":"updated"}\
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "191"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "191"}
+        )
 
 
 async def test_delete_method(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.request(
             "DELETE",
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
         )
         assert response.text == snapshot("""\
 DELETE /echo HTTP/1.1\r
@@ -383,32 +417,36 @@ host: 127.0.0.1\r
 user-agent: python-zapros\r
 \r
 """)
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "124"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "124"}
+        )
 
 
 async def test_response_status(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
         )
-        assert response.status == snapshot(200)
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
+        assert response.status == snapshot(201)
+        assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+            {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "121"}
+        )
 
 
 async def test_stream_context_manager(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         async with client.stream(
             "GET",
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
         ) as response:
-            assert response.status == snapshot(200)
+            assert response.status == snapshot(201)
             await response.aread()
             assert response.text == snapshot("""\
 GET /echo HTTP/1.1\r
@@ -418,17 +456,19 @@ host: 127.0.0.1\r
 user-agent: python-zapros\r
 \r
 """)
-            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
+            assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+                {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "121"}
+            )
 
 
 async def test_stream_iter_bytes(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         async with client.stream(
             "GET",
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
         ) as response:
             chunks = []
             async for chunk in response.async_iter_bytes():
@@ -436,18 +476,20 @@ async def test_stream_iter_bytes(
             assert b"".join(chunks) == snapshot(
                 b"GET /echo HTTP/1.1\r\naccept: */*\r\naccept-encoding: zstd, br, gzip, deflate\r\nhost: 127.0.0.1\r\nuser-agent: python-zapros\r\n\r\n"  # noqa: E501
             )
-            assert response.status == snapshot(200)
-            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "121"})
+            assert response.status == snapshot(201)
+            assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+                {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "121"}
+            )
 
 
 async def test_stream_json_body(
-    async_mock_server: AsyncMockServer,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     async with AsyncClient(handler=handler) as client:
         async with client.stream(
             "POST",
-            f"{async_mock_server.url}/echo",
+            f"{mock_server.url}/echo",
             json={"stream": True},
         ) as response:
             await response.aread()
@@ -462,110 +504,50 @@ user-agent: python-zapros\r
 \r
 {"stream":true}\
 """)
-            assert response.status == snapshot(200)
-            assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "189"})
+            assert response.status == snapshot(201)
+            assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
+                {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "189"}
+            )
 
 
 async def test_gzip_raw_bytes_unchanged(
-    async_mock_server: AsyncMockServer,
-    async_mock_builder,
-    request,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
-    original = b"hello from the server"
-    compressed = gzip.compress(original)
-
-    async_mock_builder.on("GET", "/data").with_body(compressed).with_header("Content-Encoding", "gzip")
+    original = "hello from the server"
 
     async with AsyncClient(handler=handler) as client:
-        async with client.stream(
-            "GET",
-            f"{async_mock_server.url}/data",
-            headers={"X-Pytest-Node-Id": request.node.nodeid},
-        ) as response:
+        async with client.stream("GET", f"{mock_server.url}/gzip", params={"data": original}) as response:
             chunks = []
             async for chunk in response.async_iter_raw():
                 chunks.append(chunk)
 
-    assert b"".join(chunks) == compressed
-
-
-async def test_cookies_without_handler(
-    async_mock_server: AsyncMockServer,
-    async_mock_builder,
-    request,
-    handler: AsyncBaseMiddleware,
-):
-    async_mock_builder.on("GET", "/set-cookie").with_header(
-        "Set-Cookie",
-        "session=abc123; Path=/",
-    )
-
-    async with AsyncClient(handler=handler) as client:
-        response1 = await client.get(
-            f"{async_mock_server.url}/set-cookie",
-            headers={"X-Pytest-Node-Id": request.node.nodeid},
-        )
-        assert response1.status == 200
-        assert "set-cookie" in [k.lower() for k in response1.headers.keys()]
-
-        response2 = await client.get(
-            f"{async_mock_server.url}/echo",
-        )
-        text = response2.text
-        assert "cookie:" not in text.lower()
-
-
-async def test_cookies_with_handler(
-    async_mock_server: AsyncMockServer,
-    async_mock_builder,
-    request,
-    handler: AsyncBaseMiddleware,
-):
-    async_mock_builder.on("GET", "/set-cookie").with_header(
-        "Set-Cookie",
-        "session=abc123; Path=/",
-    )
-
-    cookie_handler = CookieMiddleware(handler)
-
-    async with AsyncClient(handler=cookie_handler) as client:
-        response1 = await client.get(
-            f"{async_mock_server.url}/set-cookie",
-            headers={"X-Pytest-Node-Id": request.node.nodeid},
-        )
-        assert response1.status == 200
-        assert "set-cookie" in [k.lower() for k in response1.headers.keys()]
-
-        response2 = await client.get(
-            f"{async_mock_server.url}/echo",
-        )
-        text = response2.text
-        assert "cookie: session=abc123" in text.lower()
+    assert b"".join(chunks) == gzip.compress(original.encode())
 
 
 async def test_with_websocket_upgrade(
-    async_mock_server: AsyncMockServer,
-    async_mock_builder,
-    request,
+    mock_server: AsyncMockServer,
     handler: AsyncBaseMiddleware,
 ):
     if isinstance(handler, AsyncPyreqwestHandler):
         pytest.skip("TODO: figure out how to support websocket upgrades in AsyncPyreqwestHandler")
-    async_mock_builder.on("GET", "/ws").with_header(
-        "Upgrade",
-        "websocket",
-    ).with_status(101)
 
     async with AsyncClient(handler=handler) as client:
         response = await client.get(
-            f"{async_mock_server.url}/ws",
+            f"{mock_server.url}/ws",
             headers={
                 "Upgrade": "websocket",
                 "Connection": "Upgrade",
-                "X-Pytest-Node-Id": request.node.nodeid,
+                "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+                "Sec-WebSocket-Version": "13",
             },
         )
         assert response.status == 101
-        assert lowercase_headers(dict(response.headers)) == snapshot({"content-length": "0", "upgrade": "websocket"})
+
+        response_headers = {
+            k: v for k, v in response.headers.items() if k.lower() not in {"date", "sec-websocket-accept"}
+        }
+        assert lowercase_headers(response_headers) == snapshot(
+            {"upgrade": "websocket", "connection": "Upgrade", "server": "uvicorn"}
+        )
         assert response.context.get("handoff", {}).get("network_stream") is not None

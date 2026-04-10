@@ -11,7 +11,6 @@ from zapros.matchers import method, path
 from zapros.mock import mock_http
 
 
-@pytest.mark.asyncio
 async def test_verification_on_exit():
     with pytest.raises(
         AssertionError,
@@ -21,7 +20,6 @@ async def test_verification_on_exit():
             Mock().given(path("/api")).respond(Response(status=200)).once().mount(router)
 
 
-@pytest.mark.asyncio
 async def test_no_verification_on_exception():
     try:
         with mock_http() as router:
@@ -31,7 +29,6 @@ async def test_no_verification_on_exception():
         pass
 
 
-@pytest.mark.asyncio
 async def test_multiple_mocks():
     with mock_http() as router:
         Mock().given(path("/users")).respond(Response(status=200, json=[{"id": 1}])).mount(router)
@@ -59,7 +56,6 @@ async def test_multiple_mocks():
             assert response.text == "OK"
 
 
-@pytest.mark.asyncio
 async def test_context_manager_with_headers():
     with mock_http() as router:
         Mock().given(path("/api").header("x-api-key", "secret")).respond(
@@ -79,7 +75,6 @@ async def test_context_manager_with_headers():
             assert response.json == {"authenticated": True}
 
 
-@pytest.mark.asyncio
 async def test_context_manager_with_query():
     with mock_http() as router:
         Mock().given(path("/search").query(q="test", page="1")).respond(
@@ -97,7 +92,6 @@ async def test_context_manager_with_query():
             assert response.json == {"results": []}
 
 
-@pytest.mark.asyncio
 async def test_context_manager_first_match_wins():
     with mock_http() as router:
         Mock().given(path("/api")).respond(Response(status=200, text="First")).mount(router)
@@ -111,7 +105,6 @@ async def test_context_manager_first_match_wins():
             assert response.text == "First"
 
 
-@pytest.mark.asyncio
 async def test_callback_in_context():
     def custom_handler(req: Request):
         from zapros._models import (
@@ -140,7 +133,6 @@ async def test_callback_in_context():
             assert response.status == 404
 
 
-@pytest.mark.asyncio
 async def test_expect_verification():
     with mock_http() as router:
         Mock().given(path("/api")).respond(Response(status=200)).expect(2).mount(router)
@@ -154,7 +146,6 @@ async def test_expect_verification():
             )
 
 
-@pytest.mark.asyncio
 async def test_expect_verification_failure():
     with pytest.raises(
         AssertionError,
@@ -172,13 +163,11 @@ async def test_expect_verification_failure():
                 )
 
 
-@pytest.mark.asyncio
 async def test_never_expectation():
     with mock_http() as router:
         Mock().given(path("/api")).respond(Response(status=200)).never().mount(router)
 
 
-@pytest.mark.asyncio
 async def test_never_expectation_failure():
     with pytest.raises(
         AssertionError,
@@ -193,7 +182,6 @@ async def test_never_expectation_failure():
                 )
 
 
-@pytest.mark.asyncio
 async def test_different_methods():
     with mock_http() as router:
         Mock().given(path("/api").method("GET")).respond(
@@ -244,7 +232,6 @@ async def test_different_methods():
             assert response.status == 204
 
 
-@pytest.mark.asyncio
 async def test_different_hosts():
     with mock_http() as router:
         from zapros.matchers import host

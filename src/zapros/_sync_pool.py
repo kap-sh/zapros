@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import threading
 import time
 from threading import Semaphore
 from collections import deque
 from dataclasses import dataclass
 
 from ._base_pool import IdlePoolConnection, PoolConnection, PoolKey
+from threading import Lock
 
 
 @dataclass
@@ -28,7 +28,7 @@ class ConnPool:
         self._max_idle_per_host = max_idle_per_host
         self._max_age = max_idle_seconds
 
-        self._lock = threading.Lock()
+        self._lock = Lock()
         self._states: dict[PoolKey, _HostState] = {}
         self._closed = False
 

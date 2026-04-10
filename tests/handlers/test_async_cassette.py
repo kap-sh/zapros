@@ -21,7 +21,6 @@ from zapros.mock import (
 )
 
 
-@pytest.mark.asyncio
 async def test_records_interaction_to_file(
     tmp_path: Path,
 ) -> None:
@@ -54,7 +53,6 @@ async def test_records_interaction_to_file(
     assert data[0]["response"]["body"] == "recorded"
 
 
-@pytest.mark.asyncio
 async def test_replays_from_cassette_without_hitting_network(
     tmp_path: Path,
 ) -> None:
@@ -95,7 +93,6 @@ async def test_replays_from_cassette_without_hitting_network(
     assert text == "from cassette"
 
 
-@pytest.mark.asyncio
 async def test_mode_once_records_when_no_cassette(
     tmp_path: Path,
 ) -> None:
@@ -123,7 +120,6 @@ async def test_mode_once_records_when_no_cassette(
     assert data[0]["response"]["body"] == "once-recorded"
 
 
-@pytest.mark.asyncio
 async def test_mode_once_does_not_record_when_cassette_exists(
     tmp_path: Path,
 ) -> None:
@@ -165,7 +161,6 @@ async def test_mode_once_does_not_record_when_cassette_exists(
             )
 
 
-@pytest.mark.asyncio
 async def test_mode_none_raises_for_unmatched_request(
     tmp_path: Path,
 ) -> None:
@@ -185,7 +180,6 @@ async def test_mode_none_raises_for_unmatched_request(
             )
 
 
-@pytest.mark.asyncio
 async def test_mode_none_replays_matched_request(
     tmp_path: Path,
 ) -> None:
@@ -226,7 +220,6 @@ async def test_mode_none_replays_matched_request(
     assert text == "matched"
 
 
-@pytest.mark.asyncio
 async def test_mode_new_episodes_replays_existing_and_records_new(
     tmp_path: Path,
 ) -> None:
@@ -281,7 +274,6 @@ async def test_mode_new_episodes_replays_existing_and_records_new(
     assert len(data) == 2
 
 
-@pytest.mark.asyncio
 async def test_mode_all_always_hits_network(
     tmp_path: Path,
 ) -> None:
@@ -329,7 +321,6 @@ async def test_mode_all_always_hits_network(
     assert len(data) == 2
 
 
-@pytest.mark.asyncio
 async def test_playback_marks_played_back(
     tmp_path: Path,
 ) -> None:
@@ -370,7 +361,6 @@ async def test_playback_marks_played_back(
             )
 
 
-@pytest.mark.asyncio
 async def test_allow_playback_repeats(
     tmp_path: Path,
 ) -> None:
@@ -417,7 +407,6 @@ async def test_allow_playback_repeats(
     assert t2 == "repeat"
 
 
-@pytest.mark.asyncio
 async def test_modifier_transforms_cassette_request_key(
     tmp_path: Path,
 ) -> None:
@@ -456,7 +445,6 @@ async def test_modifier_transforms_cassette_request_key(
     assert data[0]["request"]["uri"] == "http://example.com/api"
 
 
-@pytest.mark.asyncio
 async def test_modifier_transforms_network_response(
     tmp_path: Path,
 ) -> None:
@@ -493,7 +481,6 @@ async def test_modifier_transforms_network_response(
     assert data[0]["response"]["status"] == 999
 
 
-@pytest.mark.asyncio
 async def test_url_query_param_normalization(
     tmp_path: Path,
 ) -> None:
@@ -534,7 +521,6 @@ async def test_url_query_param_normalization(
     assert text == "normalized"
 
 
-@pytest.mark.asyncio
 async def test_json_body_stored_as_object(
     tmp_path: Path,
 ) -> None:
@@ -571,7 +557,6 @@ async def test_json_body_stored_as_object(
     assert isinstance(data[0]["response"]["body"], dict)
 
 
-@pytest.mark.asyncio
 async def test_binary_body_stored_as_base64(
     tmp_path: Path,
 ) -> None:
@@ -615,7 +600,6 @@ async def test_binary_body_stored_as_base64(
     assert isinstance(data[0]["response"]["body"], str)
 
 
-@pytest.mark.asyncio
 async def test_compressed_json_stored_decompressed(
     tmp_path: Path,
 ) -> None:
@@ -666,7 +650,6 @@ async def test_compressed_json_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-@pytest.mark.asyncio
 async def test_compressed_text_stored_decompressed(
     tmp_path: Path,
 ) -> None:
@@ -716,7 +699,6 @@ async def test_compressed_text_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-@pytest.mark.asyncio
 async def test_compressed_binary_stored_decompressed(
     tmp_path: Path,
 ) -> None:
@@ -766,7 +748,6 @@ async def test_compressed_binary_stored_decompressed(
     assert "content-encoding" not in data[0]["response"]["headers"]
 
 
-@pytest.mark.asyncio
 async def test_empty_body_stored_as_null(
     tmp_path: Path,
 ) -> None:

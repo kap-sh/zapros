@@ -17,6 +17,11 @@ from zapros._handlers._asgi import (
 )
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 @get("/")
 async def get_root() -> str:
     return "Hello, World!"

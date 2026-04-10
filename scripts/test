@@ -3,4 +3,4 @@
 set -e
 
 echo "==> Running tests"
-uv run pytest tests "$@"
+uv run --all-extras pytest tests "$@"

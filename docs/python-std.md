@@ -185,3 +185,15 @@ with Client(
 
 :::
 
+## Trio Support
+
+If you use `AsyncStdNetworkHandler` in a Trio event loop, it will automatically default to using `TrioTransport` instead of `AsyncIOTransport`. You can also explicitly specify `TrioTransport`:
+
+```python
+from zapros import AsyncClient, AsyncStdNetworkHandler, TrioTransport
+
+async with AsyncClient(
+    handler=AsyncStdNetworkHandler(transport=TrioTransport())
+) as client:
+    ...
+```

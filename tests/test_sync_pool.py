@@ -1,8 +1,7 @@
-from time import sleep
-
 import pytest
 
 from zapros._sync_pool import ConnPool
+from time import sleep
 
 
 class MockConnection:
@@ -42,12 +41,10 @@ def get_state(pool: ConnPool, key):
         return pool._states.get(key)
 
 
-
 def test_acquire_with_no_idle_returns_none(pool):
     key = ("http", "example.com", 80)
     conn = pool.acquire(key)
     assert conn is None
-
 
 
 def test_release_and_reacquire_connection(pool):
@@ -61,7 +58,6 @@ def test_release_and_reacquire_connection(pool):
     assert conn.close_count == 0
 
 
-
 def test_release_without_reuse_closes_connection(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockConnection(conn_id=1)
@@ -71,7 +67,6 @@ def test_release_without_reuse_closes_connection(pool):
     conn = pool.acquire(key)
     assert conn is None
     assert mock_conn.is_closed
-
 
 
 def test_expired_connection_not_reused(pool):
@@ -87,7 +82,6 @@ def test_expired_connection_not_reused(pool):
     assert mock_conn.is_closed
 
 
-
 def test_non_reusable_connection_discarded(pool):
     key = ("http", "example.com", 80)
     mock_conn = MockConnection(conn_id=1, reusable=False)
@@ -97,7 +91,6 @@ def test_non_reusable_connection_discarded(pool):
     conn = pool.acquire(key)
     assert conn is None
     assert mock_conn.is_closed
-
 
 
 def test_stale_connections_closed_before_returning_reusable(pool):
@@ -115,7 +108,6 @@ def test_stale_connections_closed_before_returning_reusable(pool):
     assert acquired is reusable_conn
     assert stale_conn.is_closed
     assert stale_conn.close_count == 1
-
 
 
 def test_max_idle_connections_enforced(pool):
@@ -137,7 +129,7 @@ def test_max_idle_connections_enforced(pool):
     assert closed_count == 5
 
 
-# 
+#
 # def test_acquire_semaphore_limits_concurrent_connections():
 #     pool = ConnPool(max_connections_per_host=2)
 #     key = ("http", "example.com", 80)
@@ -169,7 +161,6 @@ def test_max_idle_connections_enforced(pool):
 #     acquire_task.cancel()
 
 
-
 def test_semaphore_per_key():
     pool = ConnPool(max_connections_per_host=2)
     key1 = ("http", "example.com", 80)
@@ -180,7 +171,6 @@ def test_semaphore_per_key():
 
     conn = pool.acquire(key2)
     assert conn is None
-
 
 
 def test_close_all_closes_idle_connections(pool):
@@ -197,14 +187,12 @@ def test_close_all_closes_idle_connections(pool):
     assert len(pool._states) == 0
 
 
-
 def test_acquire_when_closed_raises_error(pool):
     key = ("http", "example.com", 80)
     pool.close_all()
 
     with pytest.raises(RuntimeError, match="Pool is closed"):
         pool.acquire(key)
-
 
 
 def test_release_when_closed_discards_connection(pool):
@@ -217,12 +205,10 @@ def test_release_when_closed_discards_connection(pool):
     assert mock_conn.is_closed
 
 
-
 def test_close_all_idempotent(pool):
     pool.close_all()
     pool.close_all()
     assert pool._closed
-
 
 
 def test_connection_close_failure_handled_gracefully(pool):
@@ -231,7 +217,6 @@ def test_connection_close_failure_handled_gracefully(pool):
 
     pool.release(key, failing_conn, reuse=False)
     assert failing_conn.close_count == 1
-
 
 
 def test_multiple_keys_isolated(pool):
@@ -256,7 +241,6 @@ def test_multiple_keys_isolated(pool):
     assert acquired3 is conn3
 
 
-
 def test_lifo_order_for_idle_connections(pool):
     key = ("http", "example.com", 80)
     connections = [MockConnection(conn_id=i) for i in range(3)]
@@ -273,7 +257,7 @@ def test_lifo_order_for_idle_connections(pool):
     assert acquired_connections == list(reversed(connections))
 
 
-# 
+#
 # def test_concurrent_acquire_release_stress():
 #     pool = ConnPool(max_connections_per_host=20, max_idle_per_host=10)
 #     key = ("http", "example.com", 80)
@@ -295,7 +279,6 @@ def test_lifo_order_for_idle_connections(pool):
 #     pool.close_all()
 
 
-
 def test_connection_expiry_during_mixed_operations():
     pool = ConnPool(max_connections_per_host=5, max_idle_seconds=0.1)
     key = ("http", "example.com", 80)
@@ -314,7 +297,6 @@ def test_connection_expiry_during_mixed_operations():
     second_acquired = pool.acquire(key)
     assert second_acquired is None
     assert old_conn.is_closed
-
 
 
 def test_partial_reusable_connections():
@@ -340,7 +322,6 @@ def test_partial_reusable_connections():
     assert connections[0].is_closed
 
 
-
 def test_semaphore_release_on_acquire_failure(pool):
     key = ("http", "example.com", 80)
 
@@ -357,7 +338,7 @@ def test_semaphore_release_on_acquire_failure(pool):
     assert len(pool._states) == 0
 
 
-# 
+#
 # def test_many_keys_concurrent_operations():
 #     pool = ConnPool(max_connections_per_host=5)
 #     keys = [("http", f"host{i}.com", 80) for i in range(20)]
@@ -379,7 +360,6 @@ def test_semaphore_release_on_acquire_failure(pool):
 #     pool.close_all()
 
 
-
 def test_rapid_acquire_release_same_connection():
     pool = ConnPool()
     key = ("http", "example.com", 80)
@@ -389,7 +369,6 @@ def test_rapid_acquire_release_same_connection():
         pool.release(key, conn, reuse=True)
         acquired = pool.acquire(key)
         assert acquired is conn
-
 
 
 def test_empty_idle_queue_after_stale_connections(pool):
@@ -408,7 +387,6 @@ def test_empty_idle_queue_after_stale_connections(pool):
     assert key not in pool._states
 
 
-
 def test_release_reservation_for_nonexistent_key():
     pool = ConnPool()
     key = ("http", "example.com", 80)
@@ -416,7 +394,6 @@ def test_release_reservation_for_nonexistent_key():
     pool.release_reservation(key)
 
     assert key not in pool._states
-
 
 
 def test_close_all_clears_semaphores(pool):
@@ -430,7 +407,6 @@ def test_close_all_clears_semaphores(pool):
     pool.close_all()
 
     assert len(pool._states) == 0
-
 
 
 def test_semaphore_entry_removed_after_reservation_released():
@@ -447,7 +423,7 @@ def test_semaphore_entry_removed_after_reservation_released():
     assert key not in pool._states
 
 
-# 
+#
 # def test_high_load_no_deadlock():
 #     pool = ConnPool(max_connections_per_host=10, max_idle_per_host=5)
 #     key = ("http", "example.com", 80)
@@ -471,7 +447,6 @@ def test_semaphore_entry_removed_after_reservation_released():
 
 #     assert len(results) == 600
 #     pool.close_all()
-
 
 
 def test_acquire_all_connections_then_release():

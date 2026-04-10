@@ -1,10 +1,8 @@
-import pytest
 from pywhatwgurl import URL
 
 from zapros import Request, Response
 from zapros._handlers._mock import Mock as ZaprosMock, MockMiddleware, MockRouter
 from zapros._handlers._proxy import ProxyMiddleware
-
 
 
 def test_http_proxy_lowercase(monkeypatch):
@@ -23,7 +21,6 @@ def test_http_proxy_lowercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-
 def test_http_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTP_PROXY", "http://proxy.local:8080")
 
@@ -38,7 +35,6 @@ def test_http_proxy_uppercase(monkeypatch):
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
-
 
 
 def test_https_proxy_lowercase(monkeypatch):
@@ -57,7 +53,6 @@ def test_https_proxy_lowercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-
 def test_https_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.local:8080")
 
@@ -72,7 +67,6 @@ def test_https_proxy_uppercase(monkeypatch):
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
-
 
 
 def test_all_proxy_uppercase(monkeypatch):
@@ -91,7 +85,6 @@ def test_all_proxy_uppercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-
 def test_all_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("all_proxy", "http://proxy.local:8080")
 
@@ -106,7 +99,6 @@ def test_all_proxy_lowercase(monkeypatch):
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
-
 
 
 def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
@@ -124,7 +116,6 @@ def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://http-proxy.local:8080/"
-
 
 
 def test_no_proxy_env(monkeypatch):
@@ -145,7 +136,6 @@ def test_no_proxy_env(monkeypatch):
     assert proxy_url == {}
 
 
-
 def test_no_proxy_exact_match(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "example.com")
@@ -160,7 +150,6 @@ def test_no_proxy_exact_match(monkeypatch):
     assert response.status == 200
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
-
 
 
 def test_no_proxy_lowercase(monkeypatch):
@@ -179,7 +168,6 @@ def test_no_proxy_lowercase(monkeypatch):
     assert proxy_url is None
 
 
-
 def test_no_proxy_wildcard(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "*")
@@ -194,7 +182,6 @@ def test_no_proxy_wildcard(monkeypatch):
     assert response.status == 200
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
-
 
 
 def test_no_proxy_subdomain_match(monkeypatch):
@@ -213,7 +200,6 @@ def test_no_proxy_subdomain_match(monkeypatch):
     assert proxy_url is None
 
 
-
 def test_no_proxy_multiple_entries(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1,example.com")
@@ -228,7 +214,6 @@ def test_no_proxy_multiple_entries(monkeypatch):
     assert response.status == 200
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
-
 
 
 def test_no_proxy_no_match(monkeypatch):
@@ -246,7 +231,6 @@ def test_no_proxy_no_match(monkeypatch):
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
-
 
 
 def test_proxy_already_set_in_context(monkeypatch):

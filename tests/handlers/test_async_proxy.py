@@ -1,4 +1,3 @@
-import pytest
 from pywhatwgurl import URL
 
 from zapros import Request, Response
@@ -6,7 +5,6 @@ from zapros._handlers._mock import Mock as ZaprosMock, MockMiddleware, MockRoute
 from zapros._handlers._proxy import ProxyMiddleware
 
 
-@pytest.mark.asyncio
 async def test_http_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
 
@@ -23,7 +21,6 @@ async def test_http_proxy_lowercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_http_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTP_PROXY", "http://proxy.local:8080")
 
@@ -40,7 +37,6 @@ async def test_http_proxy_uppercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_https_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("https_proxy", "http://proxy.local:8080")
 
@@ -57,7 +53,6 @@ async def test_https_proxy_lowercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_https_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.local:8080")
 
@@ -74,7 +69,6 @@ async def test_https_proxy_uppercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_all_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("ALL_PROXY", "http://proxy.local:8080")
 
@@ -91,7 +85,6 @@ async def test_all_proxy_uppercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_all_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("all_proxy", "http://proxy.local:8080")
 
@@ -108,7 +101,6 @@ async def test_all_proxy_lowercase(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
     monkeypatch.setenv("ALL_PROXY", "http://all-proxy.local:8080")
     monkeypatch.setenv("http_proxy", "http://http-proxy.local:8080")
@@ -126,7 +118,6 @@ async def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
     assert str(proxy_url) == "http://http-proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_env(monkeypatch):
     monkeypatch.delenv("http_proxy", raising=False)
     monkeypatch.delenv("HTTP_PROXY", raising=False)
@@ -145,7 +136,6 @@ async def test_no_proxy_env(monkeypatch):
     assert proxy_url == {}
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_exact_match(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "example.com")
@@ -162,7 +152,6 @@ async def test_no_proxy_exact_match(monkeypatch):
     assert proxy_url is None
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("no_proxy", "example.com")
@@ -179,7 +168,6 @@ async def test_no_proxy_lowercase(monkeypatch):
     assert proxy_url is None
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_wildcard(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "*")
@@ -196,7 +184,6 @@ async def test_no_proxy_wildcard(monkeypatch):
     assert proxy_url is None
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_subdomain_match(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", ".example.com")
@@ -213,7 +200,6 @@ async def test_no_proxy_subdomain_match(monkeypatch):
     assert proxy_url is None
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_multiple_entries(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1,example.com")
@@ -230,7 +216,6 @@ async def test_no_proxy_multiple_entries(monkeypatch):
     assert proxy_url is None
 
 
-@pytest.mark.asyncio
 async def test_no_proxy_no_match(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
     monkeypatch.setenv("NO_PROXY", "other.com,another.com")
@@ -248,7 +233,6 @@ async def test_no_proxy_no_match(monkeypatch):
     assert str(proxy_url) == "http://proxy.local:8080/"
 
 
-@pytest.mark.asyncio
 async def test_proxy_already_set_in_context(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
 

@@ -20,7 +20,6 @@ from zapros._handlers._mock import (
 from zapros._models import Response
 
 
-@pytest.mark.asyncio
 async def test_cache_miss_then_hit():
     router = MockRouter()
     ZaprosMock().respond(
@@ -52,7 +51,6 @@ async def test_cache_miss_then_hit():
         router.verify()
 
 
-@pytest.mark.asyncio
 async def test_cache_context_fields():
     router = MockRouter()
     ZaprosMock().respond(
@@ -88,7 +86,6 @@ async def test_cache_context_fields():
         assert "created_at" in caching2
 
 
-@pytest.mark.asyncio
 async def test_cache_respects_no_cache_directive():
     router = MockRouter()
     ZaprosMock().respond(
@@ -117,7 +114,6 @@ async def test_cache_respects_no_cache_directive():
 
 
 @pytest.mark.xfail(reason="investigate hishel's ttl handling")
-@pytest.mark.asyncio
 async def test_cache_ttl_in_context():
     router = MockRouter()
     ZaprosMock().respond(
@@ -166,7 +162,6 @@ async def test_cache_ttl_in_context():
         assert caching2.get("from_cache") is False
 
 
-@pytest.mark.asyncio
 async def test_cache_body_key():
     router = MockRouter()
     ZaprosMock().respond(
@@ -198,7 +193,6 @@ async def test_cache_body_key():
         router.verify()
 
 
-@pytest.mark.asyncio
 async def test_specification_policy():
     router = MockRouter()
     ZaprosMock().respond(
@@ -235,7 +229,6 @@ async def test_specification_policy():
         router.verify()
 
 
-@pytest.mark.asyncio
 async def test_filter_policy():
     router = MockRouter()
     ZaprosMock().respond(Response(status=200, headers={})).expect(1).mount(router)
@@ -267,7 +260,6 @@ async def test_filter_policy():
         router.verify()
 
 
-@pytest.mark.asyncio
 async def test_different_urls_not_cached_together():
     router = MockRouter()
     ZaprosMock().respond(
@@ -295,7 +287,6 @@ async def test_different_urls_not_cached_together():
         router.verify()
 
 
-@pytest.mark.asyncio
 async def test_cache_post_request_with_body_key():
     router = MockRouter()
     ZaprosMock().respond(

@@ -1,7 +1,5 @@
 import base64
 
-import pytest
-
 from zapros import AsyncClient
 from zapros._handlers._mock import (
     Mock,
@@ -12,7 +10,6 @@ from zapros._models import Response
 from zapros.matchers import path
 
 
-@pytest.mark.asyncio
 async def test_bearer_token_async():
     router = MockRouter()
     Mock.given(
@@ -32,7 +29,6 @@ async def test_bearer_token_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_basic_auth_async():
     router = MockRouter()
     username = "user"
@@ -57,7 +53,6 @@ async def test_basic_auth_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_no_auth_async():
     router = MockRouter()
     Mock.given(path("/api")).respond(Response(status=200)).mount(router)
@@ -69,7 +64,6 @@ async def test_no_auth_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_bearer_with_default_headers_async():
     router = MockRouter()
     Mock.given(
@@ -92,7 +86,6 @@ async def test_bearer_with_default_headers_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_with_handler_preserves_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -115,7 +108,6 @@ async def test_with_handler_preserves_bearer_async():
     await client.aclose()
 
 
-@pytest.mark.asyncio
 async def test_with_handler_preserves_basic_auth_async():
     router = MockRouter()
     username = "user"
@@ -143,7 +135,6 @@ async def test_with_handler_preserves_basic_auth_async():
     await client.aclose()
 
 
-@pytest.mark.asyncio
 async def test_per_request_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -161,7 +152,6 @@ async def test_per_request_bearer_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_per_request_basic_auth_async():
     router = MockRouter()
     username = "req_user"
@@ -184,7 +174,6 @@ async def test_per_request_basic_auth_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_per_request_overrides_client_bearer_async():
     router = MockRouter()
     Mock.given(
@@ -205,7 +194,6 @@ async def test_per_request_overrides_client_bearer_async():
         assert response.status == 200
 
 
-@pytest.mark.asyncio
 async def test_per_request_overrides_client_basic_auth_async():
     router = MockRouter()
     username = "req_user"
