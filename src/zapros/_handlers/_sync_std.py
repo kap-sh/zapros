@@ -5,7 +5,7 @@ import ssl
 import time
 import warnings
 from collections.abc import (
-    Iterator as ABCIterator,
+    Iterator,
 )
 from typing import TYPE_CHECKING, cast
 
@@ -40,7 +40,7 @@ from .._models import (
     ResponseHandoffContext,
 )
 from ._sync_base import BaseHandler
-from ._exc_map import map_read_exceptions, map_write_exceptions
+from ._exc_map import map_socket_read_exceptions, map_write_exceptions
 
 
 def _encode_target(path: str, query: str) -> bytes:
@@ -257,7 +257,7 @@ class StdStream(ClosableStream):
         return self
 
     def _read(self, n: int) -> bytes:
-        with map_read_exceptions():
+        with map_socket_read_exceptions():
             return self._conn.stream.read(n, timeout=self._read_timeout)
 
     def _drain_no_body_end_of_message(self) -> None:
@@ -469,16 +469,6 @@ class StdNetworkHandler(BaseHandler):
         return conn
 
     @staticmethod
-    def _prepare_body(
-        request: Request,
-    ) -> bytes | ABCIterator[bytes] | None:
-        if request.body is None:
-            return None
-        if isinstance(request.body, (bytes, ABCIterator)):
-            return request.body
-        raise NotImplementedError("Async request bodies are not supported by StdNetworkHandler")
-
-    @staticmethod
     def _response_has_no_body(
         method: str,
         status: int,
@@ -510,7 +500,7 @@ class StdNetworkHandler(BaseHandler):
         *,
         read_timeout: float | None = None,
     ) -> bytes:
-        with map_read_exceptions():
+        with map_socket_read_exceptions():
             return conn.stream.read(n, timeout=read_timeout)
 
     def _send_request_headers(
@@ -542,7 +532,7 @@ class StdNetworkHandler(BaseHandler):
     def _send_request_body(
         self,
         conn: Conn,
-        body: bytes | ABCIterator[bytes] | None,
+        body: bytes | Iterator[bytes] | None,
         *,
         write_timeout: float | None = None,
     ) -> None:
@@ -553,7 +543,7 @@ class StdNetworkHandler(BaseHandler):
                     conn.h11.send(h11.Data(data=body)),
                     write_timeout=write_timeout,
                 )
-        elif isinstance(body, ABCIterator):
+        elif isinstance(body, Iterator):
             for chunk in body:
                 if chunk:
                     self._write_all(
@@ -561,6 +551,8 @@ class StdNetworkHandler(BaseHandler):
                         conn.h11.send(h11.Data(data=chunk)),
                         write_timeout=write_timeout,
                     )
+        else:
+            raise TypeError(f"Unsupported body type: {body.__class__.__name__}")
 
         self._write_all(
             conn,
@@ -693,7 +685,6 @@ class StdNetworkHandler(BaseHandler):
             target = str(request.url).encode("ascii")
         else:
             target = _encode_target(request.url.pathname, request.url.search[1:])
-        body = self._prepare_body(request)
         headers = list(request.headers.list())
 
         proxy_context = request.context.get("network", {}).get("proxy")
@@ -743,9 +734,12 @@ class StdNetworkHandler(BaseHandler):
                     write_timeout=phase_timeout(write_timeout),
                 )
 
+            if not isinstance(request.body, (bytes, Iterator)) and request.body is not None:
+                raise TypeError(f"Unsupported body type: {request.body.__class__.__name__}")
+
             self._send_request_body(
                 conn,
-                body,
+                request.body,
                 write_timeout=phase_timeout(write_timeout),
             )
 

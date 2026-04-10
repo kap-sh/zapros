@@ -101,3 +101,15 @@ class StatusCodeError(ZaprosError):
         if message is None:
             message = f"Error status code: {response.status}"
         super().__init__(message)
+
+
+class ReadError(ZaprosError):
+    """Raised when an error occurs while reading response data."""
+
+    pass
+
+
+class WriteError(ZaprosError):
+    """Raised when an error occurs while writing request data."""
+
+    pass

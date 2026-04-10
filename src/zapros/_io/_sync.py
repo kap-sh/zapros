@@ -3,7 +3,11 @@ import ssl
 from typing import Any, Callable, TypeVar
 
 from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
-from zapros._handlers._exc_map import map_connect_exceptions, map_read_exceptions, map_write_exceptions
+from zapros._handlers._exc_map import (
+    map_socket_connect_exceptions,
+    map_socket_read_exceptions,
+    map_socket_write_exceptions,
+)
 from zapros._io._base import BaseNetworkStream, BaseTransport
 
 T = TypeVar("T")
@@ -35,13 +39,13 @@ class SyncStream(BaseNetworkStream):
         assert self._tls_state is not None
         pending = self._tls_state.outgoing_bio.read(DEFAULT_READ_SIZE)
         if pending:
-            with map_write_exceptions():
+            with map_socket_write_exceptions():
                 self._tls_state.sock.settimeout(timeout)
                 self._tls_state.sock.sendall(pending)
 
     def _pump_incoming(self, timeout: float | None = None) -> None:
         assert self._tls_state is not None
-        with map_read_exceptions():
+        with map_socket_read_exceptions():
             self._tls_state.sock.settimeout(timeout)
             data = self._tls_state.sock.recv(DEFAULT_READ_SIZE)
             if data:
@@ -68,7 +72,7 @@ class SyncStream(BaseNetworkStream):
         if self._tls_state is not None:
             return self._call_sslobject_method(self._tls_state.ssl_object.read, max_bytes)
 
-        with map_read_exceptions():
+        with map_socket_read_exceptions():
             self.sock.settimeout(timeout)
             return self.sock.recv(max_bytes)
 
@@ -77,7 +81,7 @@ class SyncStream(BaseNetworkStream):
             self._call_sslobject_method(self._tls_state.ssl_object.write, data)
             return len(data)
 
-        with map_write_exceptions():
+        with map_socket_write_exceptions():
             self.sock.settimeout(timeout)
             self.sock.sendall(data)
             return len(data)
@@ -130,7 +134,7 @@ class SyncTransport(BaseTransport):
         *,
         timeout: float | None = None,
     ) -> BaseNetworkStream:
-        with map_connect_exceptions():
+        with map_socket_connect_exceptions():
             sock = socket.create_connection((host, port), timeout=timeout)
 
         try:

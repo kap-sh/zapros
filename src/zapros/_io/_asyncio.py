@@ -6,7 +6,12 @@ from typing import Any, Callable, TypeVar
 
 from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
 
-from .._handlers._exc_map import map_connect_exceptions, map_read_exceptions, map_write_exceptions
+from .._handlers._exc_map import (
+    map_asyncio_connect_exceptions,
+    map_asyncio_read_exceptions,
+    map_asyncio_write_exceptions,
+    map_socket_read_exceptions,
+)
 from ._base import AsyncBaseNetworkStream, AsyncBaseTransport
 
 T = TypeVar("T")
@@ -49,7 +54,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         assert self._tls_state is not None
         pending = self._tls_state.outgoing_bio.read(DEFAULT_READ_SIZE)
         if pending:
-            with map_write_exceptions():
+            with map_asyncio_write_exceptions():
                 self._tls_state.writer.write(pending)
                 if timeout is None:
                     await self._tls_state.writer.drain()
@@ -58,7 +63,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
 
     async def _pump_incoming(self, timeout: float | None = None) -> None:
         assert self._tls_state is not None
-        with map_read_exceptions():
+        with map_socket_read_exceptions():
             if timeout is None:
                 data = await self._tls_state.reader.read(DEFAULT_READ_SIZE)
             else:
@@ -88,7 +93,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         if self._tls_state is not None:
             return await self._call_sslobject_method(self._tls_state.ssl_object.read, max_bytes)
 
-        with map_read_exceptions():
+        with map_asyncio_read_exceptions():
             if timeout is None:
                 return await self._reader.read(max_bytes)
             return await asyncio.wait_for(self._reader.read(max_bytes), timeout)
@@ -98,7 +103,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
             await self._call_sslobject_method(self._tls_state.ssl_object.write, data)
             return len(data)
 
-        with map_write_exceptions():
+        with map_asyncio_write_exceptions():
             self._writer.write(data)
             if timeout is None:
                 await self._writer.drain()
@@ -150,7 +155,7 @@ class AsyncIOTransport(AsyncBaseTransport):
         *,
         timeout: float | None = None,
     ) -> AsyncBaseNetworkStream:
-        with map_connect_exceptions():
+        with map_asyncio_connect_exceptions():
             if timeout is None:
                 reader, writer = await asyncio.open_connection(
                     host,
