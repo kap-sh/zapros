@@ -1,8 +1,5 @@
 {
   "release-type": "python",
-  "packages": {
-    ".": {}
-  },
   "include-v-in-tag": true,
   "include-component-in-tag": false,
   "prerelease": true,
