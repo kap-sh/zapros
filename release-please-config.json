@@ -1,7 +1,4 @@
 {
-  "packages": {
-    ".": {}
-  },
   "release-type": "python",
   "package-name": "zapros",
   "changelog-path": "CHANGELOG.md",
