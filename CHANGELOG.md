@@ -1,5 +1,90 @@
 # Changelog
 
+## [0.3.0](https://github.com/kap-sh/zapros/compare/v0.5.1...v0.3.0) (2026-04-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* deprecate `atext` and `ajson` helpers
+* **types:** improve handler type annotations and deprecate misnamed middlewares
+
+### Features
+
+* add `ProxyMiddleware` ([495053e](https://github.com/kap-sh/zapros/commit/495053ee43e3c3009cc861f36e8ec4a0c0c074e3))
+* add support for socks proxy ([550a483](https://github.com/kap-sh/zapros/commit/550a483c8f2064fb7a4a2909f23bcf0b055acdf0))
+* add support for trio ([e4c2469](https://github.com/kap-sh/zapros/commit/e4c24692f0c2dcf4aa8ec64b440cc46cecb6f42d))
+* add URLSearchParams to public API ([739c2ac](https://github.com/kap-sh/zapros/commit/739c2ac4f1754becb33140cd6a58fb366e9317b4))
+* add ZaprosError ([e7ecaea](https://github.com/kap-sh/zapros/commit/e7ecaeaa8d19be2527ea1cc513e942f42ff686af))
+* **api:** add DNSResolutionError ([e88f282](https://github.com/kap-sh/zapros/commit/e88f2824a0d61f26a8410004a7bbd1c2bed2286a))
+* **api:** add SSLError ([6763281](https://github.com/kap-sh/zapros/commit/6763281b1b40227e671435bc2a8008e3facf527c))
+* **api:** add support for Response.raise_for_status ([a4f6784](https://github.com/kap-sh/zapros/commit/a4f678447f645481352da0a7b97c90cb5ace730e))
+* better exceptions mapping ([79ecc9c](https://github.com/kap-sh/zapros/commit/79ecc9cf0648dfc98c696f63eb9a5b6c1dbfb505))
+* expose `AsyncIOTransport` and `SyncTransport` classes ([0b6ef8a](https://github.com/kap-sh/zapros/commit/0b6ef8aba4bf646694647afd045f9d1d070a25ea))
+* initial release ([35b7dc5](https://github.com/kap-sh/zapros/commit/35b7dc5b931c1dbea788e1076652847543c31acb))
+* **io:** add pluggable network transports ([408ddde](https://github.com/kap-sh/zapros/commit/408dddeb30c509c19403fc49a15209df181319e8))
+* **io:** properly handle TLS-in-TLS upgrades ([408ddde](https://github.com/kap-sh/zapros/commit/408dddeb30c509c19403fc49a15209df181319e8))
+* **perf:** use happy eyeballs by default in async handler ([793f2a2](https://github.com/kap-sh/zapros/commit/793f2a277fc20c0199c1bb612942e5894b0c500c))
+* replace unasync script with ry ([6761cd1](https://github.com/kap-sh/zapros/commit/6761cd175160d95713de1436216fa2ed8e977c6d))
+
+
+### Bug Fixes
+
+* do not buffer the response data in `iter_bytes` ([ef93fd1](https://github.com/kap-sh/zapros/commit/ef93fd19229cf8268cdded23eaa23a4b4018c1a9))
+* do not try to import pyreqwest on python3.10 ([fb968d7](https://github.com/kap-sh/zapros/commit/fb968d71a558938b528f3d8081f5205a3f881bca))
+* ensure Response.aclose/close properly releases stream resources ([4d08138](https://github.com/kap-sh/zapros/commit/4d081383e23ca6de4ddc8d8fbf0fd37eb0f9373b))
+* fix support for python3.10 ([0205dd1](https://github.com/kap-sh/zapros/commit/0205dd1b4d81444e5671a56bed503025a1334d12))
+* **handlers:** handle 101 websocket upgrade responses ([035eb2e](https://github.com/kap-sh/zapros/commit/035eb2eae3e18cef4f00b322448c6801077e41a4))
+* make connection pooling proxy-aware ([3c64504](https://github.com/kap-sh/zapros/commit/3c64504b7369f2cf9e682815f1ae99de20f88034))
+* **pool:** narrow down some broad type catches ([db5cb6c](https://github.com/kap-sh/zapros/commit/db5cb6c02ecb0513747be1afa273b286619f186c))
+* **proxies:** respect credentials in the proxy url ([5852aa6](https://github.com/kap-sh/zapros/commit/5852aa611887158a4284d5c65185e1c73d7e403e))
+* remove body-related arguments from get and head methods ([37fc100](https://github.com/kap-sh/zapros/commit/37fc100c020df6b36cc5334dc11b8ec54ec3a82c))
+* return usable handoff transport for 101 responses ([78a0a1e](https://github.com/kap-sh/zapros/commit/78a0a1e5096995f007a7454528b1ced15ed7aba0))
+* **types:** correct `next_handler` type annotations in handlers ([f174810](https://github.com/kap-sh/zapros/commit/f17481082522d8276d5969d753fd9b631a112f55))
+* **types:** improve handler type annotations and deprecate misnamed middlewares ([2376086](https://github.com/kap-sh/zapros/commit/2376086b4e4c385cbb9f970d8d3853ca189a353a))
+
+
+### Chores
+
+* add py.typed file ([ee7ed8a](https://github.com/kap-sh/zapros/commit/ee7ed8a7e5453f2d898347f46e607d27d0590015))
+* bump ry version, get rid of bunch of ids ([5c166f8](https://github.com/kap-sh/zapros/commit/5c166f8b50bf8261469e7b9cfe253e1401a89837))
+* bump ry version, tidy up tests ([311871f](https://github.com/kap-sh/zapros/commit/311871f3bc5832f27898d0f258dda87dc4190172))
+* do not echo host port in the mock server ([24dae9f](https://github.com/kap-sh/zapros/commit/24dae9f6d9993198383175f5673cbf084652fff4))
+* fix logo link in the README ([2c05bb0](https://github.com/kap-sh/zapros/commit/2c05bb0190eadca0dfae10835b2efabe956246f6))
+* fix release-config path ([dcc39ba](https://github.com/kap-sh/zapros/commit/dcc39ba8580ef613e175552ce8754bfae173133a))
+* fix the spider’s leg count :D ([833e94b](https://github.com/kap-sh/zapros/commit/833e94b94b22cfeaa11a0ddd5f4ce42a36d9bc29))
+* **main:** release 0.2.0 ([#1](https://github.com/kap-sh/zapros/issues/1)) ([e1eedd4](https://github.com/kap-sh/zapros/commit/e1eedd41b8d2c9bdb3014882cb2a6b4d1cc0528a))
+* **main:** release zapros 0.2.1 ([#2](https://github.com/kap-sh/zapros/issues/2)) ([1594757](https://github.com/kap-sh/zapros/commit/15947579ba527981078d2e95c0df6928741732b3))
+* **main:** release zapros 0.2.2 ([#3](https://github.com/kap-sh/zapros/issues/3)) ([26437a6](https://github.com/kap-sh/zapros/commit/26437a6ef07a1e733c5fde7fa360c8ecdd10d34d))
+* **main:** release zapros 0.2.3 ([#4](https://github.com/kap-sh/zapros/issues/4)) ([f5dd41e](https://github.com/kap-sh/zapros/commit/f5dd41ec376b0e871b959991c1a5d57cde1825f0))
+* **main:** release zapros 0.3.0 ([#5](https://github.com/kap-sh/zapros/issues/5)) ([9b4a7c6](https://github.com/kap-sh/zapros/commit/9b4a7c6952639f6ef73fe14cf47a282f7db07ad1))
+* **main:** release zapros 0.4.0 ([#8](https://github.com/kap-sh/zapros/issues/8)) ([4cd293a](https://github.com/kap-sh/zapros/commit/4cd293a37791124052f83f8c845593bb47a74372))
+* **main:** release zapros 0.5.0 ([#12](https://github.com/kap-sh/zapros/issues/12)) ([926ee4b](https://github.com/kap-sh/zapros/commit/926ee4bdced8b2f10ace3125359bc7aa9515cd52))
+* **main:** release zapros 0.5.1 ([#13](https://github.com/kap-sh/zapros/issues/13)) ([ffdde67](https://github.com/kap-sh/zapros/commit/ffdde67b9a2dac5e3df5a932cc53a63ae911ffca))
+* release 0.3.0 ([9eae1b3](https://github.com/kap-sh/zapros/commit/9eae1b372b0e7a42474b1fb6fcec41babd7b2242))
+* remove .python-version ([889df55](https://github.com/kap-sh/zapros/commit/889df5504d483f0666ddea11d9435e6aabe1969d))
+* remove duplicated release-please config ([0105c9c](https://github.com/kap-sh/zapros/commit/0105c9c227365de7d4a36c1ce776548592e7fe7f))
+* update uv.lock ([daff37b](https://github.com/kap-sh/zapros/commit/daff37beea572337b930d793f03e7733b0b5e6fa))
+* update uv.lock ([7982c50](https://github.com/kap-sh/zapros/commit/7982c508b4d3ec46e73549650fd5d09cbe786f16))
+* use always-bump versioning ([1155098](https://github.com/kap-sh/zapros/commit/11550987c9a37d371df702ea9e436bf98cde9ff1))
+* very simple commit ([d00db56](https://github.com/kap-sh/zapros/commit/d00db562b8a2b252bddcffcb7ba40ae9d44ed998))
+
+
+### Documentation
+
+* add async/sync separation guide with error links ([6841ef6](https://github.com/kap-sh/zapros/commit/6841ef6e4c6e76813799365bb3c7a50f8ebfaff5))
+* add basic benchmark example ([89e711f](https://github.com/kap-sh/zapros/commit/89e711fb6c905accdd2d62c50a0aadab63f5c876))
+* add docs for proxies ([5852aa6](https://github.com/kap-sh/zapros/commit/5852aa611887158a4284d5c65185e1c73d7e403e))
+* add docs for std handlers ([eac0ca1](https://github.com/kap-sh/zapros/commit/eac0ca1ccea26d17967626ef21e85065e9ff59fc))
+* add OAuth authorization code flow example ([e286ec9](https://github.com/kap-sh/zapros/commit/e286ec9d3466cef716432f4dce15b3b49d8147e8))
+* fix caching feature name ([a575bbe](https://github.com/kap-sh/zapros/commit/a575bbe0e286975c3ce17162f4c9e34cc18c4045))
+* fix the github link ([896d993](https://github.com/kap-sh/zapros/commit/896d993eac8cae667bd82dc71b3a151681f06cc2))
+
+
+### Refactors
+
+* deprecate `atext` and `ajson` helpers ([0ed8d08](https://github.com/kap-sh/zapros/commit/0ed8d08a1a2ce78434778d9f05fd9edec32bcf6c))
+* unify sync and async connection pool interfaces ([c8778bb](https://github.com/kap-sh/zapros/commit/c8778bba570ff780c8a5c4664ca5bc9ffe1fd457))
+
 ## [0.5.1](https://github.com/kap-sh/zapros/compare/zapros-v0.5.0...zapros-v0.5.1) (2026-04-08)
 
 
