@@ -1,4 +1,7 @@
 {
+  "packages": {
+    ".": {}
+  },
   "release-type": "python",
   "package-name": "zapros",
   "include-component-in-tag": true,
