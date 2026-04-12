@@ -1079,21 +1079,21 @@ wheels = [
 
 [[package]]
 name = "ry-cli"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/80/00/f09b09521561b843d81ec70000c3b0d2d1c52e5d076477d15a4650a6e3d0/ry_cli-0.2.0.tar.gz", hash = "sha256:7b1c752c798c312ca5058ad9d407019d3f0782ca489d9503321935999365b818", size = 979252, upload-time = "2026-04-09T07:29:20.844Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/11/6c35c1e05e996bdf222f5c23f0bc589edc71f7ff33040b6d202c756250eb/ry_cli-0.3.0.tar.gz", hash = "sha256:eb785284792f7026824531ec242f7e237861a69ce6a7a28f36997ef57d749702", size = 979379, upload-time = "2026-04-10T14:02:14.859Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/17/5e7f88bb8683222d2a10dcc6228f40a869a30c050fcd6714280ca39d08b3/ry_cli-0.2.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:8d66057e0b3ee274e7dd2cdd7d6ae2ceb1c223cf64ae963ad46e8f9bb7088b2a", size = 1387306, upload-time = "2026-04-09T07:29:03.033Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/2e/0e76b7c6c17b7a7a2b386230543a4c039b0dfefbb2219b1e97ca079e8f79/ry_cli-0.2.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:75abca3b366e5f72d9ee26d520fb707d67b390d4180ea9e26954d50fe7811149", size = 1323595, upload-time = "2026-04-09T07:29:04.719Z" },
-    { url = "https://files.pythonhosted.org/packages/7a/85/346b2dba922d7c4143582072babc066eba29ae451d82f5d8760edc5df387/ry_cli-0.2.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c57c3ef54be665afe75c26227f4853cc07f7039f3531b8da3862adbee50ca57a", size = 1425574, upload-time = "2026-04-09T07:29:06.257Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/52/da44bdc0170cb40737bcec3bfd2d03e8bc6c375f1d3b3734e2b645b45b70/ry_cli-0.2.0-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:ac07571b00b770807e00287a945e9899f5007ed08058687a7d58b419663a8f46", size = 1384654, upload-time = "2026-04-09T07:29:07.842Z" },
-    { url = "https://files.pythonhosted.org/packages/76/f5/a8b9ada130a56efd0705786c5d69f7e08877f39c6beed529fb85c4b9b454/ry_cli-0.2.0-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1cb870d12a325296640ce43feb4c33d22ff416d5110d70a6dd766a162686c46f", size = 1535229, upload-time = "2026-04-09T07:29:09.308Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/8a/7cd7cf4b922a578b801788c0f11ce75c1f1126b14604a114e14d0125d055/ry_cli-0.2.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:897f4b6a9c0e82d45bd55330dab3c1a5c38e0d0325fa8df72f8f0169358e136f", size = 1471814, upload-time = "2026-04-09T07:29:11.068Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/f9/8e2f4bc3bce4e04c327a5865122bf75c0529dfc3ca258ab5d34c560284e5/ry_cli-0.2.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:f57caeb07eb356a508ca345767923664ea9d81e424015ac55acce59461d5e1e4", size = 1446582, upload-time = "2026-04-09T07:29:12.835Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/4f/dd00872a1f957cf973fdab4c27d8492e110e7c41fc1ee1e47224d89f9e8e/ry_cli-0.2.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:7601ca0799c4e1f83da00fc8c79505e6df629a99b72e97accf0880c9686c5bca", size = 1552211, upload-time = "2026-04-09T07:29:14.307Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/94/d7b569b8a919fb32e3c7ca1691de90c8b5c00c95e5e467b2188f0b0dde54/ry_cli-0.2.0-py3-none-win32.whl", hash = "sha256:2a6936c2d4800bc35654f980cbea872e38b2aa9f29aac6b94c3bc7df98e8e79b", size = 1078263, upload-time = "2026-04-09T07:29:15.859Z" },
-    { url = "https://files.pythonhosted.org/packages/11/b6/fa438c93cc797759c5417563194cb876d77311ce5f9b31464646f805ed59/ry_cli-0.2.0-py3-none-win_amd64.whl", hash = "sha256:f6b591ca73b4879a0e5fbf813ea4620a96e875bcab7ec2de7f54618677895c92", size = 1188145, upload-time = "2026-04-09T07:29:17.741Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/e9/63e4f778d5d605433cfcce9778cf6ddd26afb46b80529b5cd0cda8aab4c8/ry_cli-0.2.0-py3-none-win_arm64.whl", hash = "sha256:b05b328020ae52cf30db1073935b780ead25e4d0ab780f31b6023d65887cfbeb", size = 1108874, upload-time = "2026-04-09T07:29:19.289Z" },
+    { url = "https://files.pythonhosted.org/packages/88/e8/655799f416fedb9724e11bcffd403e9967acc9a551e9582c7e47e0efa043/ry_cli-0.3.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:9b4a046c55bd403142bf6dfdd2390cdc42d8aa327f59876c11d33442304b3f3c", size = 1385442, upload-time = "2026-04-10T14:01:56.61Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/9c/7fb106011b1a1dc5458083e2d0782c597813dd6a3f1bc02d565652cc2ee7/ry_cli-0.3.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a65b6cd2e5a15fc1cc3992718dd6f171dfef518c0a57fb920648e720cdab1d09", size = 1322665, upload-time = "2026-04-10T14:01:58.138Z" },
+    { url = "https://files.pythonhosted.org/packages/39/0a/a5868c6135c6bcd1ff63734e39fb2899f86033292e5b37e9b76e20ea936c/ry_cli-0.3.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ec92a67c1c29264de97cce18844659020d8c9561cbd23c0e414be233a7a175f3", size = 1422671, upload-time = "2026-04-10T14:01:59.349Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/02/fa336f2b245d845f534f1533ae9a60da6648db1c56c3cb6f7099d93c293b/ry_cli-0.3.0-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:c3b136ce39c653107a7b44e86f3562ae8d3fcc8779762dee77c11595f5783448", size = 1383871, upload-time = "2026-04-10T14:02:00.825Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/8b/a485a86f52fc926cbf17d09e31275bd4f11e10d68daa754995d4145acb28/ry_cli-0.3.0-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b1fb8fbaf0d274baa30256d3fb33b157c0f3429abf14d8a144899b7b52afa9c7", size = 1533116, upload-time = "2026-04-10T14:02:02.151Z" },
+    { url = "https://files.pythonhosted.org/packages/88/ef/fdeda68c2d37582252a19954cd04e8a74a51c453980db56d71e34e696525/ry_cli-0.3.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:689d9fb7cf27d9add956b1e87c32bc231b4a324eed0b00531e662db148f101b0", size = 1470672, upload-time = "2026-04-10T14:02:03.339Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/e8/63069ad088aab2ca6f26752199306fe7e76b6cb7867e4c3d8784cd4fad34/ry_cli-0.3.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:56d07419ed999a122de3b048c852db038a2df7660625bb6d9ef12fc28670bb33", size = 1444881, upload-time = "2026-04-10T14:02:04.849Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/c7/7a49c1b8b79c8b96de8999a588e8892751829504c9b24b627eaf2c642439/ry_cli-0.3.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:2c9136a4f169daff2d3278d53660d9151e814b4cc40b381b15233c4b4379c2bd", size = 1551141, upload-time = "2026-04-10T14:02:06.137Z" },
+    { url = "https://files.pythonhosted.org/packages/95/80/d83932d266f9f84d7333a20cae0656bf919bb1c5719a15619c12ab220195/ry_cli-0.3.0-py3-none-win32.whl", hash = "sha256:99511755c250ef4fb5a8cde16400403411d84196f792fef0bf91799f18085d70", size = 1076235, upload-time = "2026-04-10T14:02:07.564Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/62/ef895c1be28b21dec293dd95044d51b7f3920b4f87ac72299a785716fdbc/ry_cli-0.3.0-py3-none-win_amd64.whl", hash = "sha256:753c429119ab754c56f9787a9fefc80bf4dc2fe6af7c6ec5c9cdd8f362fc531d", size = 1186617, upload-time = "2026-04-10T14:02:12.598Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/c1/ea97c508960191edfd33fce835ec186ef52c067faa3a77f155e504bd9177/ry_cli-0.3.0-py3-none-win_arm64.whl", hash = "sha256:0a53df2640641937012eea6b6ad28a393b1c42ac9397ffd95e5b142e1ac6114c", size = 1106404, upload-time = "2026-04-10T14:02:13.76Z" },
 ]
 
 [[package]]
@@ -1530,7 +1530,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pywhatwgurl", specifier = ">=0.1.0" },
     { name = "ruff", specifier = ">=0.14.0" },
-    { name = "ry-cli", specifier = "==0.2.0" },
+    { name = "ry-cli", specifier = "==0.3.0" },
     { name = "sniffio", specifier = ">=1.3.1" },
     { name = "trio", specifier = ">=0.33.0" },
     { name = "uvicorn", specifier = ">=0.38.0" },
