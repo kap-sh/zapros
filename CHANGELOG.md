@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/kap-sh/zapros/compare/zapros-v0.5.1...zapros-v0.5.2) (2026-04-12)
+
+
+### Features
+
+* add support for trio ([e4c2469](https://github.com/kap-sh/zapros/commit/e4c24692f0c2dcf4aa8ec64b440cc46cecb6f42d))
+* better exceptions mapping ([79ecc9c](https://github.com/kap-sh/zapros/commit/79ecc9cf0648dfc98c696f63eb9a5b6c1dbfb505))
+
 ## [0.5.1](https://github.com/kap-sh/zapros/compare/zapros-v0.5.0...zapros-v0.5.1) (2026-04-08)
 
 
