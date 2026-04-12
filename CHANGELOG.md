@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0](https://github.com/kap-sh/zapros/compare/v0.5.1...v0.6.0) (2026-04-12)
+
+
+### Features
+
+* add support for trio ([e4c2469](https://github.com/kap-sh/zapros/commit/e4c24692f0c2dcf4aa8ec64b440cc46cecb6f42d))
+* better exceptions mapping ([79ecc9c](https://github.com/kap-sh/zapros/commit/79ecc9cf0648dfc98c696f63eb9a5b6c1dbfb505))
+
+
+### Chores
+
+* bump ry version, get rid of bunch of ids ([5c166f8](https://github.com/kap-sh/zapros/commit/5c166f8b50bf8261469e7b9cfe253e1401a89837))
+* bump ry version, tidy up tests ([311871f](https://github.com/kap-sh/zapros/commit/311871f3bc5832f27898d0f258dda87dc4190172))
+* update uv.lock ([daff37b](https://github.com/kap-sh/zapros/commit/daff37beea572337b930d793f03e7733b0b5e6fa))
+
 ## [0.5.1](https://github.com/kap-sh/zapros/compare/zapros-v0.5.0...zapros-v0.5.1) (2026-04-08)
 
 
