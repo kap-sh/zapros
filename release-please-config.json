@@ -1,20 +1,26 @@
 {
   "release-type": "python",
-  "package-name": "zapros",
-  "include-component-in-tag": true,
-  "changelog-path": "CHANGELOG.md",
+  "packages": {
+    ".": {}
+  },
+  "include-v-in-tag": true,
+  "include-component-in-tag": false,
+  "prerelease": true,
   "bump-minor-pre-major": true,
-  "bump-patch-for-minor-pre-major": true,
-  "changelog-types": [
-    { "type": "feat", "section": "Features", "hidden": false },
-    { "type": "fix", "section": "Bug Fixes", "hidden": false },
-    { "type": "perf", "section": "Performance Improvements", "hidden": false },
-    { "type": "revert", "section": "Reverts", "hidden": false },
-    { "type": "docs", "section": "Documentation", "hidden": false },
-    { "type": "chore", "section": "Miscellaneous", "hidden": false },
-    { "type": "refactor", "section": "Code Refactoring", "hidden": false },
-    { "type": "test", "section": "Tests", "hidden": false },
-    { "type": "build", "section": "Build System", "hidden": false },
-    { "type": "ci", "section": "Continuous Integration", "hidden": false }
+  "bump-patch-for-minor-pre-major": false,
+  "pull-request-header": "Automated Release PR",
+  "pull-request-title-pattern": "release: ${version}",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance Improvements" },
+    { "type": "revert", "section": "Reverts" },
+    { "type": "chore", "section": "Chores" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "style", "section": "Styles" },
+    { "type": "refactor", "section": "Refactors" },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "build", "section": "Build System" },
+    { "type": "ci", "section": "Continuous Integration", "hidden": true }
   ]
 }
