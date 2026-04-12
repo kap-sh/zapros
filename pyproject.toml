@@ -1,6 +1,6 @@
 [project]
 name = "zapros"
-version = "0.5.1"
+version = "0.6.0"
 description = "Modern and extensible HTTP client for Python."
 readme = "README.md"
 requires-python = ">=3.10"
