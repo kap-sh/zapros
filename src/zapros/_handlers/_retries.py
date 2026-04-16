@@ -166,7 +166,7 @@ class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
         self._backoff_max = backoff_max
         self._backoff_jitter = backoff_jitter
 
-    async def ahandle(self, request: Request) -> Response:
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate @retryMiddleware
         handler = ensure_async_handler(self.async_next)
 
         attempt = 0
@@ -223,7 +223,7 @@ class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
 
         raise RuntimeError("Unreachable code")
 
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> Response:  # unasync: generated @retryMiddleware
         handler = ensure_sync_handler(self.next)
 
         attempt = 0

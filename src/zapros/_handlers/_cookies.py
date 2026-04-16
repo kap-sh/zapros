@@ -90,13 +90,13 @@ class CookieMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         return response
 
-    async def ahandle(self, request: Request) -> Response:
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate
         handler = ensure_async_handler(self.async_next)
         req = self._process_request(request)
         response = await handler.ahandle(request)
         return self._process_response(response, req)
 
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> Response:  # unasync: generated
         handler = ensure_sync_handler(self.next)
         req = self._process_request(request)
         response = handler.handle(request)

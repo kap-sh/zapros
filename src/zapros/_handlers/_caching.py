@@ -222,39 +222,7 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         self._policy = policy
         self._cache_proxy: AsyncCacheProxy | SyncCacheProxy | None = None
 
-    def _get_sync_cache_proxy(
-        self,
-    ) -> SyncCacheProxy:
-        if self._cache_proxy is None:
-
-            def _sync_send_request(
-                request: HishelRequest,
-            ) -> HishelResponse:
-                zapros_request = _hishel_to_zapros(request)
-                zapros_response = self.next.handle(zapros_request)
-                return _zapros_to_hishel(zapros_response)
-
-            assert (
-                isinstance(
-                    self._storage,
-                    HishelSyncBaseStorage,
-                )
-                or self._storage is None
-            ), "Sync handler requires sync storage"
-            self._cache_proxy = SyncCacheProxy(
-                request_sender=_sync_send_request,
-                storage=self._storage,
-                policy=self._policy,
-            )
-
-        if not isinstance(
-            self._cache_proxy,
-            SyncCacheProxy,
-        ):
-            raise TypeError("Cache proxy is not a SyncCacheProxy")
-        return self._cache_proxy
-
-    async def _get_async_cache_proxy(
+    async def _get_async_cache_proxy(  # unasync: generate @cacheMiddleware
         self,
     ) -> AsyncCacheProxy:
         if self._cache_proxy is None:
@@ -272,7 +240,7 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
                     HishelAsyncBaseStorage,
                 )
                 or self._storage is None
-            ), "Async handler requires async storage"
+            ), "Incompatible storage type"
             self._cache_proxy = AsyncCacheProxy(
                 request_sender=_async_send_request,
                 storage=self._storage,
@@ -283,18 +251,51 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             self._cache_proxy,
             AsyncCacheProxy,
         ):
-            raise TypeError("Cache proxy is not an AsyncCacheProxy")
+            raise TypeError("Cache proxy type mismatch")
         return self._cache_proxy
 
-    async def ahandle(self, request: Request) -> Response:
+    def _get_sync_cache_proxy(  # unasync: generated @cacheMiddleware
+        self,
+    ) -> SyncCacheProxy:
+        if self._cache_proxy is None:
+
+            def _sync_send_request(
+                request: HishelRequest,
+            ) -> HishelResponse:
+                zapros_request = _hishel_to_zapros(request)
+                zapros_response = self.next.handle(zapros_request)
+                return _zapros_to_hishel(zapros_response)
+
+            assert (
+                isinstance(
+                    self._storage,
+                    HishelSyncBaseStorage,
+                )
+                or self._storage is None
+            ), "Incompatible storage type"
+            self._cache_proxy = SyncCacheProxy(
+                request_sender=_sync_send_request,
+                storage=self._storage,
+                policy=self._policy,
+            )
+
+        if not isinstance(
+            self._cache_proxy,
+            SyncCacheProxy,
+        ):
+            raise TypeError("Cache proxy type mismatch")
+        return self._cache_proxy
+
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate @cacheMiddleware
         hishel_request = _zapros_to_hishel(request)
         proxy = await self._get_async_cache_proxy()
         hishel_response = await proxy.handle_request(hishel_request)
         return _hishel_to_zapros(hishel_response)
 
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> Response:  # unasync: generated @cacheMiddleware
         hishel_request = _zapros_to_hishel(request)
-        hishel_response = self._get_sync_cache_proxy().handle_request(hishel_request)
+        proxy = self._get_sync_cache_proxy()
+        hishel_response = proxy.handle_request(hishel_request)
         return _hishel_to_zapros(hishel_response)
 
 

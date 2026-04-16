@@ -156,8 +156,7 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         self._fallback = next_handler
         self._passthrough = next_handler is not None
 
-    async def ahandle(self, request: Request) -> Response:
-
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate
         response = self._router.dispatch(request)
         if response is not None:
             return response
@@ -168,8 +167,7 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         handler = ensure_async_handler(self.async_next)
         return await handler.ahandle(request)
 
-    def handle(self, request: Request) -> Response:
-
+    def handle(self, request: Request) -> Response:  # unasync: generated
         response = self._router.dispatch(request)
         if response is not None:
             return response

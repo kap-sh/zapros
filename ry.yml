@@ -61,6 +61,10 @@ packages:
         replace: 'handle'
 
       - kind: regex
+        match: '\bensure_async_handler\b'
+        replace: 'ensure_sync_handler'
+
+      - kind: regex
         match: '\baconnect\b'
         replace: 'connect'
 
@@ -265,3 +269,25 @@ targets:
       - kind: regex
         match: '\bAsyncSqliteStorage\b'
         replace: 'SyncSqliteStorage'
+
+  - tag: retryMiddleware
+    rules:
+      - kind: regex
+        match: '\banysleep\b'
+        replace: 'time.sleep'
+
+  - tag: cacheMiddleware
+    rules:
+      # TODO: adopt ry in Hishel and import it's rules here instead of duplicating them
+      - kind: regex
+        match: '_get_async_cache_proxy'
+        replace: '_get_sync_cache_proxy'
+      - kind: regex
+        match: '\bAsyncCacheProxy\b'
+        replace: 'SyncCacheProxy'
+      - kind: regex
+        match: '\b_async_send_request\b'
+        replace: '_sync_send_request'
+      - kind: regex
+        match: '\bHishelAsyncBaseStorage\b'
+        replace: 'HishelSyncBaseStorage'

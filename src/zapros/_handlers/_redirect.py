@@ -138,7 +138,7 @@ class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         else:
             raise NotImplementedError("Redirect with non-replayable body is not supported")
 
-    async def ahandle(self, request: Request) -> Response:
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate
         handler = ensure_async_handler(self.async_next)
 
         current_request = request
@@ -166,7 +166,7 @@ class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             redirect_count += 1
             await response.aclose()
 
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> Response:  # unasync: generated
         handler = ensure_sync_handler(self.next)
 
         current_request = request
