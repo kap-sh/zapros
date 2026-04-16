@@ -5,7 +5,7 @@ description: Record and replay HTTP interactions for deterministic testing and o
 
 # HTTP Cassettes
 
-Cassettes record HTTP request/response interactions to disk and replay them later without hitting the network. This is useful for:
+Cassettes record HTTP request/response interactions to disk and replay them later without hitting the network.
 
 ## Quickstart
 
