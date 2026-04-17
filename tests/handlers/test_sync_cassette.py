@@ -459,7 +459,7 @@ def test_modifier_transforms_network_response(
         lambda resp: Response(
             status=999,
             headers=dict(resp.headers),
-            content=resp.content,
+            content=resp.iter_raw(),
         )
     )
     handler = CassetteMiddleware(

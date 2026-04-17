@@ -480,7 +480,7 @@ class TestResponse:
         response = Response(200)
         assert response.status == 200
         assert len(response.headers) == 0
-        assert response.content is None
+        assert response.read() == b""
         assert response.context == {}
 
     def test_response_with_headers_dict(self):
@@ -500,24 +500,24 @@ class TestResponse:
     def test_response_content_bytes(self):
         content = b"Hello, World!"
         response = Response(200, content=content)
-        assert response.content == content
+        assert response.read() == content
 
     def test_response_content_sync_stream(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
-        assert response.content == stream
+        assert response.read() == b"chunk1chunk2"
 
-    def test_response_content_async_stream(self):
+    async def test_response_content_async_stream(self):
         async def gen():
             yield b"chunk1"
 
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
-        assert response.content == stream
+        assert await response.aread() == b"chunk1"
 
     def test_response_text_parameter(self):
         response = Response(200, text="Hello, World!")
-        assert response.content == b"Hello, World!"
+        assert response.read() == b"Hello, World!"
         assert response.headers["Content-Type"] == "text/plain; charset=utf-8"
         assert "Content-Encoding" not in response.headers
 
@@ -532,8 +532,9 @@ class TestResponse:
     def test_response_json_data_parameter(self):
         data = {"key": "value"}
         response = Response(200, json=data)
-        assert isinstance(response.content, bytes)
-        assert json_module.loads(response.content) == data
+        content = response.read()
+        assert isinstance(content, bytes)
+        assert json_module.loads(content) == data
         assert response.headers["Content-Type"] == "application/json; charset=utf-8"
         assert "Content-Encoding" not in response.headers
 
@@ -612,7 +613,7 @@ class TestResponse:
         assert content1 is content2
 
     def test_response_text_method(self):
-        response = Response(200, content=b"Hello, World!")
+        response = Response(200, text="Hello, World!")
         text = response.text
         assert text == "Hello, World!"
 
@@ -622,12 +623,14 @@ class TestResponse:
             headers={"Content-Type": "text/plain; charset=latin-1"},
             content="Hëllo".encode("latin-1"),
         )
+        response.read()
         text = response.text
         assert text == "Hëllo"
 
     def test_response_json_method(self):
         data = {"key": "value"}
         response = Response(200, content=json_module.dumps(data).encode("utf-8"))
+        response.read()
         result = response.json
         assert result == data
 
@@ -727,7 +730,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_bytes())
-        assert "Can't call `iter_bytes`" in str(exc_info.value)
+        assert "Can't iterate content in this context" in str(exc_info.value)
 
     async def test_response_async_iter_bytes_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -775,7 +778,7 @@ class TestResponse:
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_bytes():
                 pass
-        assert "Can't call `async_iter_bytes`" in str(exc_info.value)
+        assert "Can't iterate content in this context" in str(exc_info.value)
 
     def test_response_iter_raw_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -805,7 +808,7 @@ class TestResponse:
         response = Response(200, content=stream)
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             list(response.iter_raw())
-        assert "Can't call `iter_raw`" in str(exc_info.value)
+        assert "Can't iterate content in this context" in str(exc_info.value)
 
     async def test_response_async_iter_raw_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -837,7 +840,7 @@ class TestResponse:
         with pytest.raises(AsyncSyncMismatchError) as exc_info:
             async for _ in response.async_iter_raw():
                 pass
-        assert "Can't call `async_iter_raw`" in str(exc_info.value)
+        assert "Can't iterate content in this context" in str(exc_info.value)
 
     def test_response_iter_text_from_bytes(self):
         response = Response(200, content=b"Hello, World!")
@@ -888,15 +891,15 @@ class TestResponse:
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
         for _ in response.iter_bytes():
-            assert not isinstance(response.content, bytes)
-        assert not isinstance(response.content, bytes)
+            ...
+        assert response._decoded_content is None
 
     def test_response_iter_raw_does_not_buffer_content(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
         for _ in response.iter_raw():
-            assert not isinstance(response.content, bytes)
-        assert not isinstance(response.content, bytes)
+            ...
+        assert response._decoded_content is None
 
     async def test_response_async_iter_bytes_does_not_buffer_content(self):
         async def gen():
@@ -906,8 +909,8 @@ class TestResponse:
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
         async for _ in response.async_iter_bytes():
-            assert not isinstance(response.content, bytes)
-        assert not isinstance(response.content, bytes)
+            assert response._decoded_content is None
+        assert response._decoded_content is None
 
     async def test_response_async_iter_raw_does_not_buffer_content(self):
         async def gen():
@@ -917,8 +920,8 @@ class TestResponse:
         stream = AsyncStreamWrapper(gen())
         response = Response(200, content=stream)
         async for _ in response.async_iter_raw():
-            assert not isinstance(response.content, bytes)
-        assert not isinstance(response.content, bytes)
+            assert response._decoded_content is None
+        assert response._decoded_content is None
 
     def test_response_close_bytes_content(self):
         response = Response(200, content=b"Hello, World!")
@@ -1016,9 +1019,9 @@ class TestResponse:
     def test_response_read_caches_stream_as_bytes(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))
         response = Response(200, content=stream)
-        response.read()
-        assert isinstance(response.content, bytes)
-        assert response.content == b"chunk1chunk2"
+        result = response.read()
+        assert isinstance(result, bytes)
+        assert response.read() == b"chunk1chunk2"
 
     def test_raise_for_status_with_success(self):
         response = Response(200)

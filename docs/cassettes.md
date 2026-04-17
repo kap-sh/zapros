@@ -347,7 +347,7 @@ def redact_headers(
     return Response(
         status=resp.status,
         headers=headers,
-        content=resp.content,
+        content=resp.read(),
     )
 
 

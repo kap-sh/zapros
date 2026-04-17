@@ -652,7 +652,7 @@ class Response:
             yield self._content
             return
         if not isinstance(self._content, AsyncIterator):
-            raise AsyncSyncMismatchError("Can't iterate source in this context")
+            raise AsyncSyncMismatchError("Can't iterate content in this context")
         async for chunk in self._content:
             yield chunk
 
@@ -663,7 +663,7 @@ class Response:
             yield self._content
             return
         if not isinstance(self._content, Iterator):
-            raise AsyncSyncMismatchError("Can't iterate source in this context")
+            raise AsyncSyncMismatchError("Can't iterate content in this context")
         for chunk in self._content:
             yield chunk
 

@@ -315,11 +315,11 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         self,
         prepared_request: Request,
         prepared_response: Response,
-        response_body: bytes | None,
+        response_body: bytes,
         response_headers: Headers,
     ) -> None:
         body_content = _serialize_body(
-            response_body,
+            response_body if response_body != b"" else None,
             response_headers,
         )
         self._interactions.append(
