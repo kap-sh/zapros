@@ -97,39 +97,33 @@ def _zapros_to_hishel(
     model: Request,
 ) -> "HishelRequest": ...
 @overload
-def _zapros_to_hishel(
-    model: Response,
-) -> "HishelResponse": ...
+def _zapros_to_hishel(model: Response, stream: AsyncIterator[bytes] | Iterator[bytes]) -> "HishelResponse": ...
 def _zapros_to_hishel(
     model: Request | Response,
+    stream: AsyncIterator[bytes] | Iterator[bytes] | None = None,
 ) -> Union["HishelRequest", "HishelResponse"]:
 
     if isinstance(model, Request):
-        stream: Iterator[bytes] | AsyncIterator[bytes]
+        hishel_stream: Iterator[bytes] | AsyncIterator[bytes]
 
         if model.body is None:
-            stream = _BytesStream(b"")
+            hishel_stream = _BytesStream(b"")
         elif isinstance(model.body, bytes):
-            stream = _BytesStream(model.body)
+            hishel_stream = _BytesStream(model.body)
         else:
-            stream = model.body
+            hishel_stream = model.body
         return HishelRequest(
             method=model.method,
             url=str(model.url.to_string()),
             headers=Headers(dict(model.headers.list())),
-            stream=stream,
+            stream=hishel_stream,
             metadata={"hishel_" + key: value for key, value in model.context.get("caching", {}).items()},
         )
     else:
-        stream: Iterator[bytes] | AsyncIterator[bytes]
+        copied_headers = Headers(model.headers)
+        copied_headers.pop("content-encoding", None)
 
-        if model.content is None:
-            stream = _BytesStream(b"")
-        elif isinstance(model.content, bytes):
-            stream = _BytesStream(model.content)
-        else:
-            stream = model.content
-
+        assert stream is not None, "Stream must be provided for Response conversion"
         return HishelResponse(
             status_code=model.status,
             headers=Headers(dict(model.headers.list())),
@@ -232,7 +226,7 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             ) -> HishelResponse:
                 zapros_request = _hishel_to_zapros(request)
                 zapros_response = await self.async_next.ahandle(zapros_request)
-                return _zapros_to_hishel(zapros_response)
+                return _zapros_to_hishel(zapros_response, stream=zapros_response.async_iter_bytes())
 
             assert (
                 isinstance(
@@ -264,7 +258,7 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             ) -> HishelResponse:
                 zapros_request = _hishel_to_zapros(request)
                 zapros_response = self.next.handle(zapros_request)
-                return _zapros_to_hishel(zapros_response)
+                return _zapros_to_hishel(zapros_response, stream=zapros_response.iter_bytes())
 
             assert (
                 isinstance(
