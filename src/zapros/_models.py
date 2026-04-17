@@ -16,6 +16,7 @@ from typing import (
     Union,
     overload,
 )
+from warnings import deprecated
 
 import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
@@ -368,8 +369,8 @@ class Response:
     __slots__ = (
         "status",
         "headers",
-        "_source",
         "_content",
+        "_decoded_content",
         "_decoder",
         "context",
     )
@@ -429,8 +430,8 @@ class Response:
 
         self.status = status
         self.headers: Headers = headers if isinstance(headers, Headers) else Headers(headers) if headers else Headers()
-        self._source: AsyncStream | Stream | bytes | None = content
-        self._content: bytes | None = None
+        self._content: AsyncStream | Stream | bytes | None = content
+        self._decoded_content: bytes | None = None
         self._decoder: ContentDecoder | None = None
         self.context: ResponseContext = context if context is not None else {}
 
@@ -446,10 +447,10 @@ class Response:
                 content_type="application/json; charset=utf-8",
             )
 
-        if isinstance(self._source, bytes):
+        if isinstance(self._content, bytes):
             if "content-length" not in self.headers:
-                self.headers.add("Content-Length", str(len(self._source)))
-        elif isinstance(self._source, (Iterator, AsyncIterator)):
+                self.headers.add("Content-Length", str(len(self._content)))
+        elif isinstance(self._content, (Iterator, AsyncIterator)):
             if "transfer-encoding" not in self.headers and "content-length" not in self.headers:
                 self.headers.add("Transfer-Encoding", "chunked")
 
@@ -473,12 +474,13 @@ class Response:
         return "utf-8"
 
     @property
+    @deprecated("Use `.read` or `.aread` to get the decoded content instead of accessing `.content` directly")
     def content(self) -> bytes | None:
         """
         The decoded response body, if it has been read. Returns `None` if the body
         has not yet been read. Call `.read()` or `.aread()` to read the body first.
         """
-        return self._content
+        return self._decoded_content
 
     @property
     def json(self) -> Any:
@@ -498,15 +500,15 @@ class Response:
 
         The response body must have been read first by calling `.read()` or `.aread()`.
         """
-        if self._content is None:
-            if self._source is None:
+        if self._decoded_content is None:
+            if self._content is None:
                 return ""
             raise ResponseNotRead(
                 "Response body has not been read yet. Call `.read()` or "
                 "`.aread()` first to read the body before accessing `.text`.",
             )
 
-        return self._content.decode(self.encoding)
+        return self._decoded_content.decode(self.encoding)
 
     @typing_extensions.deprecated("Use `.aread()` and then `.text` instead")
     async def atext(self) -> str:
@@ -552,6 +554,15 @@ class Response:
         if chunk_size is None:
             chunk_size = CHUNK_SIZE
 
+        if self._decoded_content is not None:
+            chunker = ByteChunker(chunk_size)
+            for chunk in chunker.feed(self._decoded_content):
+                yield chunk
+            remaining = chunker.flush()
+            if remaining:
+                yield remaining
+            return
+
         decoder = self._get_content_decoder()
         chunker = ByteChunker(chunk_size)
 
@@ -576,6 +587,15 @@ class Response:
     ) -> Iterator[bytes]:
         if chunk_size is None:
             chunk_size = CHUNK_SIZE
+
+        if self._decoded_content is not None:
+            chunker = ByteChunker(chunk_size)
+            for chunk in chunker.feed(self._decoded_content):
+                yield chunk
+            remaining = chunker.flush()
+            if remaining:
+                yield remaining
+            return
 
         decoder = self._get_content_decoder()
         chunker = ByteChunker(chunk_size)
@@ -626,62 +646,66 @@ class Response:
             yield remaining
 
     async def _async_iter_source(self) -> AsyncIterator[bytes]:  # unasync: generate
-        if self._source is None:
+        if self._content is None:
             return
-        if isinstance(self._source, bytes):
-            yield self._source
+        if isinstance(self._content, bytes):
+            yield self._content
             return
-        if not isinstance(self._source, AsyncIterator):
+        if not isinstance(self._content, AsyncIterator):
             raise AsyncSyncMismatchError("Can't iterate source in this context")
-        async for chunk in self._source:
+        async for chunk in self._content:
             yield chunk
 
     def _iter_source(self) -> Iterator[bytes]:  # unasync: generated
-        if self._source is None:
+        if self._content is None:
             return
-        if isinstance(self._source, bytes):
-            yield self._source
+        if isinstance(self._content, bytes):
+            yield self._content
             return
-        if not isinstance(self._source, Iterator):
+        if not isinstance(self._content, Iterator):
             raise AsyncSyncMismatchError("Can't iterate source in this context")
-        for chunk in self._source:
+        for chunk in self._content:
             yield chunk
 
     async def aread(self) -> bytes:  # unasync: generate
-        if self._content is not None:
-            return self._content
+        if self._decoded_content is not None:
+            return self._decoded_content
         chunks: list[bytes] = []
         async for chunk in self.async_iter_bytes():
             chunks.append(chunk)
-        self._content = b"".join(chunks)
-        return self._content
+        self._decoded_content = b"".join(chunks)
+        return self._decoded_content
 
     def read(self) -> bytes:  # unasync: generated
-        if self._content is not None:
-            return self._content
+        if self._decoded_content is not None:
+            return self._decoded_content
         chunks: list[bytes] = []
         for chunk in self.iter_bytes():
             chunks.append(chunk)
-        self._content = b"".join(chunks)
-        return self._content
+        self._decoded_content = b"".join(chunks)
+        return self._decoded_content
 
     async def aclose(self) -> None:  # unasync: generate
-        if self._source is None or isinstance(self._source, bytes):
+        if self._content is None or isinstance(self._content, bytes):
             return
-        if not isinstance(self._source, AsyncClosableStream):
+
+        if not isinstance(self._content, AsyncIterator):
             raise AsyncSyncMismatchError("Can't call `aclose` in this context")
-        await self._source.aclose()
+        if isinstance(self._content, AsyncClosableStream):
+            await self._content.aclose()
 
     def close(self) -> None:  # unasync: generated
-        if self._source is None or isinstance(self._source, bytes):
+        if self._content is None or isinstance(self._content, bytes):
             return
-        if not isinstance(self._source, ClosableStream):
+
+        if not isinstance(self._content, Iterator):
             raise AsyncSyncMismatchError("Can't call `close` in this context")
-        self._source.close()
+        if isinstance(self._content, ClosableStream):
+            self._content.close()
 
     def _set_static_content(self, data: bytes, *, content_type: str) -> None:
-        self._source = data
         self._content = data
+        self._decoded_content = data
 
         self.headers.pop("Content-Encoding", None)
 
