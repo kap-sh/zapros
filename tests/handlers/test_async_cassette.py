@@ -563,7 +563,6 @@ async def test_binary_body_stored_as_base64(
     import base64
 
     from zapros import Response
-    from zapros._handlers._cassette import _CassetteBytesStream
 
     binary_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
     router = MockRouter()
@@ -571,7 +570,7 @@ async def test_binary_body_stored_as_base64(
         lambda _: Response(
             status=200,
             headers={"content-type": "image/png"},
-            content=_CassetteBytesStream(binary_data),
+            content=binary_data,
         )
     ).mount(router)
     mock_handler = MockMiddleware(router=router)
@@ -606,7 +605,6 @@ async def test_compressed_json_stored_decompressed(
     import gzip
 
     from zapros import Response
-    from zapros._handlers._cassette import _CassetteBytesStream
 
     json_obj = {"login": "octocat", "id": 583231, "type": "User"}
     json_bytes = json.dumps(json_obj).encode("utf-8")
@@ -620,7 +618,7 @@ async def test_compressed_json_stored_decompressed(
                 "content-type": "application/json",
                 "content-encoding": "gzip",
             },
-            content=_CassetteBytesStream(compressed),
+            content=compressed,
         )
     ).mount(router)
     mock_handler = MockMiddleware(router=router)
@@ -656,7 +654,6 @@ async def test_compressed_text_stored_decompressed(
     import gzip
 
     from zapros import Response
-    from zapros._handlers._cassette import _CassetteBytesStream
 
     text_content = "Hello, World! This is compressed text."
     compressed = gzip.compress(text_content.encode("utf-8"))
@@ -669,7 +666,7 @@ async def test_compressed_text_stored_decompressed(
                 "content-type": "text/plain",
                 "content-encoding": "gzip",
             },
-            content=_CassetteBytesStream(compressed),
+            content=compressed,
         )
     ).mount(router)
     mock_handler = MockMiddleware(router=router)
@@ -706,7 +703,6 @@ async def test_compressed_binary_stored_decompressed(
     import gzip
 
     from zapros import Response
-    from zapros._handlers._cassette import _CassetteBytesStream
 
     binary_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
     compressed = gzip.compress(binary_data)
@@ -719,7 +715,7 @@ async def test_compressed_binary_stored_decompressed(
                 "content-type": "image/png",
                 "content-encoding": "gzip",
             },
-            content=_CassetteBytesStream(compressed),
+            content=compressed,
         )
     ).mount(router)
     mock_handler = MockMiddleware(router=router)

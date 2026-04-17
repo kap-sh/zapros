@@ -137,6 +137,10 @@ packages:
         replace: 'Stream'
 
       - kind: regex
+        match: '\b_async_iter_source\b'
+        replace: '_iter_source'
+
+      - kind: regex
         match: '\bAsyncPyodideHandler\b'
         replace: 'PyodideHandler'
 
@@ -269,6 +273,12 @@ targets:
       - kind: regex
         match: '\bAsyncSqliteStorage\b'
         replace: 'SyncSqliteStorage'
+
+  - tag: cassetteMiddleware
+    rules:
+      - kind: regex
+        match: '\b_amaterialize_request\b'
+        replace: '_materialize_request'
 
   - tag: retryMiddleware
     rules:

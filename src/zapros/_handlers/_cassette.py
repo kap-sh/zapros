@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
@@ -11,14 +10,9 @@ from typing import (
     Literal,
     cast,
 )
-from urllib.parse import (
-    parse_qsl,
-    urlencode,
-    urlsplit,
-    urlunsplit,
-)
 
 import typing_extensions
+from pywhatwgurl import URL
 
 from zapros._handlers._async_base import (
     AsyncBaseHandler,
@@ -34,41 +28,13 @@ from zapros._handlers._sync_base import (
 )
 from zapros._models import (
     AsyncClosableStream,
+    ClosableStream,
     Headers,
     Request,
     Response,
 )
 
 from ..matchers import Matcher
-
-
-class _CassetteBytesStream:
-    def __init__(self, data: bytes) -> None:
-        self._data = data
-        self._consumed = False
-
-    def __iter__(
-        self,
-    ) -> Iterator[bytes]:
-        return self
-
-    def __next__(self) -> bytes:
-        if self._consumed:
-            raise StopIteration
-        self._consumed = True
-        return self._data
-
-    def __aiter__(
-        self,
-    ) -> _CassetteBytesStream:
-        return self
-
-    async def __anext__(self) -> bytes:
-        if self._consumed:
-            raise StopAsyncIteration
-        self._consumed = True
-        return self._data
-
 
 RequestMapper = Callable[[Request], Request]
 ResponseMapper = Callable[[Response], Response]
@@ -84,27 +50,10 @@ class UnhandledRequestError(ValueError):
     pass
 
 
-def _normalize_url(url: Any) -> str:
-    raw = str(url)
-    parts = urlsplit(raw)
-    normalized_query = urlencode(
-        sorted(
-            parse_qsl(
-                parts.query,
-                keep_blank_values=True,
-            )
-        ),
-        doseq=True,
-    )
-    return urlunsplit(
-        (
-            parts.scheme,
-            parts.netloc,
-            parts.path,
-            normalized_query,
-            parts.fragment,
-        )
-    )
+def normalize_url(url: URL) -> str:
+    copy = URL(url.href)
+    copy.search_params.sort()
+    return copy.href
 
 
 def _extract_encoding_from_content_type(content_type: str) -> str:
@@ -168,7 +117,7 @@ def _request_key(
 ) -> dict[str, Any]:
     return {
         "method": request.method.upper(),
-        "uri": _normalize_url(request.url),
+        "uri": normalize_url(request.url),
     }
 
 
@@ -409,7 +358,7 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             body=b"".join(body),  # type: ignore
         )
 
-    async def ahandle(self, request: Request) -> Response:
+    async def ahandle(self, request: Request) -> Response:  # unasync: generate @cassetteMiddleware
         handler = ensure_async_handler(self.async_next)
 
         replayable_request = await self._amaterialize_request(request)
@@ -427,22 +376,17 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         if not self._can_record():
             raise UnhandledRequestError(
-                f"No cassette matched request: {prepared_request.method} {_normalize_url(prepared_request.url)}"
+                f"No cassette matched request: {prepared_request.method} {normalize_url(prepared_request.url)}"
             )
 
         network_response = await handler.ahandle(replayable_request)
 
         mapped_response = self._cassette.prepare_network_response(replayable_request, network_response)
 
-        if mapped_response.content is None:
-            mapped_body = None
-            mapped_headers = Headers(mapped_response.headers)
-        else:
-            mapped_body = await mapped_response.aread()
-            mapped_headers = Headers(
-                (k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding"
-            )
+        mapped_body = await mapped_response.aread()
+        mapped_headers = Headers((k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding")
 
+        await network_response.aclose()
         await mapped_response.aclose()
 
         replayable_response = Response(
@@ -459,10 +403,14 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         )
         return replayable_response
 
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> Response:  # unasync: generated @cassetteMiddleware
         handler = ensure_sync_handler(self.next)
 
         replayable_request = self._materialize_request(request)
+
+        if isinstance(request.body, ClosableStream):
+            request.body.close()
+
         prepared_request = self._cassette.prepare_request(replayable_request)
 
         if self._mode != "all":
@@ -473,22 +421,17 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         if not self._can_record():
             raise UnhandledRequestError(
-                f"No cassette matched request: {prepared_request.method} {_normalize_url(prepared_request.url)}"
+                f"No cassette matched request: {prepared_request.method} {normalize_url(prepared_request.url)}"
             )
 
         network_response = handler.handle(replayable_request)
 
         mapped_response = self._cassette.prepare_network_response(replayable_request, network_response)
 
-        if mapped_response.content is None:
-            mapped_body = None
-            mapped_headers = Headers(mapped_response.headers)
-        else:
-            mapped_body = mapped_response.read()
-            mapped_headers = Headers(
-                (k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding"
-            )
+        mapped_body = mapped_response.read()
+        mapped_headers = Headers((k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding")
 
+        network_response.close()
         mapped_response.close()
 
         replayable_response = Response(
