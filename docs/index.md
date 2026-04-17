@@ -19,7 +19,7 @@ hero:
 features:
   - icon: 🔌
     title: Sans-IO Design
-    details: Ships with pure-python standard I/O, Rust-based, browser fetch, and ASGI handlers. Bring your own I/O implementation easily.
+    details: Designed to work with any I/O. It comes with default implementations for running on Python, Rust, and the browser's network implementation.
 
   - icon: 🛠️
     title: Batteries Included
