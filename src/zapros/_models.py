@@ -16,10 +16,10 @@ from typing import (
     Union,
     overload,
 )
-from warnings import deprecated
 
 import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
+from typing_extensions import deprecated
 
 from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError
 from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
