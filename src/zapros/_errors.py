@@ -109,7 +109,21 @@ class ReadError(ZaprosError):
     pass
 
 
+class UnhandledRequestError(ZaprosError, ValueError):
+    """Raised by :class:`~zapros.CassetteMiddleware` when a request cannot be
+    served from the cassette and the current :class:`~zapros.CassetteMode`
+    does not allow recording a new interaction."""
+
+    pass
+
+
 class WriteError(ZaprosError):
     """Raised when an error occurs while writing request data."""
+
+    pass
+
+
+class HeaderParseError(ZaprosError):
+    """Raised when an error occurs while parsing a header value."""
 
     pass
