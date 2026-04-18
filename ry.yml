@@ -10,206 +10,158 @@ packages:
   zapros-public:
     rules:
       - id: async-client
-        kind: regex
         match: '\bAsyncClient\b'
         replace: 'Client'
 
       - id: async-base-handler
-        kind: regex
         match: '\bAsyncBaseHandler\b'
         replace: 'BaseHandler'
 
       - id: async-base-middleware
-        kind: regex
         match: '\bAsyncBaseMiddleware\b'
         replace: 'BaseMiddleware'
 
       - id: async-iter-bytes
-        kind: regex
         match: '\basync_iter_bytes\b'
         replace: 'iter_bytes'
 
       - id: async-iter-text
-        kind: regex
         match: '\basync_iter_text\b'
         replace: 'iter_text'
 
       - id: async-iter-raw
-        kind: regex
         match: '\basync_iter_raw\b'
         replace: 'iter_raw'
 
       - id: async-iter-next
-        kind: regex
         match: '\basync_iter_next\b'
         replace: 'iter_next'
 
       - id: aclose
-        kind: regex
         match: '\baclose\b'
         replace: 'close'
 
       - id: aread
-        kind: regex
         match: '\baread\b'
         replace: 'read'
 
   zapros-internal:
     rules:
-      - kind: regex
-        match: '\bahandle\b'
+      - match: '\bahandle\b'
         replace: 'handle'
 
-      - kind: regex
-        match: '\bensure_async_handler\b'
+      - match: '\bensure_async_handler\b'
         replace: 'ensure_sync_handler'
 
-      - kind: regex
-        match: '\baconnect\b'
+      - match: '\baconnect\b'
         replace: 'connect'
 
-      - kind: regex
-        match: '\baconnect_tcp\b'
+      - match: '\baconnect_tcp\b'
         replace: 'connect_tcp'
 
-      - kind: regex
-        match: '\basync_next\b'
+      - match: '\basync_next\b'
         replace: 'next'
 
-      - kind: regex
-        match: '\bhandle_async_request\b'
+      - match: '\bhandle_async_request\b'
         replace: 'handle_request'
 
-      - kind: regex
-        match: '\bwrap_with_async_middleware\b'
+      - match: '\bwrap_with_async_middleware\b'
         replace: 'wrap_with_middleware'
 
-      - kind: regex
-        match: '\bAsyncPyreqwestHandler\b'
+      - match: '\bAsyncPyreqwestHandler\b'
         replace: 'PyreqwestHandler'
 
-      - kind: regex
-        match: '\bAsyncStdNetworkHandler\b'
+      - match: '\bAsyncStdNetworkHandler\b'
         replace: 'StdNetworkHandler'
 
-      - kind: regex
-        match: '\bAsyncIterable\b'
+      - match: '\bAsyncIterable\b'
         replace: 'Iterable'
 
-      - kind: regex
-        match: '\bAsyncIdlePoolConnection\b'
+      - match: '\bAsyncIdlePoolConnection\b'
         replace: 'IdlePoolConnection'
 
-      - kind: regex
-        match: '\bAsyncPoolConnection\b'
+      - match: '\bAsyncPoolConnection\b'
         replace: 'PoolConnection'
 
-      - kind: regex
-        match: '\bAsyncClosableStream\b'
+      - match: '\bAsyncClosableStream\b'
         replace: 'ClosableStream'
 
-      - kind: regex
-        match: '\bAsyncBaseNetworkStream\b'
+      - match: '\bAsyncBaseNetworkStream\b'
         replace: 'BaseNetworkStream'
 
-      - kind: regex
-        match: '\bAsyncBaseTransport\b'
+      - match: '\bAsyncBaseTransport\b'
         replace: 'BaseTransport'
 
-      - kind: regex
-        match: '\bAsyncConnPool\b'
+      - match: '\bAsyncConnPool\b'
         replace: 'ConnPool'
 
-      - kind: regex
-        match: '\bAsyncConn\b'
+      - match: '\bAsyncConn\b'
         replace: 'Conn'
 
-      - kind: regex
-        match: '\bAsyncPyreqwestStream\b'
+      - match: '\bAsyncPyreqwestStream\b'
         replace: 'PyreqwestStream'
 
-      - kind: regex
-        match: '\bAsyncStdStream\b'
+      - match: '\bAsyncStdStream\b'
         replace: 'StdStream'
 
-      - kind: regex
-        match: '\bAsyncStream\b'
+      - match: '\bAsyncStream\b'
         replace: 'Stream'
 
-      - kind: regex
-        match: '\b_async_iter_source\b'
+      - match: '\b_async_iter_source\b'
         replace: '_iter_source'
 
-      - kind: regex
-        match: '\bAsyncPyodideHandler\b'
+      - match: '\bAsyncPyodideHandler\b'
         replace: 'PyodideHandler'
 
-      - kind: regex
-        match: '\bAsyncIOTransport\b'
+      - match: '\bAsyncIOTransport\b'
         replace: 'SyncTransport'
 
-      - kind: regex
-        match: 'from zapros\._io\._asyncio import SyncTransport'
+      - match: 'from zapros\._io\._asyncio import SyncTransport'
         replace: 'from zapros._io._sync import SyncTransport'
 
-      - kind: regex
-        match: 'zapros\._async_io'
+      - match: 'zapros\._async_io'
         replace: 'zapros._sync_io'
 
-      - kind: regex
-        match: '\._async_io'
+      - match: '\._async_io'
         replace: '._sync_io'
 
-      - kind: regex
-        match: 'zapros\._async_base'
+      - match: 'zapros\._async_base'
         replace: 'zapros._sync_base'
 
-      - kind: regex
-        match: '\._async_base'
+      - match: '\._async_base'
         replace: '._sync_base'
 
-      - kind: regex
-        match: 'zapros\._async_pool'
+      - match: 'zapros\._async_pool'
         replace: 'zapros._sync_pool'
 
-      - kind: regex
-        match: '\._async_pool'
+      - match: '\._async_pool'
         replace: '._sync_pool'
 
-      - kind: regex
-        match: 'self\._wait_with_timeout\((.*)\)'
+      - match: 'self\._wait_with_timeout\((.*)\)'
         replace: 'self._cond.wait($1)'
 
-      - kind: regex
-        match: '\bClientBuilder\b'
+      - match: '\bClientBuilder\b'
         replace: 'SyncClientBuilder'
 
-      - kind: regex
-        match: 'from pyreqwest\.response import Response as PyreqwestResponse'
+      - match: 'from pyreqwest\.response import Response as PyreqwestResponse'
         replace: 'from pyreqwest.response import SyncResponse as PyreqwestResponse'
 
-      - kind: regex
-        match: 'Response as PyreqwestResponse'
+      - match: 'Response as PyreqwestResponse'
         replace: 'SyncResponse as PyreqwestResponse'
 
-      - kind: regex
-        match: '\bpytest_asyncio\b'
+      - match: '\bpytest_asyncio\b'
         replace: 'pytest'
 
-      - kind: regex
-        match: '\bmock_server\b'
+      - match: '\bmock_server\b'
         replace: 'mock_server'
 
-      - kind: regex
-        match: '\basync_mock_builder\b'
+      - match: '\basync_mock_builder\b'
         replace: 'mock_builder'
 
-      - kind: regex
-        match: 'MockAsyncConnection'
+      - match: 'MockAsyncConnection'
         replace: 'MockConnection'
 
-      - kind: regex
-        match: '\bAsyncMockServer\b'
+      - match: '\bAsyncMockServer\b'
         replace: 'MockServer'
 
 targets:
@@ -228,17 +180,13 @@ targets:
   - input: src/zapros/_async_pool.py
     output: src/zapros/_sync_pool.py
     rules:
-      - kind: regex
-        match: '\bfrom ._compat import AnyLock\b'
+      - match: '\bfrom ._compat import AnyLock\b'
         replace: 'from threading import Lock'
-      - kind: regex
-        match: '\bfrom ._compat import AnyLock, AnySemaphore\b'
+      - match: '\bfrom ._compat import AnyLock, AnySemaphore\b'
         replace: 'from threading import Lock, Semaphore'
-      - kind: regex
-        match: '\bAnyLock\b'
+      - match: '\bAnyLock\b'
         replace: 'Lock'
-      - kind: regex
-        match: '\bAnySemaphore\b'
+      - match: '\bAnySemaphore\b'
         replace: 'Semaphore'
 
   - input: tests/handlers/test_async_basic.py
@@ -250,11 +198,9 @@ targets:
   - input: tests/test_async_pool.py
     output: tests/test_sync_pool.py
     rules:
-      - kind: regex
-        match: '\bfrom zapros._compat import anysleep\b'
+      - match: '\bfrom zapros._compat import anysleep\b'
         replace: 'from time import sleep'
-      - kind: regex
-        match: '\banysleep\b'
+      - match: '\banysleep\b'
         replace: 'sleep'
 
 
@@ -267,37 +213,29 @@ targets:
   - input: tests/handlers/test_async_caching.py
     output: tests/handlers/test_sync_caching.py
     rules:
-      - kind: regex
-        match: '\banysqlite\b'
+      - match: '\banysqlite\b'
         replace: 'sqlite3'
-      - kind: regex
-        match: '\bAsyncSqliteStorage\b'
+      - match: '\bAsyncSqliteStorage\b'
         replace: 'SyncSqliteStorage'
 
   - tag: cassetteMiddleware
     rules:
-      - kind: regex
-        match: '\b_amaterialize_request\b'
+      - match: '\b_amaterialize_request\b'
         replace: '_materialize_request'
 
   - tag: retryMiddleware
     rules:
-      - kind: regex
-        match: '\banysleep\b'
+      - match: '\banysleep\b'
         replace: 'time.sleep'
 
   - tag: cacheMiddleware
     rules:
       # TODO: adopt ry in Hishel and import it's rules here instead of duplicating them
-      - kind: regex
-        match: '_get_async_cache_proxy'
+      - match: '_get_async_cache_proxy'
         replace: '_get_sync_cache_proxy'
-      - kind: regex
-        match: '\bAsyncCacheProxy\b'
+      - match: '\bAsyncCacheProxy\b'
         replace: 'SyncCacheProxy'
-      - kind: regex
-        match: '\b_async_send_request\b'
+      - match: '\b_async_send_request\b'
         replace: '_sync_send_request'
-      - kind: regex
-        match: '\bHishelAsyncBaseStorage\b'
+      - match: '\bHishelAsyncBaseStorage\b'
         replace: 'HishelSyncBaseStorage'
