@@ -35,6 +35,7 @@ from ._errors import (
     TimeoutError as TimeoutError,
     TooManyRedirectsError as TooManyRedirectsError,
     TotalTimeoutError as TotalTimeoutError,
+    UnhandledRequestError as UnhandledRequestError,
     WriteError as WriteError,
     WriteTimeoutError as WriteTimeoutError,
     ZaprosError as ZaprosError,
@@ -60,11 +61,12 @@ from ._handlers._caching import (
     CachingHandler as CachingHandler,  # type: ignore[reportDeprecated]
 )
 from ._handlers._cassette import (
-    Cassette as Cassette,
+    Cassette as Cassette,  # type: ignore[reportDeprecated]
     CassetteHandler as CassetteHandler,  # type: ignore[reportDeprecated]
     CassetteMiddleware as CassetteMiddleware,
+    CassetteMode as CassetteMode,
     Modifier as Modifier,
-    UnhandledRequestError as UnhandledRequestError,
+    ModifierRouter as ModifierRouter,
 )
 from ._handlers._sync_base import (
     BaseHandler as BaseHandler,

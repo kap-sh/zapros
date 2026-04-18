@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import base64
+import enum
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     Any,
     Callable,
-    Literal,
     cast,
 )
 
 import typing_extensions
 from pywhatwgurl import URL
 
+from zapros._errors import HeaderParseError, UnhandledRequestError
 from zapros._handlers._async_base import (
     AsyncBaseHandler,
     AsyncBaseMiddleware,
@@ -26,6 +28,7 @@ from zapros._handlers._sync_base import (
     BaseHandler,
     BaseMiddleware,
 )
+from zapros._headers import ContentType
 from zapros._models import (
     AsyncClosableStream,
     ClosableStream,
@@ -38,16 +41,32 @@ from ..matchers import Matcher
 
 RequestMapper = Callable[[Request], Request]
 ResponseMapper = Callable[[Response], Response]
-CassetteMode = Literal[
-    "all",
-    "new_episodes",
-    "once",
-    "none",
-]
 
 
-class UnhandledRequestError(ValueError):
-    pass
+class CassetteMode(enum.Enum):
+    """Recording behavior for :class:`CassetteMiddleware`."""
+
+    ALL = "all"
+    """Always send requests to the network and record them.
+
+    Any pre-existing cassette contents are discarded at init — the cassette is
+    rewritten from scratch, not appended to. Use when regenerating cassettes.
+    """
+
+    NEW_EPISODES = "new_episodes"
+    """Replay matched requests from the cassette; send unmatched ones to the
+    network and append the new interactions to the cassette."""
+
+    ONCE = "once"
+    """Record only if the cassette file does not yet exist.
+
+    Once a cassette exists, behave like :attr:`NONE` — replay matches and raise
+    :class:`~zapros.UnhandledRequestError` on unmatched requests.
+    """
+
+    NONE = "none"
+    """Replay-only. Never hit the network; unmatched requests raise
+    :class:`~zapros.UnhandledRequestError`."""
 
 
 def normalize_url(url: URL) -> str:
@@ -56,63 +75,62 @@ def normalize_url(url: URL) -> str:
     return copy.href
 
 
-def _extract_encoding_from_content_type(content_type: str) -> str:
-    parts = content_type.split(";")
-    for part in parts[1:]:
-        stripped = part.strip()
-        if stripped.lower().startswith("charset="):
-            charset = stripped[8:].strip()
-            if charset.startswith('"') and charset.endswith('"'):
-                charset = charset[1:-1]
-            return charset
-    return "utf-8"
-
-
-def _serialize_body(
-    body: bytes | None,
-    headers: Headers,
-) -> Any:
-    if body is None:
+def parse_content_type(headers: Headers) -> ContentType | None:
+    value = headers.get("content-type")
+    if not value:
+        return None
+    try:
+        return ContentType.parse(value)
+    except HeaderParseError:
         return None
 
-    content_type = headers.get("content-type", "")
-    mime_type = content_type.split(";")[0].strip().lower()
-    charset = _extract_encoding_from_content_type(content_type)
 
-    if mime_type == "application/json" or mime_type.endswith("+json"):
-        return json.loads(body.decode(charset))
-    elif mime_type.startswith("text/"):
-        return body.decode(charset)
+def is_json(ct: ContentType | None) -> bool:
+    return ct is not None and (ct.media_type == "application/json" or ct.subtype.endswith("+json"))
+
+
+def is_text(ct: ContentType | None) -> bool:
+    return ct is not None and ct.type == "text"
+
+
+def charset(ct: ContentType | None) -> str:
+    return ct.charset if ct is not None and ct.charset is not None else "utf-8"
+
+
+def serialize_body(
+    body: bytes,
+    headers: Headers,
+) -> Any:
+    ct = parse_content_type(headers)
+    charset_ = charset(ct)
+
+    if is_json(ct):
+        return json.loads(body.decode(charset_))
+    elif is_text(ct):
+        return body.decode(charset_)
     else:
         return base64.b64encode(body).decode("ascii")
 
 
-def _deserialize_body(
+def deserialize_body(
     body: Any,
     headers: Headers,
-) -> bytes | None:
-    if body is None:
-        return None
-
-    content_type = headers.get("content-type", "")
-    mime_type = content_type.split(";")[0].strip().lower()
-    charset = _extract_encoding_from_content_type(content_type)
+) -> bytes:
+    ct = parse_content_type(headers)
+    charset_ = charset(ct)
 
     if isinstance(body, (dict, list)):
-        return json.dumps(body, ensure_ascii=False).encode(charset)
+        return json.dumps(body, ensure_ascii=False).encode(charset_)
     elif isinstance(body, str):
-        is_json = mime_type == "application/json" or mime_type.endswith("+json")
-        is_text = mime_type.startswith("text/")
-
-        if is_text or is_json:
-            return body.encode(charset)
+        if is_text(ct) or is_json(ct):
+            return body.encode(charset_)
         else:
             return base64.b64decode(body)
     else:
         raise ValueError(f"Unexpected body type: {type(body)}")
 
 
-def _request_key(
+def request_key(
     request: Request,
 ) -> dict[str, Any]:
     return {
@@ -121,8 +139,16 @@ def _request_key(
     }
 
 
+def get_cassette_mode_from_env() -> CassetteMode:
+    mode_str = os.getenv("ZAPROS_CASSETTE_MODE", CassetteMode.ONCE.value).lower()
+    try:
+        return CassetteMode(mode_str)
+    except ValueError:
+        raise ValueError(f"Invalid cassette mode in environment variable ZAPROS_CASSETTE_MODE: {mode_str}") from None
+
+
 @dataclass
-class _StoredInteraction:
+class StoredInteraction:
     request: dict[str, Any]
     response: dict[str, Any]
     played_back: bool = False
@@ -161,14 +187,9 @@ class Modifier:
         return self._network_response_mapper(response)
 
 
-class Cassette:
-    def __init__(
-        self,
-        *,
-        allow_playback_repeats: bool = False,
-    ) -> None:
+class ModifierRouter:
+    def __init__(self) -> None:
         self._modifiers: list[Modifier] = []
-        self._allow_playback_repeats = allow_playback_repeats
 
     def modifier(self, matcher: Matcher) -> Modifier:
         modifier = Modifier(matcher)
@@ -196,48 +217,45 @@ class Cassette:
 
         return current
 
-    @property
-    def allow_playback_repeats(
-        self,
-    ) -> bool:
-        return self._allow_playback_repeats
-
 
 class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
-        cassette: Cassette,
         next_handler: AsyncBaseHandler | BaseHandler,
         *,
-        mode: CassetteMode,
-        cassette_dir: str,
+        router: ModifierRouter | None = None,
+        mode: CassetteMode | None = None,
+        cassette_dir: str = "cassettes",
         cassette_name: str = "default",
+        allow_playback_repeats: bool = False,
     ) -> None:
-        self._cassette = cassette
-        self._mode = mode
+        self.router = router or ModifierRouter()
         self.next = cast(BaseHandler, next_handler)
         self.async_next = cast(
             AsyncBaseMiddleware,
             next_handler,
         )
+        self._mode = mode if mode is not None else get_cassette_mode_from_env()
+
+        self._allow_playback_repeats = allow_playback_repeats
         self._cassette_dir = Path(cassette_dir)
         self._cassette_name = cassette_name
         self._cassette_existed_at_init = self._cassette_path().exists()
-        self._interactions = self._load()
+        self._interactions = [] if self._mode == CassetteMode.ALL else self._load()
 
     def _cassette_path(self) -> Path:
         return self._cassette_dir / f"{self._cassette_name}.json"
 
     def _load(
         self,
-    ) -> list[_StoredInteraction]:
+    ) -> list[StoredInteraction]:
         path = self._cassette_path()
         if not path.exists():
             return []
 
         payload = json.loads(path.read_text(encoding="utf-8"))
         return [
-            _StoredInteraction(
+            StoredInteraction(
                 request=item["request"],
                 response=item["response"],
                 played_back=False,  # runtime-only state
@@ -264,22 +282,25 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             encoding="utf-8",
         )
 
-    def _build_replayed_response(self, item: _StoredInteraction) -> Response:
+    def _build_replayed_response(self, item: StoredInteraction) -> Response:
         headers = Headers(item.response["headers"])
-        body = _deserialize_body(item.response["body"], headers)
+        body = deserialize_body(item.response["body"], headers)
         return Response(
             status=item.response["status"],
-            headers=headers,
+            headers={
+                **headers,
+                "content-length": str(len(body)),
+            },
             content=body,
         )
 
     def _find_matching_interaction(
         self,
         prepared_request: Request,
-    ) -> _StoredInteraction | None:
-        key = _request_key(prepared_request)
+    ) -> StoredInteraction | None:
+        key = request_key(prepared_request)
 
-        if self._cassette.allow_playback_repeats:
+        if self._allow_playback_repeats:
             for item in self._interactions:
                 if item.request == key:
                     return item
@@ -291,48 +312,25 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         return None
 
-    def _mark_played_back(self, item: _StoredInteraction) -> None:
-        if self._cassette.allow_playback_repeats:
+    def _mark_played_back(self, item: StoredInteraction) -> None:
+        if self._allow_playback_repeats:
             return
         item.played_back = True
 
     def _can_record(self) -> bool:
-        if self._mode == "all":
+        if self._mode == CassetteMode.ALL:
             return True
 
-        if self._mode == "new_episodes":
+        if self._mode == CassetteMode.NEW_EPISODES:
             return True
 
-        if self._mode == "once":
+        if self._mode == CassetteMode.ONCE:
             return not self._cassette_existed_at_init
 
-        if self._mode == "none":
+        if self._mode == CassetteMode.NONE:
             return False
 
         raise ValueError(f"Unknown cassette mode: {self._mode}")
-
-    def _record_interaction(
-        self,
-        prepared_request: Request,
-        prepared_response: Response,
-        response_body: bytes,
-        response_headers: Headers,
-    ) -> None:
-        body_content = _serialize_body(
-            response_body if response_body != b"" else None,
-            response_headers,
-        )
-        self._interactions.append(
-            _StoredInteraction(
-                request=_request_key(prepared_request),
-                response={
-                    "status": prepared_response.status,
-                    "headers": dict(response_headers),
-                    "body": body_content,
-                },
-            )
-        )
-        self._save()
 
     async def _amaterialize_request(self, request: Request) -> Request:
         body = request.body
@@ -366,9 +364,9 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         if isinstance(request.body, AsyncClosableStream):
             await request.body.aclose()
 
-        prepared_request = self._cassette.prepare_request(replayable_request)
+        prepared_request = self.router.prepare_request(replayable_request)
 
-        if self._mode != "all":
+        if self._mode != CassetteMode.ALL:
             stored = self._find_matching_interaction(prepared_request)
             if stored is not None:
                 self._mark_played_back(stored)
@@ -381,7 +379,7 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         network_response = await handler.ahandle(replayable_request)
 
-        mapped_response = self._cassette.prepare_network_response(replayable_request, network_response)
+        mapped_response = self.router.prepare_network_response(replayable_request, network_response)
 
         mapped_body = await mapped_response.aread()
         mapped_headers = Headers((k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding")
@@ -395,11 +393,16 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             content=mapped_body,
         )
 
-        self._record_interaction(
-            prepared_request,
-            replayable_response,
-            mapped_body,
-            mapped_headers,
+        self._interactions.append(
+            StoredInteraction(
+                request=request_key(prepared_request),
+                response={
+                    "status": replayable_response.status,
+                    "headers": dict(replayable_response.headers),
+                    "body": serialize_body(await replayable_response.aread(), replayable_response.headers),
+                },
+                played_back=False,
+            )
         )
         return replayable_response
 
@@ -411,9 +414,9 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         if isinstance(request.body, ClosableStream):
             request.body.close()
 
-        prepared_request = self._cassette.prepare_request(replayable_request)
+        prepared_request = self.router.prepare_request(replayable_request)
 
-        if self._mode != "all":
+        if self._mode != CassetteMode.ALL:
             stored = self._find_matching_interaction(prepared_request)
             if stored is not None:
                 self._mark_played_back(stored)
@@ -426,7 +429,7 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
 
         network_response = handler.handle(replayable_request)
 
-        mapped_response = self._cassette.prepare_network_response(replayable_request, network_response)
+        mapped_response = self.router.prepare_network_response(replayable_request, network_response)
 
         mapped_body = mapped_response.read()
         mapped_headers = Headers((k, v) for k, v in mapped_response.headers.items() if k.lower() != "content-encoding")
@@ -440,13 +443,26 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             content=mapped_body,
         )
 
-        self._record_interaction(
-            prepared_request,
-            replayable_response,
-            mapped_body,
-            mapped_headers,
+        self._interactions.append(
+            StoredInteraction(
+                request=request_key(prepared_request),
+                response={
+                    "status": replayable_response.status,
+                    "headers": dict(replayable_response.headers),
+                    "body": serialize_body(replayable_response.read(), replayable_response.headers),
+                },
+                played_back=False,
+            )
         )
         return replayable_response
+
+    async def aclose(self) -> None:
+        # TODO: It's not critical to call the sync code here because cassettes are mostly used in the tests, buy maybe
+        # we should consider making the async close to avoid blocking the event loop with file I/O?
+        return self.close()
+
+    def close(self) -> None:
+        self._save()
 
 
 @typing_extensions.deprecated(
@@ -454,4 +470,12 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     "The name 'Handler' was misleading as this is a middleware, not a terminal handler."
 )
 class CassetteHandler(CassetteMiddleware):
+    pass
+
+
+@typing_extensions.deprecated(
+    "Cassette is deprecated, use ModifierRouter instead. "
+    "The name 'Cassette' was misleading as this class only manages modifiers, not cassette recordings."
+)
+class Cassette(ModifierRouter):
     pass

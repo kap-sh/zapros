@@ -19,19 +19,12 @@ from zapros import (
     AsyncClient,
     AsyncStdNetworkHandler,
 )
-from zapros import (
-    Cassette,
-    CassetteMiddleware,
-)
+from zapros import CassetteMiddleware
 
 
 async def main():
-    cassette = Cassette()
     handler = CassetteMiddleware(
-        cassette,
         AsyncStdNetworkHandler(),
-        mode="once",
-        cassette_dir="cassettes",
         cassette_name="github_api",
     )
 
@@ -50,17 +43,10 @@ from zapros import (
     Client,
     StdNetworkHandler,
 )
-from zapros import (
-    Cassette,
-    CassetteMiddleware,
-)
+from zapros import CassetteMiddleware
 
-cassette = Cassette()
 handler = CassetteMiddleware(
-    cassette,
     StdNetworkHandler(),
-    mode="once",
-    cassette_dir="cassettes",
     cassette_name="github_api",
 )
 
@@ -81,16 +67,14 @@ The first run hits the network and writes `cassettes/github_api.json`. Subsequen
 
 The `mode` parameter controls recording behavior:
 
-### `mode="once"`
+### `mode=CassetteMode.ONCE`
 
-Records only if the cassette file doesn't exist yet. Useful for initial recording:
+The default mode. Records only if the cassette file doesn't exist yet. Useful for initial recording:
 
 ```python
 handler = CassetteMiddleware(
-    cassette,
     network_handler,
-    mode="once",
-    cassette_dir="cassettes",
+    mode=CassetteMode.ONCE,
     cassette_name="api",
 )
 ```
@@ -98,16 +82,14 @@ handler = CassetteMiddleware(
 - First run: records to `cassettes/api.json`
 - Later runs: replays from cassette, raises error for unmatched requests
 
-### `mode="new_episodes"`
+### `mode=CassetteMode.NEW_EPISODES`
 
 Replays existing interactions, records new ones:
 
 ```python
 handler = CassetteMiddleware(
-    cassette,
     network_handler,
-    mode="new_episodes",
-    cassette_dir="cassettes",
+    mode=CassetteMode.NEW_EPISODES,
     cassette_name="api",
 )
 ```
@@ -115,37 +97,60 @@ handler = CassetteMiddleware(
 - Matched requests: served from cassette
 - Unmatched requests: hit network, get appended to cassette
 
-### `mode="all"`
+### `mode=CassetteMode.ALL`
 
 Always hits the network, always records (even duplicates):
 
 ```python
 handler = CassetteMiddleware(
-    cassette,
     network_handler,
-    mode="all",
-    cassette_dir="cassettes",
+    mode=CassetteMode.ALL,
     cassette_name="api",
 )
 ```
 
 Use for regenerating cassettes or debugging.
 
-### `mode="none"`
+### `mode=CassetteMode.NONE`
 
 Replay-only mode. Raises error if no match found:
 
 ```python
 handler = CassetteMiddleware(
-    cassette,
     None,  # no network handler needed
-    mode="none",
-    cassette_dir="cassettes",
+    mode=CassetteMode.NONE,
     cassette_name="api",
 )
 ```
 
 Use in CI to ensure tests never hit the network.
+
+### Overriding the mode via environment
+
+If `mode` is not passed to `CassetteMiddleware`, the default is read from the `ZAPROS_CASSETTE_MODE` environment variable. This lets the same code record or replay depending on how it's run:
+
+```python
+handler = CassetteMiddleware(
+    network_handler,
+    cassette_name="api",
+)
+```
+
+```bash
+# record new interactions on first run, replay after
+ZAPROS_CASSETTE_MODE=once pytest
+
+# always hit the network and regenerate cassettes
+ZAPROS_CASSETTE_MODE=all pytest
+
+# append new interactions to existing cassettes
+ZAPROS_CASSETTE_MODE=new_episodes pytest
+
+# replay-only; fail on any unmatched request
+ZAPROS_CASSETTE_MODE=none pytest
+```
+
+Valid values match the `CassetteMode` names (case-insensitive): `all`, `new_episodes`, `once`, `none`. An invalid value raises `ValueError` at middleware init. If both `mode=` and the environment variable are set, the explicit `mode=` argument wins. If neither is set, the default is `once`.
 
 ---
 
@@ -154,11 +159,9 @@ Use in CI to ensure tests never hit the network.
 By default, each cassette interaction can be played back once. Requesting the same URL again raises an error:
 
 ```python
-cassette = Cassette()
 handler = CassetteMiddleware(
-    cassette,
     None,
-    mode="none",
+    mode=CassetteMode.NONE,
     cassette_dir=".",
     cassette_name="test",
 )
@@ -175,13 +178,12 @@ async with AsyncClient(handler=handler) as client:
 To allow repeated playback:
 
 ```python
-cassette = Cassette(allow_playback_repeats=True)
 handler = CassetteMiddleware(
-    cassette,
     None,
-    mode="none",
+    mode=CassetteMode.NONE,
     cassette_dir=".",
     cassette_name="test",
+    allow_playback_repeats=True,
 )
 
 async with AsyncClient(handler=handler) as client:
@@ -231,8 +233,9 @@ Map the request before it becomes a cassette key:
 import asyncio
 from zapros import AsyncClient, Request
 from zapros import (
-    Cassette,
     CassetteMiddleware,
+    CassetteMode,
+    ModifierRouter,
 )
 from zapros.mock import (
     Mock,
@@ -248,7 +251,7 @@ async def main():
         status=200, text="ok"
     ).mount(router)
 
-    cassette = Cassette()
+    router = ModifierRouter()
 
     def strip_query(
         req: Request,
@@ -258,15 +261,14 @@ async def main():
             req.method,
         )
 
-    cassette.modifier(path("/api")).map_network_request(
+    router.modifier(path("/api")).map_network_request(
         strip_query
     )
 
     handler = CassetteMiddleware(
-        cassette,
         MockMiddleware(router),
-        mode="all",
-        cassette_dir="cassettes",
+        router=router,
+        mode=CassetteMode.ALL,
         cassette_name="test",
     )
 
@@ -282,8 +284,9 @@ asyncio.run(main())
 ```python [Sync]
 from zapros import Client, Request
 from zapros import (
-    Cassette,
     CassetteMiddleware,
+    CassetteMode,
+    ModifierRouter,
 )
 from zapros.mock import (
     Mock,
@@ -297,7 +300,7 @@ Mock.given(path("/api")).respond(
     status=200, text="ok"
 ).mount(router)
 
-cassette = Cassette()
+router = ModifierRouter()
 
 
 def strip_query(
@@ -309,15 +312,14 @@ def strip_query(
     )
 
 
-cassette.modifier(path("/api")).map_network_request(
+router.modifier(path("/api")).map_network_request(
     strip_query
 )
 
 handler = CassetteMiddleware(
-    cassette,
     MockMiddleware(router),
-    mode="all",
-    cassette_dir="cassettes",
+    router=router,
+    mode=CassetteMode.ALL,
     cassette_name="test",
 )
 
@@ -351,7 +353,7 @@ def redact_headers(
     )
 
 
-cassette.modifier(path("/login")).map_network_response(
+router.modifier(path("/login")).map_network_response(
     redact_headers
 )
 ```
@@ -376,14 +378,19 @@ Cassettes are stored as JSON:
       "headers": {
         "content-type": "application/json"
       },
-      "body": "[{\"id\": 1, \"name\": \"Alice\"}]"
-    },
+      "body": [
+        { "id": 1, "name": "Alice" }
+      ]
+    }
   }
 ]
 ```
 
-- `request`: Normalized method + URI
-- `response`: Status, headers, and body (UTF-8 encoded)
+Bodies are stored based on the response `content-type`:
+
+- `application/json` (or `*/*+json`): inlined as a JSON value (object, array, number, etc.) so diffs stay readable.
+- `text/*`: inlined as a string, decoded with the charset from `content-type` (default `utf-8`).
+- Anything else (binary): base64-encoded string.
 
 ---
 
