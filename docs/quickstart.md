@@ -22,7 +22,7 @@ async def main():
         )
         print(response.status)
         print(response.headers["content-type"])
-         print(response.text)
+        print(response.text)
 
 
 asyncio.run(main())
