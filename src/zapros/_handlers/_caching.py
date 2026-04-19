@@ -120,9 +120,6 @@ def _zapros_to_hishel(
             metadata={"hishel_" + key: value for key, value in model.context.get("caching", {}).items()},
         )
     else:
-        copied_headers = Headers(model.headers)
-        copied_headers.pop("content-encoding", None)
-
         assert stream is not None, "Stream must be provided for Response conversion"
         return HishelResponse(
             status_code=model.status,
@@ -226,7 +223,11 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             ) -> HishelResponse:
                 zapros_request = _hishel_to_zapros(request)
                 zapros_response = await self.async_next.ahandle(zapros_request)
-                return _zapros_to_hishel(zapros_response, stream=zapros_response.async_iter_bytes())
+
+                if zapros_response.consumed:
+                    return _zapros_to_hishel(zapros_response, stream=zapros_response.async_iter_bytes())
+                else:
+                    return _zapros_to_hishel(zapros_response, stream=zapros_response.async_iter_raw())
 
             assert (
                 isinstance(
@@ -258,7 +259,11 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             ) -> HishelResponse:
                 zapros_request = _hishel_to_zapros(request)
                 zapros_response = self.next.handle(zapros_request)
-                return _zapros_to_hishel(zapros_response, stream=zapros_response.iter_bytes())
+
+                if zapros_response.consumed:
+                    return _zapros_to_hishel(zapros_response, stream=zapros_response.iter_bytes())
+                else:
+                    return _zapros_to_hishel(zapros_response, stream=zapros_response.iter_raw())
 
             assert (
                 isinstance(
