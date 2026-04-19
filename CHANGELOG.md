@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.7.0](https://github.com/kap-sh/zapros/compare/v0.6.0...v0.7.0) (2026-04-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **models:** split Response.content into _source and _content
+
+### Features
+
+* add ContentType header parsing and validation ([43984d5](https://github.com/kap-sh/zapros/commit/43984d556ba334351ab86c35df4d356e23a7e11a))
+* add Response.consumed flag ([6ff277b](https://github.com/kap-sh/zapros/commit/6ff277b7a7a7d20f87e3e849e9fc4d9acbb9dc8c))
+
+
+### Bug Fixes
+
+* **caching:** properly handle cases when body was consumed before reaching cache ([d68cbc0](https://github.com/kap-sh/zapros/commit/d68cbc0c58f63e5121fb47ef4e8ac8e248ffd898))
+
+
+### Chores
+
+* bump ry version, simplify ry.yml ([ed05152](https://github.com/kap-sh/zapros/commit/ed051528aae87dcb1384a027caf8b9bf7787f6cb))
+* disable release-please prerelease mode ([7fe0f3a](https://github.com/kap-sh/zapros/commit/7fe0f3aea51a25940c51b07dd312aac9283afa55))
+* generate more sync code ([ef19b40](https://github.com/kap-sh/zapros/commit/ef19b40741975c954457b96e8264d1f371754255))
+
+
+### Documentation
+
+* fix typo in cassettes page ([4d086bc](https://github.com/kap-sh/zapros/commit/4d086bcbe574947ba74f6c9daae7637404d5ceaf))
+
+
+### Refactors
+
+* **cassettes:** deprecate Cassette, move some arguments to CassetteMiddleware ([a2e4eeb](https://github.com/kap-sh/zapros/commit/a2e4eeb9bdad964813c49e85de693ea26f4e3c40))
+* **internal:** rename _source to _content ([1793b9b](https://github.com/kap-sh/zapros/commit/1793b9bb3a4fbb423f8324ec8a48603dda9500f2))
+* **models:** split Response.content into _source and _content ([be45aea](https://github.com/kap-sh/zapros/commit/be45aead4f2c8482b4d36a9227959e5d7ea3774c))
+* simplify cassette url normalizer ([1f0a304](https://github.com/kap-sh/zapros/commit/1f0a30403629a000b15d2b7472a044ab3b732165))
+* simplify zapros to hishel conversion ([62e9f83](https://github.com/kap-sh/zapros/commit/62e9f83e74f857c1d74d7af3a0e87f018f69cf25))
+
 ## [0.6.0](https://github.com/kap-sh/zapros/compare/v0.5.1...v0.6.0) (2026-04-12)
 
 
