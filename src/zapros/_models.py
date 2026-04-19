@@ -372,6 +372,7 @@ class Response:
         "_content",
         "_decoded_content",
         "_decoder",
+        "_consumed",
         "context",
     )
 
@@ -430,10 +431,10 @@ class Response:
 
         self.status = status
         self.headers: Headers = headers if isinstance(headers, Headers) else Headers(headers) if headers else Headers()
+        self.context: ResponseContext = context if context is not None else {}
         self._content: AsyncStream | Stream | bytes | None = content
         self._decoded_content: bytes | None = None
         self._decoder: ContentDecoder | None = None
-        self.context: ResponseContext = context if context is not None else {}
 
         if text is not None:
             encoding = self.encoding
@@ -446,6 +447,11 @@ class Response:
                 json_module.dumps(json).encode("utf-8"),
                 content_type="application/json; charset=utf-8",
             )
+
+        # Static content (bytes, text=, json=) and absent content are always
+        # considered consumed -- there's no underlying stream to exhaust, so the
+        # body is either immediately available or not present at all.
+        self._consumed: bool = isinstance(self._content, bytes) or self._content is None
 
         if isinstance(self._content, bytes):
             if "content-length" not in self.headers:
@@ -472,6 +478,18 @@ class Response:
             if part.lower().startswith("charset="):
                 return part[8:].strip().strip('"')
         return "utf-8"
+
+    @property
+    def consumed(self) -> bool:
+        """
+        Whether the response body stream has been fully read.
+
+        Returns `True` if the body was provided as static content (bytes, text, or json),
+        if no body was provided at all, or if the underlying stream has been exhausted by
+        any of the iter/read methods. Returns `False` if a streaming body has been
+        provided but not yet fully consumed.
+        """
+        return self._consumed
 
     @property
     @deprecated("Use `.read` or `.aread` to get the decoded content instead of accessing `.content` directly")
@@ -655,6 +673,7 @@ class Response:
             raise AsyncSyncMismatchError("Can't iterate content in this context")
         async for chunk in self._content:
             yield chunk
+        self._consumed = True
 
     def _iter_source(self) -> Iterator[bytes]:  # unasync: generated
         if self._content is None:
@@ -666,6 +685,7 @@ class Response:
             raise AsyncSyncMismatchError("Can't iterate content in this context")
         for chunk in self._content:
             yield chunk
+        self._consumed = True
 
     async def aread(self) -> bytes:  # unasync: generate
         if self._decoded_content is not None:
