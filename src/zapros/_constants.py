@@ -18,7 +18,7 @@ DEFAULT_READ_SIZE = 1024 * 64
 
 
 @functools.cache
-def default_ssl_context() -> ssl.SSLContext:
+def default_ssl_context() -> "ssl.SSLContext":
     if ssl is None:
         raise RuntimeError("SSL support is not available in this environment")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 
@@ -47,8 +47,8 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
         *,
-        ssl_context: ssl.SSLContext | None = None,
-        upgrade_ssl_context: ssl.SSLContext | None = None,
+        ssl_context: Optional["ssl.SSLContext"] = None,
+        upgrade_ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self._reader = reader
         self._writer = writer
@@ -149,7 +149,7 @@ class AsyncIOTransport(AsyncBaseTransport):
     def __init__(
         self,
         *,
-        ssl_context: ssl.SSLContext | None = None,
+        ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 if TYPE_CHECKING:
     import ssl
@@ -33,7 +33,7 @@ class TrioStream(AsyncBaseNetworkStream):
         self,
         stream: trio.abc.Stream,
         *,
-        ssl_context: ssl.SSLContext | None = None,
+        ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self._stream = stream
         self._closed = False
@@ -98,7 +98,7 @@ class TrioTransport(AsyncBaseTransport):
     def __init__(
         self,
         *,
-        ssl_context: ssl.SSLContext | None = None,
+        ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 
