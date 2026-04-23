@@ -74,11 +74,43 @@ jobs:
 
   pyodide:
     needs: build
-    uses: pyodide/pytest-pyodide/.github/workflows/main.yaml@main
-    with:
-      build-artifact-name: pyodide_wheel
-      build-artifact-path: pyodide-dist
-      browser: firefox
-      runner: selenium
-      pyodide-version: "0.27.2"
-      pytest-extra-args: "pyodide_tests --override-ini=addopts="
+    runs-on: ubuntu-latest
+    env:
+      DISPLAY: :99
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pyodide/pyodide-actions/download-pyodide@v2
+        with:
+          version: "0.27.2"
+          to: pyodide-dist
+
+      - uses: pyodide/pyodide-actions/install-browser@v2
+        with:
+          runner: selenium
+          browser: firefox
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pyodide_wheel
+          path: pyodide-dist
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pyodide-py
+        run: pip install pyodide-py==0.27.2
+
+      - name: Install pytest-pyodide
+        run: pip install pytest-pyodide
+
+      - name: Run tests
+        run: |
+          python -m pytest -vra \
+            --dist-dir=./pyodide-dist/ \
+            --runner=selenium \
+            --rt=firefox \
+            pyodide_tests
