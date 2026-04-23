@@ -1,4 +1,3 @@
-import ssl
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
@@ -13,11 +12,14 @@ T = TypeVar("T")
 
 if TYPE_CHECKING:
     import socket
+    import ssl
 else:
     try:
         import socket
+        import ssl
     except ImportError:
         socket = None
+        ssl = None
 
 
 class _SyncTLSState:

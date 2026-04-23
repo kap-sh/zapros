@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import ssl
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -26,11 +25,15 @@ from .._errors import (
 
 if TYPE_CHECKING:
     import socket
+    import ssl
 else:
     try:
         import socket
+        import ssl
     except ImportError:
         socket = None
+        ssl = None
+
 
 _CONNECT_TIMEOUT_ERRNOS = {60, 110}
 _CONNECTION_LOST_ERRORS = (
