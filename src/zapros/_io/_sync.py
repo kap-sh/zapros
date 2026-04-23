@@ -25,10 +25,10 @@ else:
 class _SyncTLSState:
     def __init__(
         self,
-        sock: socket.socket,
-        ssl_object: ssl.SSLObject,
-        incoming_bio: ssl.MemoryBIO,
-        outgoing_bio: ssl.MemoryBIO,
+        sock: "socket.socket",
+        ssl_object: "ssl.SSLObject",
+        incoming_bio: "ssl.MemoryBIO",
+        outgoing_bio: "ssl.MemoryBIO",
     ) -> None:
         self.sock = sock
         self.ssl_object = ssl_object
@@ -38,7 +38,7 @@ class _SyncTLSState:
 
 
 class SyncStream(BaseNetworkStream):
-    def __init__(self, sock: socket.socket, *, upgrade_ssl_context: ssl.SSLContext) -> None:
+    def __init__(self, sock: "socket.socket", *, upgrade_ssl_context: "ssl.SSLContext") -> None:
         self.sock = sock
         self._closed = False
         self._upgrade_ssl_context = upgrade_ssl_context
@@ -130,7 +130,7 @@ class SyncTransport(BaseTransport):
     def __init__(
         self,
         *,
-        ssl_context: ssl.SSLContext | None = None,
+        ssl_context: "ssl.SSLContext | None" = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 
