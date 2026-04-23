@@ -1,12 +1,19 @@
 import gzip
-import socket
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from litestar import Litestar, Request, Response, WebSocket, get, websocket
 from litestar.handlers import route
+
+if TYPE_CHECKING:
+    import socket
+else:
+    try:
+        import socket
+    except ImportError:
+        socket = None
 
 
 def _normalize_header(name: bytes, value: bytes) -> tuple[str, str]:

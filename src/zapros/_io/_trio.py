@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-import ssl
 from typing import TYPE_CHECKING, cast
 
-from zapros._constants import DEFAULT_SSL_CONTEXT
+if TYPE_CHECKING:
+    import ssl
+else:
+    try:
+        import ssl
+    except ImportError:
+        ssl = None
+
+from zapros._constants import default_ssl_context
 
 from .._handlers._exc_map import (
     map_trio_connect_exceptions,
@@ -30,7 +37,7 @@ class TrioStream(AsyncBaseNetworkStream):
     ) -> None:
         self._stream = stream
         self._closed = False
-        self._ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
+        self._ssl_context = ssl_context or default_ssl_context()
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         with map_trio_read_exceptions():
@@ -93,7 +100,7 @@ class TrioTransport(AsyncBaseTransport):
         *,
         ssl_context: ssl.SSLContext | None = None,
     ) -> None:
-        self.ssl_context = DEFAULT_SSL_CONTEXT if ssl_context is None else ssl_context
+        self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 
     async def aconnect(
         self,

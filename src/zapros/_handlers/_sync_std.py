@@ -1,23 +1,26 @@
 from __future__ import annotations
 
 import base64
-import ssl
 import time
 import warnings
 from collections.abc import (
     Iterator,
 )
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import h11
 from pywhatwgurl import URL
 from typing_extensions import override
 
-from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
+from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._io._sync import SyncTransport
 from zapros._io._base import BaseNetworkStream, BaseTransport
 from zapros._io._trio import TrioTransport
 from zapros._utils import get_authority_value, get_pool_key
+
+if TYPE_CHECKING:
+    import ssl
+
 
 if TYPE_CHECKING:
     from socksio import ProtocolError, socks5
@@ -335,7 +338,7 @@ class StdNetworkHandler(BaseHandler):
         self,
         *,
         transport: BaseTransport | None = None,
-        ssl_context: ssl.SSLContext | None = None,
+        ssl_context: Union[None, "ssl.SSLContext"] = None,
         total_timeout: float | None = None,
         connect_timeout: float | None = None,
         read_timeout: float | None = None,
@@ -350,7 +353,7 @@ class StdNetworkHandler(BaseHandler):
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self.ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
+        self.ssl_context = ssl_context or default_ssl_context()
 
         self._transport = transport
 

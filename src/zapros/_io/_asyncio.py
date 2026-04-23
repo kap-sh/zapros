@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import ssl
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
+from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 
 from .._handlers._exc_map import (
     map_asyncio_connect_exceptions,
@@ -13,6 +12,14 @@ from .._handlers._exc_map import (
     map_socket_read_exceptions,
 )
 from ._base import AsyncBaseNetworkStream, AsyncBaseTransport
+
+if TYPE_CHECKING:
+    import ssl
+else:
+    try:
+        import ssl
+    except ImportError:
+        ssl = None
 
 T = TypeVar("T")
 
@@ -46,8 +53,8 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         self._reader = reader
         self._writer = writer
         self._closed = False
-        self._ssl_context = ssl_context or DEFAULT_SSL_CONTEXT
-        self._upgrade_ssl_context = upgrade_ssl_context or DEFAULT_SSL_CONTEXT
+        self._ssl_context = ssl_context or default_ssl_context()
+        self._upgrade_ssl_context = upgrade_ssl_context or default_ssl_context()
         self._tls_state: _AsyncTLSState | None = None
 
     async def _flush_outgoing(self, timeout: float | None = None) -> None:
@@ -144,7 +151,7 @@ class AsyncIOTransport(AsyncBaseTransport):
         *,
         ssl_context: ssl.SSLContext | None = None,
     ) -> None:
-        self.ssl_context = DEFAULT_SSL_CONTEXT if ssl_context is None else ssl_context
+        self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 
     async def aconnect(
         self,

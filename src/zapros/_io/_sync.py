@@ -1,8 +1,7 @@
-import socket
 import ssl
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from zapros._constants import DEFAULT_READ_SIZE, DEFAULT_SSL_CONTEXT
+from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._handlers._exc_map import (
     map_socket_connect_exceptions,
     map_socket_read_exceptions,
@@ -11,6 +10,14 @@ from zapros._handlers._exc_map import (
 from zapros._io._base import BaseNetworkStream, BaseTransport
 
 T = TypeVar("T")
+
+if TYPE_CHECKING:
+    import socket
+else:
+    try:
+        import socket
+    except ImportError:
+        socket = None
 
 
 class _SyncTLSState:
@@ -123,7 +130,7 @@ class SyncTransport(BaseTransport):
         *,
         ssl_context: ssl.SSLContext | None = None,
     ) -> None:
-        self.ssl_context = DEFAULT_SSL_CONTEXT if ssl_context is None else ssl_context
+        self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
 
     def connect(
         self,

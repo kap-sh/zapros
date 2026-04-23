@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import socket
 import ssl
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
@@ -24,6 +23,14 @@ from .._errors import (
     WriteError,
     WriteTimeoutError,
 )
+
+if TYPE_CHECKING:
+    import socket
+else:
+    try:
+        import socket
+    except ImportError:
+        socket = None
 
 _CONNECT_TIMEOUT_ERRNOS = {60, 110}
 _CONNECTION_LOST_ERRORS = (
