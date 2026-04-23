@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,3 +39,46 @@ jobs:
 
       - name: Run tests
         run: scripts/test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "3.1.58"
+
+      - name: Install pyodide-build
+        run: pip install pyodide-build>=0.27.0
+
+      - name: Build pyodide wheel
+        run: pyodide build
+
+      - name: Copy wheel to pyodide-dist
+        run: |
+          mkdir -p pyodide-dist
+          cp dist/*.whl pyodide-dist/
+          cp dist/*.tar.gz pyodide-dist/ || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyodide_wheel
+          path: pyodide-dist
+
+  pyodide:
+    needs: build
+    uses: pyodide/pytest-pyodide/.github/workflows/main.yaml@main
+    with:
+      build-artifact-name: pyodide_wheel
+      build-artifact-path: pyodide-dist
+      browser: firefox
+      runner: selenium
+      pyodide-version: "0.27.2"
+      pytest-extra-args: "pyodide_tests"
