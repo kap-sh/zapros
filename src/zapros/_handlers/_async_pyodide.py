@@ -19,6 +19,7 @@ from .._models import (
     Response,
 )
 from ._async_base import (
+    AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
 
@@ -214,7 +215,7 @@ class PyodideAsyncClosableStream(AsyncClosableStream):  # type: ignore[reportRed
                 self._total_abort.clear()
 
 
-class AsyncPyodideHandler(AsyncBaseMiddleware):  # type: ignore[reportRedeclaration]
+class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration]
     def __init__(
         self,
         *,
