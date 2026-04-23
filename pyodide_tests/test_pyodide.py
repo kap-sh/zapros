@@ -1,14 +1,26 @@
+import glob
+
 from pytest_pyodide import run_in_pyodide
+from pytest_pyodide.decorator import copy_files_to_pyodide
 
 
-@run_in_pyodide(packages=["zapros"])
+def get_wheel_path():
+    wheels = glob.glob("dist/*.whl")
+    if not wheels:
+        raise FileNotFoundError("No wheel found in dist/. Run 'uv build' first.")
+    return wheels[0]
+
+
+@copy_files_to_pyodide(file_list=lambda: [(get_wheel_path(), "/tmp/zapros.whl")], install_wheels=True)
+@run_in_pyodide
 def test_import_zapros(selenium):
     import zapros
 
     assert hasattr(zapros, "__version__")
 
 
-@run_in_pyodide(packages=["zapros"])
+@copy_files_to_pyodide(file_list=lambda: [(get_wheel_path(), "/tmp/zapros.whl")], install_wheels=True)
+@run_in_pyodide
 def test_basic_get(selenium):
     from zapros import Client
 

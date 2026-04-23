@@ -95,14 +95,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pyodide_wheel
-          path: pyodide-dist
+          path: dist
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install pyodide-py
-        run: pip install pyodide-py==0.27.2
 
       - name: Install pytest-pyodide
         run: pip install pytest-pyodide
