@@ -81,4 +81,4 @@ jobs:
       browser: firefox
       runner: selenium
       pyodide-version: "0.27.2"
-      pytest-extra-args: "pyodide_tests"
+      pytest-extra-args: "pyodide_tests --override-ini=addopts="
