@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from http.client import HTTPMessage
-from http.cookiejar import CookieJar
-from typing import cast
-from urllib.request import (
-    Request as UrllibRequest,
-)
+from typing import TYPE_CHECKING, cast
 
 import typing_extensions
 
@@ -24,12 +19,17 @@ from ._sync_base import (
     BaseMiddleware,
 )
 
+if TYPE_CHECKING:
+    from http.client import HTTPMessage
+    from http.cookiejar import CookieJar
+    from urllib.request import Request as UrllibRequest
+
 
 class _MockHTTPResponse:
-    def __init__(self, headers: HTTPMessage) -> None:
+    def __init__(self, headers: "HTTPMessage") -> None:
         self.msg = headers
 
-    def info(self) -> HTTPMessage:
+    def info(self) -> "HTTPMessage":
         return self.msg
 
 
@@ -37,16 +37,20 @@ class CookieMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         next_handler: AsyncBaseHandler | BaseHandler,
-        jar: CookieJar | None = None,
+        jar: "CookieJar | None" = None,
     ) -> None:
+        from http.cookiejar import CookieJar as _CookieJar
+
         self.next = cast(BaseHandler, next_handler)
         self.async_next = cast(
             AsyncBaseHandler,
             next_handler,
         )
-        self.jar = jar if jar is not None else CookieJar()
+        self.jar = jar if jar is not None else _CookieJar()
 
-    def _process_request(self, request: Request) -> UrllibRequest:
+    def _process_request(self, request: Request) -> "UrllibRequest":
+        from urllib.request import Request as UrllibRequest
+
         req = UrllibRequest(
             str(request.url),
             headers=dict(request.headers.list()),
@@ -76,8 +80,10 @@ class CookieMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def _process_response(
         self,
         response: Response,
-        req: UrllibRequest,
+        req: "UrllibRequest",
     ) -> Response:
+        from http.client import HTTPMessage
+
         headers = HTTPMessage()
         for (
             k,
