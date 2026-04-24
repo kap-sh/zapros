@@ -93,6 +93,9 @@ class AsyncClient:
         )
 
         if sys.platform == "emscripten" and handler is None:
+            if type(self).__name__ == "Client":
+                raise RuntimeError("Synchronous Client is not supported in Pyodide. Please use AsyncClient instead.")
+
             from zapros import (
                 AsyncPyodideHandler,
             )
