@@ -104,6 +104,10 @@ jobs:
       - name: Install pytest-pyodide
         run: pip install pytest-pyodide
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.10.0"
       - name: Run tests
         run: |
           uv run pytest -vra \
