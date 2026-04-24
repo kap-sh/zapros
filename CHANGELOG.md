@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/kap-sh/zapros/compare/v0.8.0...v0.9.0) (2026-04-24)
+
+
+### Bug Fixes
+
+* **pyodide:** strip out content-encoding header as fetch always decompresses ([14ef378](https://github.com/kap-sh/zapros/commit/14ef378cefa38a65207bcb6e0d9c725fb494f86d))
+
+
+### Documentation
+
+* fix the browser example, use CORS-free endpoint ([1f9e0ab](https://github.com/kap-sh/zapros/commit/1f9e0ab97eafaf12f8e1a95d005abddc5a86513d))
+
 ## [0.8.0](https://github.com/kap-sh/zapros/compare/v0.7.0...v0.8.0) (2026-04-24)
 
 
