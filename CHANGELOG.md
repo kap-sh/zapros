@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/kap-sh/zapros/compare/v0.7.0...v0.8.0) (2026-04-24)
+
+
+### Chores
+
+* add CI test for pyodide support ([3c03a8f](https://github.com/kap-sh/zapros/commit/3c03a8f4200f57e25cd36c2898fe523e1bf0766d))
+* release 0.8.0 ([3966f38](https://github.com/kap-sh/zapros/commit/3966f38ec6924fdbd1ddd4d63d5953c324f0333b))
+
+
+### Documentation
+
+* document how to use zapros in browser ([c5ee3dc](https://github.com/kap-sh/zapros/commit/c5ee3dcb1943ae7df7f0ff54cca2bb321999ef08))
+
 ## [0.7.0](https://github.com/kap-sh/zapros/compare/v0.6.0...v0.7.0) (2026-04-19)
 
 
