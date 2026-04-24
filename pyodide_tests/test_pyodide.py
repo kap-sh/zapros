@@ -9,6 +9,8 @@ if not wheels:
     raise FileNotFoundError("No wheel found in dist/. Run 'uv build' first.")
 WHEEL_PATH = wheels[0]
 
+# TODO: try to deduplicate these tests and use the ones in test_handlers/test_async_basic.py instead
+
 
 @copy_files_to_pyodide(file_list=[(WHEEL_PATH, "/tmp/zapros.whl")], install_wheels=True)
 @run_in_pyodide
