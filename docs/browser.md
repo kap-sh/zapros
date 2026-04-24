@@ -9,11 +9,12 @@ You can try Zapros in your browser's developer tools console. For a better exper
 Zapros automatically detects when it's running in a browser environment and uses the appropriate handler, so you can simply create a client and make requests as you normally would:
 
 ```python
-from zapros import AsyncClient
+import zapros
 
-async with AsyncClient() as client:
-    response = await client.get("https://zapros.dev")
-    print(response.status)
+async with zapros.AsyncClient() as client:
+  # make a request to a CORS-free endpoint
+  response = await client.get("https://httpbin.org/get")
+  print(response.json)
 ```
 
 Note that using `await` at the top level is supported in Pyodide.
@@ -24,8 +25,8 @@ You can also explicitly specify the `AsyncPyodideHandler` if you prefer:
 from zapros import AsyncClient, AsyncPyodideHandler
 
 async with AsyncClient(handler=AsyncPyodideHandler()) as client:
-    response = await client.get("https://zapros.dev")
-    print(response.status)
+  response = await client.get("https://httpbin.org/get")
+  print(response.json)
 ```
 
 Note that some built-in features won't work in a browser environment, such as [caching](caching.md) and [cassettes](cassettes.md), since they rely on file system access. We're actively working on bringing these features to the browser as well, so stay tuned!
