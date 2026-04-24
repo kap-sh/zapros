@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from litestar import Litestar, Request, Response, WebSocket, get, websocket
+from litestar.config.cors import CORSConfig
 from litestar.handlers import route
 
 if TYPE_CHECKING:
@@ -73,7 +74,10 @@ async def gzip_endpoint(request: Request) -> Response[bytes]:
     )
 
 
-app = Litestar(route_handlers=[echo, ws_handler, gzip_endpoint])
+app = Litestar(
+    route_handlers=[echo, ws_handler, gzip_endpoint],
+    cors_config=CORSConfig(allow_origins=["*"]),
+)
 
 
 class MockServer:

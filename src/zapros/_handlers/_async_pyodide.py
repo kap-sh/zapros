@@ -20,7 +20,6 @@ from .._models import (
 )
 from ._async_base import (
     AsyncBaseHandler,
-    AsyncBaseMiddleware,
 )
 
 if TYPE_CHECKING:
