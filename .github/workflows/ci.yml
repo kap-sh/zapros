@@ -106,7 +106,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest -vra \
+          uv run pytest -vra \
             --dist-dir=./pyodide-dist/ \
             --runner=selenium \
             --rt=firefox \
