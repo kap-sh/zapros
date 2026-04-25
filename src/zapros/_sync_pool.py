@@ -9,10 +9,35 @@ from threading import Lock, Semaphore
 
 
 @dataclass
-class _HostState:
+class HostState:
     semaphore: Semaphore
+    """
+    Semaphore controlling the maximum number of concurrent connections for this host.
+    """
+
     refs: int = 0
+    """
+    Number of callers currently holding a pointer to this HostState -- that
+    is, callers between _get_state and _release_state_ref. Should be mutated only under
+    the lock.
+
+    Needed because callers do real work (awaiting the semaphore, using a
+    connection) *outside* the lock while still relying on this state. Without
+    a refcount, a concurrent _release_state_ref could observe an empty idle
+    deque and a fully-replenished semaphore and evict the entry from _states;
+    the next _get_state for the same key would then create a fresh state with
+    a fresh semaphore, silently breaking the per-host concurrency limit.
+
+    While refs > 0, the eviction check in _release_state_ref leaves the entry
+    in place, guaranteeing that every concurrent caller for the same key
+    shares the same semaphore and idle deque.
+    """
+
     idle: deque[IdlePoolConnection] | None = None
+    """
+    Deque of idle connections for this host, ordered from least recently used (left) to most recently used (right).
+    None when no idle connections are currently stored.
+    """
 
 
 class ConnPool:
@@ -28,20 +53,20 @@ class ConnPool:
         self._max_age = max_idle_seconds
 
         self._lock = Lock()
-        self._states: dict[PoolKey, _HostState] = {}
+        self._states: dict[PoolKey, HostState] = {}
         self._closed = False
 
-    def _get_state(self, key: PoolKey) -> _HostState:
+    def _get_state(self, key: PoolKey) -> HostState:
         with self._lock:
             state = self._states.get(key)
             if state is None:
-                state = _HostState(semaphore=Semaphore(self._max_connections_per_host))
+                state = HostState(semaphore=Semaphore(self._max_connections_per_host))
                 self._states[key] = state
 
             state.refs += 1
             return state
 
-    def _release_state_ref(self, key: PoolKey, state: _HostState) -> None:
+    def _release_state_ref(self, key: PoolKey, state: HostState) -> None:
         with self._lock:
             if self._states.get(key) is not state:
                 return
@@ -104,7 +129,7 @@ class ConnPool:
 
             state = self._states.get(key)
             if state is None:
-                state = _HostState(semaphore=Semaphore(self._max_connections_per_host))
+                state = HostState(semaphore=Semaphore(self._max_connections_per_host))
                 self._states[key] = state
 
             dq = state.idle
