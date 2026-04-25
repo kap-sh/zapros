@@ -4,7 +4,7 @@ Zapros supports browser runtimes through **Pyodide** and uses the browser's nati
 
 ## Try it out in your browser
 
-You can try Zapros in your browser's developer tools console. For a better experience, go to [PlayCode](https://playcode.io/python-template), add the `zapros>=0.8.0` package, and use the IDE to write and run your code.
+You can try Zapros in your browser's developer tools console. For a better experience, go to [PlayCode](https://playcode.io/python-template), add the `zapros>=0.9.0` package, and use the IDE to write and run your code.
 
 Zapros automatically detects when it's running in a browser environment and uses the appropriate handler, so you can simply create a client and make requests as you normally would:
 
