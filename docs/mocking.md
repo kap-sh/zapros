@@ -86,7 +86,7 @@ from zapros.matchers import path
 
 async def main():
     async with AsyncClient() as client:
-        async with mock_http() as router:
+        with mock_http() as router:
             Mock.given(path("/api")).respond(
                 Response(status=200)
             ).mount(router)
