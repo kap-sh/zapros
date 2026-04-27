@@ -69,7 +69,7 @@ with Client(handler=MockMiddleware(router)) as client:
 
 :::
 
-or, if you don't have access to the `Client` and can't easily inject a handler, you can use the `mock_http` context manager to patch the standard library's HTTP handling:
+or, if you don't have access to the `Client` and can't easily inject a handler, you can use the `mock_http` context manager to patch `zapros`'s default HTTP handling:
 
 ::: code-group
 
