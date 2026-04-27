@@ -191,6 +191,49 @@ with Client(
 
 :::
 
+## Base URL
+
+Pass `base_url` to set a base URL that all request paths are resolved against. This is useful when making multiple requests to the same API:
+
+::: code-group
+
+```python [Async]
+from zapros import AsyncClient
+
+async with AsyncClient(
+    base_url="https://api.example.com/v1/"
+) as client:
+    response = await client.get("users")
+    # Requests https://api.example.com/v1/users
+```
+
+```python [Sync]
+from zapros import Client
+
+with Client(base_url="https://api.example.com/v1/") as client:
+    response = client.get("users")
+    # Requests https://api.example.com/v1/users
+```
+
+:::
+
+URL resolution follows the [WHATWG URL Standard](https://url.spec.whatwg.org/). Key behaviors to note:
+
+| Base URL | Endpoint | Result |
+|----------|----------|--------|
+| `https://api.example.com/v1/` | `users` | `https://api.example.com/v1/users` |
+| `https://api.example.com/v1` | `users` | `https://api.example.com/users` |
+| `https://api.example.com/v1/` | `/health` | `https://api.example.com/health` |
+| `https://api.example.com/v1/` | `https://other.com/path` | `https://other.com/path` |
+
+::: tip
+Always include a trailing slash on your base URL if you want relative paths appended to it. Without a trailing slash, the last path segment is replaced.
+:::
+
+::: warning
+Query parameters on the base URL are dropped during resolution. Use `default_params` instead to include query parameters on every request.
+:::
+
 ## Authentication
 
 Pass `auth` to the client to authenticate every request. Auth passed directly to the request takes priority over the client-level `auth`:

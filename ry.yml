@@ -239,3 +239,8 @@ targets:
         replace: '_sync_send_request'
       - match: '\bHishelAsyncBaseStorage\b'
         replace: 'HishelSyncBaseStorage'
+
+  - tag: TestBaseUrl
+    rules:
+      - match: '\btest_async\b'
+        replace: 'test_sync'

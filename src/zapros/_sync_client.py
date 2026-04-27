@@ -55,6 +55,7 @@ class Client:
             URLSearchParams,
         ]
         | None = None,
+        base_url: str | None = None,
     ) -> None: ...
 
     @overload
@@ -70,6 +71,7 @@ class Client:
             URLSearchParams,
         ]
         | None = None,
+        base_url: str | None = None,
         auth: str | tuple[str, str],
     ) -> None: ...
 
@@ -85,6 +87,7 @@ class Client:
             URLSearchParams,
         ]
         | None = None,
+        base_url: str | None = None,
         auth: str | tuple[str, str] | None = None,
     ) -> None:
         from zapros import (
@@ -106,6 +109,7 @@ class Client:
             default_headers if isinstance(default_headers, Headers) else Headers(default_headers)
         )
         self.default_params = URLSearchParams(default_params)
+        self.base_url = base_url
         self.auth = auth
 
     def _merge_url(
@@ -119,7 +123,8 @@ class Client:
         ]
         | None = None,
     ) -> URL:
-        url_obj = url if isinstance(url, URL) else URL(url)
+
+        url_obj = url if isinstance(url, URL) else URL(url, self.base_url)
         url_obj.search = URLSearchParams(
             {
                 **self.default_params,
