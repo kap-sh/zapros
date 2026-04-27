@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.10.0](https://github.com/kap-sh/zapros/compare/v0.9.0...v0.10.0) (2026-04-27)
+
+
+### Features
+
+* add mock call tracking helpers ([#27](https://github.com/kap-sh/zapros/issues/27)) ([f86c588](https://github.com/kap-sh/zapros/commit/f86c588f9858c6ed010d4274eec12b5d1fda7131))
+* **client:** add base_url parameter for URL resolution ([2274816](https://github.com/kap-sh/zapros/commit/2274816208a6966723bf34972a4571b2cc348fa4))
+
+
+### Bug Fixes
+
+* make mypy happy with base handler shape ([6490251](https://github.com/kap-sh/zapros/commit/6490251e4aaf674cf44ff76bc7c7b7eee06cf476))
+
+
+### Documentation
+
+* Improve wording of what `mock_http` patches ([#26](https://github.com/kap-sh/zapros/issues/26)) ([fab280c](https://github.com/kap-sh/zapros/commit/fab280ccd58a38e420989f5b6ce7dcd1bc005484))
+* mock_http should be used as sync context manager ([#23](https://github.com/kap-sh/zapros/issues/23)) ([fd3063c](https://github.com/kap-sh/zapros/commit/fd3063c6c1f5b42f401cd31dad57f1f18092e75b))
+* separate matchers documentation ([6065c3b](https://github.com/kap-sh/zapros/commit/6065c3bad47b1bef3fbacbf48c6b737c34f2ebac))
+* suggest avoiding ([2b67277](https://github.com/kap-sh/zapros/commit/2b6727722b23ac69707866cd36fc7dfab1b5ea34))
+
 ## [0.9.0](https://github.com/kap-sh/zapros/compare/v0.8.0...v0.9.0) (2026-04-24)
 
 
