@@ -144,7 +144,7 @@ class MockRouter:
 class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
-        router: MockRouter,
+        router: MockRouter | None = None,
         next_handler: AsyncBaseHandler | BaseHandler | None = None,
     ) -> None:
         self.next = cast(BaseHandler, next_handler)
@@ -152,12 +152,12 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             AsyncBaseHandler,
             next_handler,
         )
-        self._router = router
+        self.router = MockRouter() if router is None else router
         self._fallback = next_handler
         self._passthrough = next_handler is not None
 
     async def ahandle(self, request: Request) -> Response:  # unasync: generate
-        response = self._router.dispatch(request)
+        response = self.router.dispatch(request)
         if response is not None:
             return response
 
@@ -168,7 +168,7 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         return await handler.ahandle(request)
 
     def handle(self, request: Request) -> Response:  # unasync: generated
-        response = self._router.dispatch(request)
+        response = self.router.dispatch(request)
         if response is not None:
             return response
 
@@ -179,12 +179,12 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         return handler.handle(request)
 
     async def aclose(self) -> None:
-        self._router.verify()
-        self._router.reset()
+        self.router.verify()
+        self.router.reset()
 
     def close(self) -> None:
-        self._router.verify()
-        self._router.reset()
+        self.router.verify()
+        self.router.reset()
 
 
 @typing_extensions.deprecated(

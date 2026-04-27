@@ -121,6 +121,39 @@ with Client() as client:
 
 :::
 
+## Prefer `MockMiddleware` over `mock_http`
+
+Whenever you can pass a handler into your `Client`, prefer `MockMiddleware` over `mock_http`. Injecting a middleware is far more reliable than globally patching `zapros`'s default network handlers, and it composes naturally with the way you already wire up clients in tests.
+
+For example, in `pytest` you typically have a fixture that builds the `Client` your code under test uses. You can write a small fixture that wires `MockMiddleware` into that same `Client` and yields the router, so each test only has to register the mocks it cares about:
+
+```python
+from typing import Iterator
+
+import pytest
+
+import zapros
+from zapros.mock import Mock, MockMiddleware, MockRouter
+
+
+@pytest.fixture
+def mock_client() -> Iterator[tuple[zapros.Client, MockRouter]]:
+    mock_middleware = MockMiddleware()
+    with zapros.Client(mock_middleware) as client:
+        yield client, mock_middleware.router
+
+
+def test_client(mock_client: tuple[zapros.Client, MockRouter]) -> None:
+    client, router = mock_client
+
+    router.add(Mock().respond(zapros.Response(200)))
+
+    response = client.get("https://example.com")
+    assert response.status == 200
+```
+
+Reach for `mock_http` only when you genuinely can't reach the `Client` to pass a handler in (for example, when testing third-party code that constructs its own client internally).
+
 ## Matching Requests
 
 Mocks match requests using **[matchers](/matchers)**. A matcher inspects some part of the request (method, path, headers, etc.) and returns `True` if it matches.

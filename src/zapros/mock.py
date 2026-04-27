@@ -68,7 +68,7 @@ class mock_http:
         mock_handler: MockMiddleware | None = None,
     ) -> None:
         self._mock_handler = mock_handler if mock_handler is not None else MockMiddleware(router=MockRouter())
-        self._router = self._mock_handler._router  # type: ignore
+        self._router = self._mock_handler.router  # type: ignore
 
         self._std_patch = patch.object(
             StdNetworkHandler,
