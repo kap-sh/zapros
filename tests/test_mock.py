@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from zapros import URL
@@ -52,6 +54,21 @@ def test_path_matcher():
     matcher = path("/health")
     request = Request(
         URL("https://example.com/health"),
+        "GET",
+    )
+    assert matcher.match(request)
+
+    request_other = Request(
+        URL("https://example.com/status"),
+        "GET",
+    )
+    assert not matcher.match(request_other)
+
+
+def test_path_matcher_with_regexp():
+    matcher = path(re.compile(r"/user/.*"))
+    request = Request(
+        URL("https://example.com/user/42"),
         "GET",
     )
     assert matcher.match(request)
