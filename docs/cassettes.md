@@ -61,8 +61,6 @@ with Client(handler=handler) as client:
 
 The first run hits the network and writes `cassettes/github_api.json`. Subsequent runs replay from disk.
 
----
-
 ## Cassette Modes
 
 The `mode` parameter controls recording behavior:
@@ -152,8 +150,6 @@ ZAPROS_CASSETTE_MODE=none pytest
 
 Valid values match the `CassetteMode` names (case-insensitive): `all`, `new_episodes`, `once`, `none`. An invalid value raises `ValueError` at middleware init. If both `mode=` and the environment variable are set, the explicit `mode=` argument wins. If neither is set, the default is `once`.
 
----
-
 ## Playback Repeats
 
 By default, each cassette interaction can be played back once. Requesting the same URL again raises an error:
@@ -195,8 +191,6 @@ async with AsyncClient(handler=handler) as client:
     )  # OK
 ```
 
----
-
 ## Request Matching
 
 Requests are matched by **method** and **normalized URL**. Query parameters are sorted before matching:
@@ -213,11 +207,9 @@ await client.get(
 
 Headers and request bodies are **not** part of the match key by default.
 
----
-
 ## Modifiers
 
-Modifiers transform requests or responses before they're recorded. Useful for:
+Modifiers transform requests or responses before they're recorded. They use [matchers](/matchers) to select which requests to modify. Useful for:
 
 - Stripping authentication tokens from cassettes
 - Normalizing dynamic URLs
@@ -360,8 +352,6 @@ router.modifier(path("/login")).map_network_response(
 
 Recorded responses won't include `Set-Cookie` headers.
 
----
-
 ## Cassette File Format
 
 Cassettes are stored as JSON:
@@ -391,6 +381,3 @@ Bodies are stored based on the response `content-type`:
 - `application/json` (or `*/*+json`): inlined as a JSON value (object, array, number, etc.) so diffs stay readable.
 - `text/*`: inlined as a string, decoded with the charset from `content-type` (default `utf-8`).
 - Anything else (binary): base64-encoded string.
-
----
-

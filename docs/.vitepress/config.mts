@@ -87,6 +87,7 @@ export default defineConfig({
         items: [
           { text: "Mocking HTTP Requests", link: "/mocking" },
           { text: "HTTP Cassettes", link: "/cassettes" },
+          { text: "Matchers", link: "/matchers" },
         ],
       },
     ],
