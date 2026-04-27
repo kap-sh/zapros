@@ -1,4 +1,5 @@
 import json as json_module
+import re
 from abc import abstractmethod
 from typing import (
     Any,
@@ -94,10 +95,12 @@ class MethodMatcher(Matcher):
 
 
 class PathMatcher(Matcher):
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str | re.Pattern[str]) -> None:
         self._path = path
 
     def match(self, request: Request) -> bool:
+        if isinstance(self._path, re.Pattern):
+            return self._path.match(request.url.pathname) is not None
         return request.url.pathname == self._path
 
 
@@ -179,7 +182,7 @@ def method(
     return MethodMatcher(method)
 
 
-def path(path: str) -> PathMatcher:
+def path(path: str | re.Pattern[str]) -> PathMatcher:
     return PathMatcher(path)
 
 

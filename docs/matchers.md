@@ -25,6 +25,23 @@ request = Request(URL("https://api.example.com/other"), "GET")
 assert matcher.match(request) == False
 ```
 
+You can also use regex-based matching:
+
+```python
+import re
+from pywhatwgurl import URL
+from zapros import Request
+from zapros.matchers import path
+
+matcher = path(re.compile("/user/.*"))
+
+request = Request(URL("https://api.example.com/user/123"), "GET")
+assert matcher.match(request) == True
+
+request = Request(URL("https://api.example.com/other"), "GET")
+assert matcher.match(request) == False
+```
+
 ## Method
 
 ```python
