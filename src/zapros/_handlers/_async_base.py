@@ -17,7 +17,7 @@ class AsyncBaseHandler(Protocol):
         raise NotImplementedError()
 
     async def aclose(self) -> None:
-        pass
+        return None
 
     def wrap_with_async_middleware(
         self,

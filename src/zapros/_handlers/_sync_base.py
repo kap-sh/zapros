@@ -17,7 +17,7 @@ class BaseHandler(Protocol):
         raise NotImplementedError()
 
     def close(self) -> None:
-        pass
+        return None
 
     def wrap_with_middleware(
         self,
