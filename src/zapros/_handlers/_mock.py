@@ -30,6 +30,7 @@ from ._async_base import (
 class Mock:
     def __init__(self) -> None:
         self.matchers: list[Matcher] = []
+        self.calls: list[Request] = []
         self._response: Response | None = None
         self._callback: Callable[[Request], Response] | BaseException | type[BaseException] | None = None
         self._expected_calls: int | None = None
@@ -75,6 +76,14 @@ class Mock:
         self._name = name
         return self
 
+    @property
+    def called(self) -> bool:
+        return bool(self.calls)
+
+    @property
+    def call_count(self) -> int:
+        return len(self.calls)
+
     def _is_exhausted(self) -> bool:
         return (
             self._expected_calls is not None and self._actual_calls >= self._expected_calls and self._expected_calls > 0
@@ -86,6 +95,7 @@ class Mock:
         return all(m.match(request) for m in self.matchers)
 
     def handle(self, request: Request) -> Response:
+        self.calls.append(request)
         self._actual_calls += 1
 
         if self._callback:
@@ -114,7 +124,20 @@ class Mock:
             name = self._name or "Mock"
             raise AssertionError(f"{name}: expected {self._expected_calls} calls, got {self._actual_calls}")
 
+    def assert_called(self) -> None:
+        if not self.called:
+            raise AssertionError(f"{self._name or 'Mock'} was not called")
+
+    def assert_not_called(self) -> None:
+        if self.called:
+            raise AssertionError(f"{self._name or 'Mock'} was unexpectedly called")
+
+    def assert_called_once(self) -> None:
+        if self.call_count != 1:
+            raise AssertionError(f"{self._name or 'Mock'} expected 1 call, got {self.call_count}")
+
     def reset(self) -> None:
+        self.calls.clear()
         self._actual_calls = 0
 
 
