@@ -121,7 +121,7 @@ with Client() as client:
 
 :::
 
-## Prefer `MockMiddleware` over `mock_http`
+## Avoid `mock_http`
 
 Whenever you can pass a handler into your `Client`, prefer `MockMiddleware` over `mock_http`. Injecting a middleware is far more reliable than globally patching `zapros`'s default network handlers, and it composes naturally with the way you already wire up clients in tests.
 
