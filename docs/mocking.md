@@ -500,6 +500,72 @@ router.verify()
 
 :::
 
+You can also make post-hoc assertions on a mock after the code under test runs. These assertions inspect recorded calls and do not change matching or exhaustion behavior.
+
+::: code-group
+
+```python [Async]
+import asyncio
+from zapros import AsyncClient, Response
+from zapros.mock import (
+    Mock,
+    MockMiddleware,
+    MockRouter,
+)
+from zapros.matchers import path
+
+router = MockRouter()
+
+mock = Mock.given(path("/api")).respond(
+    Response(status=200)
+).mount(router)
+
+
+async def main():
+    async with AsyncClient(
+        handler=MockMiddleware(router)
+    ) as client:
+        await client.get(
+            "https://api.example.com/api",
+        )
+
+    mock.assert_called_once()
+    assert mock.called
+    assert mock.call_count == 1
+    assert mock.calls[0].method == "GET"
+
+
+asyncio.run(main())
+```
+
+```python [Sync]
+from zapros import Client, Response
+from zapros.mock import (
+    Mock,
+    MockMiddleware,
+    MockRouter,
+)
+from zapros.matchers import path
+
+router = MockRouter()
+
+mock = Mock.given(path("/api")).respond(
+    Response(status=200)
+).mount(router)
+
+with Client(handler=MockMiddleware(router)) as client:
+    client.get(
+        "https://api.example.com/api",
+    )
+
+mock.assert_called_once()
+assert mock.called
+assert mock.call_count == 1
+assert mock.calls[0].method == "GET"
+```
+
+:::
+
 ## Once
 
 ::: code-group

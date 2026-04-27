@@ -309,6 +309,66 @@ def test_mock_expect():
     mock.verify()
 
 
+def test_mock_tracks_calls():
+    mock = Mock.given(path("/api")).respond(Response(status=200))
+    first_request = Request(
+        URL("https://example.com/api"),
+        "GET",
+    )
+    second_request = Request(
+        URL("https://example.com/api"),
+        "POST",
+    )
+
+    assert not mock.called
+    assert mock.call_count == 0
+
+    mock.handle(first_request)
+    mock.handle(second_request)
+
+    assert mock.called
+    assert mock.call_count == 2
+    assert mock.calls == [first_request, second_request]
+
+
+def test_mock_assert_called_helpers():
+    mock = Mock.given(path("/api")).respond(Response(status=200))
+    request = Request(
+        URL("https://example.com/api"),
+        "GET",
+    )
+
+    with pytest.raises(AssertionError, match="Mock was not called"):
+        mock.assert_called()
+
+    mock.assert_not_called()
+
+    mock.handle(request)
+
+    mock.assert_called()
+    mock.assert_called_once()
+
+    with pytest.raises(AssertionError, match="Mock was unexpectedly called"):
+        mock.assert_not_called()
+
+
+def test_mock_assert_called_once_failure():
+    mock = Mock.given(path("/api")).respond(Response(status=200)).name("API Mock")
+    request = Request(
+        URL("https://example.com/api"),
+        "GET",
+    )
+
+    with pytest.raises(AssertionError, match="API Mock expected 1 call, got 0"):
+        mock.assert_called_once()
+
+    mock.handle(request)
+    mock.handle(request)
+
+    with pytest.raises(AssertionError, match="API Mock expected 1 call, got 2"):
+        mock.assert_called_once()
+
+
 def test_mock_expect_failure():
     mock = Mock.given(path("/api")).respond(Response(status=200)).expect(2).name("API Mock")
     request = Request(
@@ -368,6 +428,9 @@ def test_mock_reset():
     mock.verify()
 
     mock.reset()
+
+    assert not mock.called
+    assert mock.call_count == 0
 
     with pytest.raises(AssertionError):
         mock.verify()
