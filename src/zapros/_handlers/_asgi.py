@@ -2,192 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from collections.abc import (
-    AsyncGenerator,
-    AsyncIterator,
-    Generator,
-    Iterator as ABCIterator,
-)
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterator
+from urllib.parse import unquote
 
-from typing_extensions import override
+from zapros._constants import DEFAULT_PORTS
 
-from zapros._constants import (
-    DEFAULT_PORTS,
-)
-
-from .._models import (
-    AsyncClosableStream,
-    Request,
-    Response,
-)
-from ._async_base import (
-    AsyncBaseHandler,
-)
+from .._models import Request, Response
+from ._async_base import AsyncBaseHandler
 
 
 @dataclass(slots=True)
-class _QueuedBodyChunk:
-    body: bytes
-    more_body: bool
-
-
-@dataclass(slots=True)
-class _LifespanSession:
+class LifespanSession:
     state: dict[str, Any]
     receive_queue: "asyncio.Queue[dict[str, Any]]"
     send_queue: "asyncio.Queue[dict[str, Any]]"
     task: "asyncio.Task[None]"
-
-
-class _RequestBodySource:
-    def __init__(
-        self,
-        source: bytes | ABCIterator[bytes] | AsyncIterator[bytes] | None,
-    ) -> None:
-        self._source = source
-        self._done = False
-        self._closed = False
-
-    @property
-    def done(self) -> bool:
-        return self._done
-
-    async def next_event(
-        self,
-    ) -> dict[str, Any]:
-        if self._done:
-            raise RuntimeError("Request body source is already exhausted")
-
-        source = self._source
-
-        if source is None:
-            self._done = True
-            return {
-                "type": "http.request",
-                "body": b"",
-                "more_body": False,
-            }
-
-        if isinstance(source, bytes):
-            self._done = True
-            self._source = None
-            return {
-                "type": "http.request",
-                "body": source,
-                "more_body": False,
-            }
-
-        if isinstance(source, ABCIterator):
-            raise RuntimeError("Synchronous iterators are not supported as request body sources by AsgiHandler")
-
-        async_iter = source
-        try:
-            chunk = await anext(async_iter)
-        except StopAsyncIteration:
-            self._done = True
-            self._source = None
-            return {
-                "type": "http.request",
-                "body": b"",
-                "more_body": False,
-            }
-
-        return {
-            "type": "http.request",
-            "body": bytes(chunk),
-            "more_body": True,
-        }
-
-    async def aclose(self) -> None:
-        if self._closed:
-            return
-
-        self._closed = True
-        source = self._source
-        self._source = None
-        self._done = True
-
-        if source is None or isinstance(source, bytes):
-            return
-
-        if isinstance(source, AsyncGenerator):
-            await source.aclose()
-            return
-
-        if isinstance(source, Generator):
-            source.close()
-
-
-class _ResponseStream(AsyncClosableStream):
-    def __init__(
-        self,
-        body_queue: "asyncio.Queue[_QueuedBodyChunk | BaseException | None]",
-        app_task: "asyncio.Task[None]",
-        disconnect_event: "asyncio.Event",
-    ) -> None:
-        self._body_queue = body_queue
-        self._app_task = app_task
-        self._disconnect_event = disconnect_event
-        self._closed = False
-
-    def __aiter__(
-        self,
-    ) -> AsyncIterator[bytes]:
-        return self
-
-    async def _finalize(self, *, abort: bool) -> BaseException | None:
-        if self._closed:
-            return None
-
-        self._closed = True
-        self._disconnect_event.set()
-
-        if abort:
-            if not self._app_task.done():
-                self._app_task.cancel()
-
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._app_task
-            return None
-
-        try:
-            await self._app_task
-        except BaseException as exc:
-            return exc
-
-        return None
-
-    async def __anext__(self) -> bytes:
-        while True:
-            if self._closed:
-                raise StopAsyncIteration
-
-            item = await self._body_queue.get()
-
-            if item is None:
-                task_error = await self._finalize(abort=False)
-                if task_error is not None:
-                    raise task_error
-                raise StopAsyncIteration
-
-            if isinstance(item, BaseException):
-                task_error = await self._finalize(abort=False)
-                raise task_error or item
-
-            if item.body:
-                return item.body
-
-            if not item.more_body:
-                task_error = await self._finalize(abort=False)
-                if task_error is not None:
-                    raise task_error
-                raise StopAsyncIteration
-
-    @override
-    async def aclose(self) -> None:
-        await self._finalize(abort=True)
 
 
 class AsgiHandler(AsyncBaseHandler):
@@ -214,120 +44,38 @@ class AsgiHandler(AsyncBaseHandler):
         self._lifespan_started = False
         self._lifespan_supported = True
         self._lifespan_state: dict[str, Any] = {}
-        self._lifespan_session: _LifespanSession | None = None
-
-    @staticmethod
-    def _iter_request_body(
-        request: Request,
-    ) -> bytes | ABCIterator[bytes] | AsyncIterator[bytes] | None:
-        if request.body is None:
-            return None
-        if isinstance(request.body, bytes):
-            return request.body
-        if isinstance(request.body, ABCIterator):
-            return request.body
-        return request.body
-
-    @staticmethod
-    def _get_raw_path_bytes(
-        request: Request,
-    ) -> bytes | None:
-        raw_path = getattr(request, "raw_path", None)
-        if raw_path is None:
-            raw_path = getattr(
-                request.url,
-                "raw_path",
-                None,
-            )
-
-        if isinstance(raw_path, memoryview):
-            return raw_path.tobytes()
-        if isinstance(raw_path, (bytes, bytearray)):
-            return bytes(raw_path)
-
-        return None
-
-    @staticmethod
-    def _get_query_string_bytes(
-        request: Request,
-    ) -> bytes:
-        raw_query = getattr(
-            request,
-            "raw_query_string",
-            None,
-        )
-        if raw_query is None:
-            raw_query = getattr(
-                request.url,
-                "raw_query",
-                None,
-            )
-        if raw_query is None:
-            raw_query = request.url.search
-
-        if raw_query in (None, ""):
-            return b""
-
-        if isinstance(raw_query, memoryview):
-            raw_query_bytes = raw_query.tobytes()
-            return raw_query_bytes[1:] if raw_query_bytes.startswith(b"?") else raw_query_bytes
-        if isinstance(
-            raw_query,
-            (bytes, bytearray),
-        ):
-            raw_query_bytes = bytes(raw_query)
-            return raw_query_bytes[1:] if raw_query_bytes.startswith(b"?") else raw_query_bytes
-
-        query_string = str(raw_query)
-        if query_string.startswith("?"):
-            query_string = query_string[1:]
-        return query_string.encode("ascii")
+        self._lifespan_session: LifespanSession | None = None
 
     @staticmethod
     async def _wait_for_lifespan_message(
-        session: _LifespanSession,
+        session: LifespanSession,
         *,
         timeout: float | None,
     ) -> dict[str, Any] | None:
-        message_task = asyncio.create_task(session.send_queue.get())
+        """Wait for next message from the lifespan app, or None if it exits."""
+        get_task = asyncio.create_task(session.send_queue.get())
         try:
-            (
-                done,
-                _,
-            ) = await asyncio.wait(
-                {
-                    message_task,
-                    session.task,
-                },
+            done, _ = await asyncio.wait(
+                {get_task, session.task},
                 timeout=timeout,
                 return_when=asyncio.FIRST_COMPLETED,
             )
             if not done:
                 raise asyncio.TimeoutError
-
-            if message_task in done:
-                return message_task.result()
-
-            if not session.send_queue.empty():
-                return session.send_queue.get_nowait()
-
+            if get_task in done:
+                return get_task.result()
             return None
         finally:
-            if not message_task.done():
-                message_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await message_task
+            if not get_task.done():
+                get_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await get_task
 
     @staticmethod
-    async def _cancel_task(
-        task: "asyncio.Task[Any]",
-    ) -> None:
+    async def _cancel_task(task: "asyncio.Task[Any]") -> None:
         if not task.done():
             task.cancel()
-        with contextlib.suppress(
-            asyncio.CancelledError,
-            Exception,
-        ):
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await task
 
     @staticmethod
@@ -341,67 +89,12 @@ class AsgiHandler(AsyncBaseHandler):
             if timeout is None:
                 await task
             else:
-                await asyncio.wait_for(
-                    asyncio.shield(task),
-                    timeout=timeout,
-                )
+                await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
         except asyncio.TimeoutError as exc:
-            if not task.done():
-                task.cancel()
-                with contextlib.suppress(
-                    asyncio.CancelledError,
-                    Exception,
-                ):
-                    await task
+            await AsgiHandler._cancel_task(task)
             raise RuntimeError(timeout_message) from exc
 
-    def _build_scope(self, request: Request) -> dict[str, Any]:
-        headers = [
-            (
-                k.lower().encode("ascii"),
-                v.encode("latin-1"),
-            )
-            for k, v in request.headers.list()
-        ]
-
-        raw_path = self._get_raw_path_bytes(request)
-        query_string = self._get_query_string_bytes(request)
-        server_port = request.url.port or DEFAULT_PORTS.get(
-            request.url.protocol[:-1],
-            80,
-        )
-
-        scope: dict[str, Any] = {
-            "type": "http",
-            "asgi": {
-                "version": "3.0",
-                "spec_version": "2.4",
-            },
-            "http_version": self.http_version,
-            "method": request.method.upper(),
-            "scheme": request.url.protocol[:-1],
-            "path": request.url.pathname or "/",
-            "query_string": query_string,
-            "root_path": self.root_path,
-            "headers": headers,
-            "client": self.client,
-            "server": (
-                request.url.hostname,
-                server_port,
-            ),
-        }
-
-        if raw_path is not None:
-            scope["raw_path"] = raw_path
-
-        if self._lifespan_supported:
-            scope["state"] = self._lifespan_state.copy()
-
-        return scope
-
-    def _raise_if_lifespan_task_exited(
-        self,
-    ) -> None:
+    def _raise_if_lifespan_task_exited(self) -> None:
         session = self._lifespan_session
         if not self._lifespan_started or session is None or not session.task.done():
             return
@@ -415,9 +108,7 @@ class AsgiHandler(AsyncBaseHandler):
             raise RuntimeError("ASGI lifespan task exited unexpectedly before shutdown")
         raise RuntimeError("ASGI lifespan task crashed after startup") from exc
 
-    async def _run_lifespan(
-        self,
-    ) -> None:
+    async def _run_lifespan(self) -> None:
         if not self.enable_lifespan or self._lifespan_started or not self._lifespan_supported:
             return
 
@@ -432,22 +123,17 @@ class AsgiHandler(AsyncBaseHandler):
             async def receive() -> dict[str, Any]:
                 return await receive_queue.get()
 
-            async def send(
-                message: dict[str, Any],
-            ) -> None:
+            async def send(message: dict[str, Any]) -> None:
                 await send_queue.put(message)
 
             scope = {
                 "type": "lifespan",
-                "asgi": {
-                    "version": "3.0",
-                    "spec_version": "2.0",
-                },
+                "asgi": {"version": "3.0", "spec_version": "2.0"},
                 "state": state,
             }
 
             task = asyncio.create_task(self.app(scope, receive, send))
-            session = _LifespanSession(
+            session = LifespanSession(
                 state=state,
                 receive_queue=receive_queue,
                 send_queue=send_queue,
@@ -469,6 +155,7 @@ class AsgiHandler(AsyncBaseHandler):
                 raise RuntimeError("ASGI lifespan startup timed out") from exc
 
             if message is None:
+                # App exited without sending startup.complete -> assume lifespan unsupported.
                 self._lifespan_supported = False
                 self._lifespan_session = None
                 self._lifespan_state = {}
@@ -491,172 +178,122 @@ class AsgiHandler(AsyncBaseHandler):
 
             raise RuntimeError(f"Unexpected ASGI lifespan startup message: {msg_type!r}")
 
+    def _build_scope(self, request: Request) -> dict[str, Any]:
+        headers = [(k.lower().encode("ascii"), v.encode("latin-1")) for k, v in request.headers.list()]
+
+        scheme = request.url.protocol[:-1]
+        server_port = request.url.port or DEFAULT_PORTS.get(scheme, 80)
+        raw_path = request.url.pathname.encode("utf-8")
+
+        scope: dict[str, Any] = {
+            "type": "http",
+            "asgi": {"version": "3.0", "spec_version": "2.4"},
+            "http_version": self.http_version,
+            "method": request.method.upper(),
+            "scheme": scheme,
+            "path": unquote(request.url.pathname) or "/",
+            "raw_path": raw_path or b"/",
+            "query_string": request.url.search[1:].encode("utf-8"),
+            "root_path": self.root_path,
+            "headers": headers,
+            "client": self.client,
+            "server": (request.url.hostname, server_port),
+        }
+
+        if self._lifespan_supported:
+            scope["state"] = self._lifespan_state.copy()
+
+        return scope
+
     async def ahandle(self, request: Request) -> Response:
         await self._run_lifespan()
         self._raise_if_lifespan_task_exited()
 
         scope = self._build_scope(request)
-        request_body = _RequestBodySource(self._iter_request_body(request))
 
-        response_started = asyncio.Event()
-        response_complete = asyncio.Event()
-        disconnect_event = asyncio.Event()
-
-        response_status: int | None = None
-        response_headers: list[tuple[str, str]] | None = None
-        body_queue: asyncio.Queue[_QueuedBodyChunk | BaseException | None] = asyncio.Queue()
-        app_error: BaseException | None = None
-
-        receive_lock = asyncio.Lock()
-        send_lock = asyncio.Lock()
+        # Buffer the request body up front so receive() is trivial.
+        assert not isinstance(request.body, Iterator)
+        request_body = (
+            request.body
+            if isinstance(request.body, bytes)
+            else b"".join([chunk async for chunk in request.body])
+            if request.body is not None
+            else b""
+        )
+        body_sent = False
+        disconnected = asyncio.Event()
 
         async def receive() -> dict[str, Any]:
-            async with receive_lock:
-                if response_complete.is_set() or disconnect_event.is_set():
-                    return {"type": "http.disconnect"}
-
-                if not request_body.done:
-                    return await request_body.next_event()
-
-            waiter1 = asyncio.create_task(response_complete.wait())
-            waiter2 = asyncio.create_task(disconnect_event.wait())
-            try:
-                await asyncio.wait(
-                    {waiter1, waiter2},
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            finally:
-                waiter1.cancel()
-                waiter2.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await waiter1
-                with contextlib.suppress(asyncio.CancelledError):
-                    await waiter2
-
+            nonlocal body_sent
+            if not body_sent:
+                body_sent = True
+                return {
+                    "type": "http.request",
+                    "body": request_body,
+                    "more_body": False,
+                }
+            # After the body has been delivered there's no more input;
+            # block until disconnect (which only happens if the response
+            # is fully sent or the caller closes us).
+            await disconnected.wait()
             return {"type": "http.disconnect"}
 
-        async def send(
-            message: dict[str, Any],
-        ) -> None:
-            nonlocal response_status, response_headers
+        # Buffer the response. The app runs to completion before we
+        # return, so no background task / queue / stream wrapper is needed.
+        response_started = False
+        response_status: int | None = None
+        response_headers: list[tuple[str, str]] = []
+        body_chunks: list[bytes] = []
+        response_complete = False
+
+        async def send(message: dict[str, Any]) -> None:
+            nonlocal response_started, response_status, response_headers, response_complete
 
             msg_type = message["type"]
 
-            async with send_lock:
-                if response_complete.is_set():
-                    return
-
-                if disconnect_event.is_set():
-                    raise OSError("Connection closed")
-
-                if msg_type == "http.response.start":
-                    if response_started.is_set():
-                        raise RuntimeError("ASGI application sent multiple http.response.start messages")
-
-                    if bool(
-                        message.get(
-                            "trailers",
-                            False,
-                        )
-                    ):
-                        raise NotImplementedError("ASGI response trailers are not supported by AsgiHandler")
-
-                    response_status = int(message["status"])
-                    raw_headers = message.get(
-                        "headers",
-                        [],
-                    )
-                    response_headers = [
-                        (
-                            bytes(k).decode("ascii"),
-                            bytes(v).decode("latin-1"),
-                        )
-                        for k, v in raw_headers
-                    ]
-                    response_started.set()
-                    return
-
-                if msg_type == "http.response.body":
-                    if not response_started.is_set():
-                        raise RuntimeError("ASGI application sent http.response.body before http.response.start")
-
-                    body = bytes(message.get("body", b""))
-                    more_body = bool(
-                        message.get(
-                            "more_body",
-                            False,
-                        )
-                    )
-                    await body_queue.put(
-                        _QueuedBodyChunk(
-                            body=body,
-                            more_body=more_body,
-                        )
-                    )
-
-                    if not more_body:
-                        response_complete.set()
-                        await body_queue.put(None)
-                    return
-
-                if msg_type == "http.response.trailers":
+            if msg_type == "http.response.start":
+                if response_started:
+                    raise RuntimeError("ASGI application sent multiple http.response.start messages")
+                if message.get("trailers", False):
                     raise NotImplementedError("ASGI response trailers are not supported by AsgiHandler")
+                response_status = int(message["status"])
+                response_headers = [
+                    (bytes(k).decode("ascii"), bytes(v).decode("latin-1")) for k, v in message.get("headers", [])
+                ]
+                response_started = True
+                return
 
-                raise RuntimeError(f"Unsupported ASGI send message type: {msg_type!r}")
-
-        async def run_app() -> None:
-            nonlocal app_error
-            try:
-                await self.app(scope, receive, send)
-
-                if not response_started.is_set():
-                    raise RuntimeError("ASGI application returned without sending http.response.start")
-
-                if not response_complete.is_set():
-                    await send(
-                        {
-                            "type": "http.response.body",
-                            "body": b"",
-                            "more_body": False,
-                        }
-                    )
-            except asyncio.CancelledError:
-                raise
-            except BaseException as exc:
-                app_error = exc
-                if not response_started.is_set():
-                    response_started.set()
+            if msg_type == "http.response.body":
+                if not response_started:
+                    raise RuntimeError("ASGI application sent http.response.body before http.response.start")
+                if response_complete:
+                    # Extra body messages after end-of-response are ignored.
                     return
+                body = message.get("body", b"")
+                if body:
+                    body_chunks.append(bytes(body))
+                if not message.get("more_body", False):
+                    response_complete = True
+                    disconnected.set()
+                return
 
-                if not response_complete.is_set():
-                    await body_queue.put(exc)
-                    response_complete.set()
-                    await body_queue.put(None)
-                    return
+            if msg_type == "http.response.trailers":
+                raise NotImplementedError("ASGI response trailers are not supported by AsgiHandler")
 
-                raise
-            finally:
-                with contextlib.suppress(Exception):
-                    await request_body.aclose()
+            raise RuntimeError(f"Unsupported ASGI send message type: {msg_type!r}")
 
-        app_task = asyncio.create_task(run_app())
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            disconnected.set()
 
-        await response_started.wait()
-
-        if response_status is None or response_headers is None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await app_task
-            assert app_error is not None
-            raise app_error
+        if not response_started or response_status is None:
+            raise RuntimeError("ASGI application returned without sending http.response.start")
 
         return Response(
             status=response_status,
             headers=response_headers,
-            content=_ResponseStream(
-                body_queue=body_queue,
-                app_task=app_task,
-                disconnect_event=disconnect_event,
-            ),
+            content=b"".join(body_chunks),
         )
 
     async def aclose(self) -> None:
