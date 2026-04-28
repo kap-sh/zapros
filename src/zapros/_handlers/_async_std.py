@@ -40,7 +40,7 @@ else:
         trio = None
 
 from .._async_pool import AsyncConnPool
-from .._base_pool import PoolKey
+from .._base_pool import AsyncPoolConnection, PoolKey
 from .._errors import (
     ConnectionError,
     TotalTimeoutError,
@@ -215,7 +215,7 @@ async def _init_socks5_connection(
         raise ConnectionError(f"SOCKS5 proxy connection failed with code: {response.reply_code}")
 
 
-class AsyncConn:
+class AsyncConn(AsyncPoolConnection):
     def __init__(
         self,
         stream: AsyncBaseNetworkStream,
@@ -242,7 +242,48 @@ class AsyncConn:
 
 
 class AsyncStdStream(AsyncClosableStream):
-    """Wrap an h11 response stream and return the connection to the pool on close."""
+    """
+    Async byte stream over an h11 response body, with pooled connection lifecycle.
+
+    Wraps an :class:`AsyncConn` whose h11 state machine is positioned just after
+    the response headers have been read. Iterating the stream pulls ``h11.Data``
+    events, transparently reading more bytes from the underlying transport when
+    h11 signals ``NEED_DATA``. Iteration ends when h11 emits ``EndOfMessage``,
+    at which point the stream closes itself and releases the connection back to
+    the pool.
+
+    Connection reuse is conditional. The connection is only returned to the
+    pool in a reusable state when **all** of the following hold:
+
+    * the response body was fully consumed (``EndOfMessage`` was reached),
+    * no exception interrupted iteration,
+    * the caller did not request ``must_close`` (e.g. ``Connection: close``),
+    * h11 successfully transitioned to the next request/response cycle, and
+    * the connection itself reports it can be reused.
+
+    Otherwise the connection is released as non-reusable and the pool will
+    discard it. Any exception during iteration marks the connection unusable before being re-raised, so a cancelled or
+    failed read never leaves a half-read response in the pool.
+
+    The ``no_body_response`` flag handles responses that are semantically
+    bodyless (e.g. ``HEAD`` requests, ``204``/``304`` status codes) but where
+    h11 still needs to see ``EndOfMessage`` to advance its state machine. When
+    set, ``aclose()`` will drain any pending end-of-message event so the
+    connection can be reused without the caller having to iterate.
+
+    Args:
+        conn: The pooled connection wrapping both the transport stream and the
+            h11 state machine.
+        pool: The pool to release ``conn`` back to on close.
+        key: Pool key for releasing the connection.
+        read_timeout: Per-read timeout in seconds passed to the underlying
+            transport. ``None`` disables the timeout.
+        no_body_response: Set when the response is known to have no body. See
+            the class docstring for details on how this affects ``aclose()``.
+        must_close: If ``True``, the connection will not be reused even on a
+            clean read. Use this when the response or request semantics require
+            closing (e.g. ``Connection: close``, HTTP/1.0 without keep-alive).
+    """
 
     def __init__(
         self,
@@ -313,6 +354,8 @@ class AsyncStdStream(AsyncClosableStream):
                     raise StopAsyncIteration
 
         except BaseException:
+            # We want to catch CancelledError and other exceptions to ensure the
+            # connection is properly closed and not returned to the pool in a bad state.
             self._ok = False
             await self.aclose()
             raise
