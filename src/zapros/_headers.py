@@ -1,6 +1,6 @@
 import re
-from dataclasses import dataclass
-from typing import ClassVar
+from dataclasses import dataclass, field
+from typing import ClassVar, Iterable, final
 
 from zapros._errors import HeaderParseError
 
@@ -68,6 +68,7 @@ class Tokenizer:
         raise HeaderParseError("Unterminated quoted-string")
 
 
+@final
 @dataclass(frozen=True, slots=True)
 class ContentType:
     name: ClassVar[str] = "Content-Type"
@@ -184,3 +185,104 @@ class ContentType:
     @classmethod
     def text(cls, subtype: str = "plain", charset: str = "utf-8") -> "ContentType":
         return cls("text", subtype, (("charset", charset),))
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Connection:
+    """
+    RFC 9110 §7.6.1 Connection header.
+
+    Grammar:  Connection = #connection-option
+              connection-option = token
+
+    A list of case-insensitive tokens describing per-connection options
+    (e.g. 'close', 'keep-alive') and naming any other header fields whose
+    semantics apply only to the immediate hop (i.e. hop-by-hop fields that
+    intermediaries must strip before forwarding).
+
+    HTTP/2 and HTTP/3 forbid this field entirely (RFC 9113 §8.2.2,
+    RFC 9114 §4.2); it is meaningful only on HTTP/1.x connections.
+    """
+
+    name: ClassVar[str] = "Connection"
+
+    # Stored lowercase so equality/hashing/membership are case-insensitive.
+    # Order is preserved from the input for round-trip-friendly serialization.
+    options: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        seen: dict[str, None] = {}  # dict preserves insertion order; dedupe case-insensitively
+        for opt in self.options:
+            lo = opt.lower()
+            # Each option must be a single token — no commas, whitespace, or quoted-strings allowed.
+            if not _TOKEN_RE.fullmatch(lo):
+                raise ValueError(f"Invalid connection-option: {opt!r}")
+            seen.setdefault(lo, None)
+        object.__setattr__(self, "options", tuple(seen))
+
+    def has(self, option: str) -> bool:
+        """Case-insensitive membership test for a connection-option."""
+        return option.lower() in self.options
+
+    @classmethod
+    def parse(cls, value: str) -> "Connection":
+        """Parse a Connection field value.
+
+        Accepts a single field-line value. Per RFC 9110 §5.3, multiple
+        Connection field lines in the same message are recombined into a
+        single comma-separated value before parsing — callers that receive
+        the raw header list should join with ", " first.
+
+        Empty list elements (e.g. ", ,") are tolerated on receipt as the
+        spec recommends defensive parsing, but a sender MUST NOT generate
+        them (§5.6.1).
+        """
+        try:
+            t = Tokenizer(value)
+            opts: list[str] = []
+            while True:
+                t.skip_ows()
+                if t.eof():
+                    break
+                # Tolerate empty elements like ",,": skip stray commas.
+                if t.peek() == ",":
+                    t.pos += 1
+                    continue
+                opts.append(t.read_token())
+                t.skip_ows()
+                if t.eof():
+                    break
+                t.expect(",")
+            return cls(options=tuple(opts))
+        except HeaderParseError:
+            raise
+        except ValueError as e:
+            raise HeaderParseError(f"Invalid Connection {value!r}: {e}") from e
+
+    @classmethod
+    def from_field_lines(cls, lines: Iterable[str]) -> "Connection":
+        """Parse a Connection value from one or more raw field lines.
+
+        Per RFC 9110 §5.3, multiple field lines for a list-based field are
+        semantically equivalent to a single field line with the values joined
+        by ", ". Use this when your HTTP layer surfaces headers as a list of
+        repeated values rather than a pre-combined string.
+        """
+
+        return cls.parse(", ".join(lines))
+
+    def serialize(self) -> str:
+        # RFC 9110 recommends ", " (comma + SP) as the canonical separator
+        # for list-based fields when generating values.
+        return ", ".join(self.options)
+
+    @classmethod
+    def close(cls) -> "Connection":
+        """Build `Connection: close`. Trailing underscore avoids the keyword clash."""
+        return cls(("close",))
+
+    @classmethod
+    def keepalive(cls) -> "Connection":
+        """Build `Connection: keep-alive` (mostly useful for HTTP/1.0 clients)."""
+        return cls(("keep-alive",))

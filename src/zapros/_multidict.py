@@ -91,7 +91,7 @@ class CIMultiDict(MutableMapping[str, _VT], Generic[_VT]):
         norm: str = self._norm_key(key)
         positions: list[int] | None = self._index.get(norm)
         if not positions:
-            raise KeyError(key)
+            return []
         return [self._items[pos][1] for pos in positions]
 
     def allitems(self) -> Iterator[tuple[str, _VT]]:

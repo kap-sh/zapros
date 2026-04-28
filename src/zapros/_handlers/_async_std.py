@@ -13,6 +13,7 @@ from pywhatwgurl import URL
 from typing_extensions import override
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
+from zapros._headers import Connection
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
 from zapros._io._trio import TrioTransport
@@ -47,6 +48,7 @@ from .._errors import (
 )
 from .._models import (
     AsyncClosableStream,
+    Headers,
     Request,
     Response,
     ResponseHandoffContext,
@@ -66,28 +68,21 @@ def _encode_target(path: str, query: str) -> bytes:
     return prepared_path.encode("ascii")
 
 
-def _header_has_token(
-    headers: list[tuple[str, str]],
-    name: str,
-    token: str,
-) -> bool:
-    name = name.lower()
-    token = token.lower()
-    for k, v in headers:
-        if k.lower() != name:
-            continue
-        for part in v.split(","):
-            if part.strip().lower() == token:
-                return True
-    return False
-
-
 def _min_timeout(a: float | None, b: float | None) -> float | None:
     if a is None:
         return b
     if b is None:
         return a
     return min(a, b)
+
+
+def _connection_wants_close(headers: list[tuple[str, str]]) -> bool:
+    connection_values = Headers(headers).getall("connection")
+
+    if not connection_values:
+        return False
+
+    return Connection.from_field_lines(connection_values).has("close")
 
 
 async def _init_socks5_connection(
@@ -737,7 +732,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     auth_value = base64.b64encode(credentials).decode("ascii")
                     headers.append(("Proxy-Authorization", f"Basic {auth_value}"))
 
-        request_wants_close = _header_has_token(headers, "connection", "close")
+        request_wants_close = _connection_wants_close(headers)
 
         try:
             # When using a pooled connection, we might noticed that it was closed by the server when it was idle.
@@ -803,11 +798,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             status,
             resp_headers,
         )
-        response_wants_close = _header_has_token(
-            resp_headers,
-            "connection",
-            "close",
-        )
+        response_wants_close = _connection_wants_close(resp_headers)
 
         return Response(
             status=status,
