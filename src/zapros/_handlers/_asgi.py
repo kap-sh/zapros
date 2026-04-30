@@ -1,23 +1,30 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
-from dataclasses import dataclass
-from typing import Any, Iterator
+from contextlib import AbstractAsyncContextManager
+from typing import TYPE_CHECKING, Any, Iterator, Literal, Optional
 from urllib.parse import unquote
 
-from zapros._constants import DEFAULT_PORTS
+from typing_extensions import Self
 
-from .._models import Request, Response
+from zapros._compat import AnyEvent, AnyEventTimeoutError, in_trio_run
+from zapros._constants import DEFAULT_PORTS
+from zapros._errors import AsgiLifespanShutdownTimeoutError, AsgiLifespanStartupTimeoutError
+
+from .._models import Headers, Request, Response
 from ._async_base import AsyncBaseHandler
 
+if TYPE_CHECKING:
+    import trio
+else:
+    try:
+        import trio
+    except ImportError:
+        trio = None
 
-@dataclass(slots=True)
-class LifespanSession:
-    state: dict[str, Any]
-    receive_queue: "asyncio.Queue[dict[str, Any]]"
-    send_queue: "asyncio.Queue[dict[str, Any]]"
-    task: "asyncio.Task[None]"
+
+LifespanStatus = Literal["pending", "complete", "failed"]
+LifespanStartupStatus = Literal["pending", "complete", "failed", "not_supported"]
 
 
 class AsgiHandler(AsyncBaseHandler):
@@ -40,143 +47,31 @@ class AsgiHandler(AsyncBaseHandler):
         self.startup_timeout = startup_timeout
         self.shutdown_timeout = shutdown_timeout
 
-        self._lifespan_lock = asyncio.Lock()
-        self._lifespan_started = False
-        self._lifespan_supported = True
+        # event fired to signal the lifespan task to start shutdown sequence
+        self._lifespan_close_event = AnyEvent()
+
+        # fired when the lifespan startup sequence has finished, regardless of outcome;
+        # check self._lifespan_startup_status to know whether it completed or failed.
+        # see https://asgi.readthedocs.io/en/latest/specs/lifespan.html#startup
+        self._lifespan_startup_event = AnyEvent()
+        self._lifespan_startup_status: LifespanStartupStatus = "pending"
+        self._lifespan_startup_failure_message: Optional[str] = None
+
+        # fired when the lifespan shutdown sequence has finished, regardless of outcome;
+        # check self._lifespan_shutdown_status to know whether it completed or failed.
+        # see https://asgi.readthedocs.io/en/latest/specs/lifespan.html#shutdown
+        self._lifespan_shutdown_event = AnyEvent()
+        self._lifespan_shutdown_status: LifespanStatus = "pending"
+        self._lifespan_shutdown_failure_message: Optional[str] = None
+
+        # the state dict passed to the ASGI lifespan scope; application can store arbitrary data here
         self._lifespan_state: dict[str, Any] = {}
-        self._lifespan_session: LifespanSession | None = None
 
-    @staticmethod
-    async def _wait_for_lifespan_message(
-        session: LifespanSession,
-        *,
-        timeout: float | None,
-    ) -> dict[str, Any] | None:
-        """Wait for next message from the lifespan app, or None if it exits."""
-        get_task = asyncio.create_task(session.send_queue.get())
-        try:
-            done, _ = await asyncio.wait(
-                {get_task, session.task},
-                timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            if not done:
-                raise asyncio.TimeoutError
-            if get_task in done:
-                return get_task.result()
-            return None
-        finally:
-            if not get_task.done():
-                get_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError, Exception):
-                    await get_task
+        # background setup
+        self._trio_nursery_cm: Optional[AbstractAsyncContextManager["trio.Nursery"]] = None
+        self._trio_nursery: Optional["trio.Nursery"] = None
 
-    @staticmethod
-    async def _cancel_task(task: "asyncio.Task[Any]") -> None:
-        if not task.done():
-            task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await task
-
-    @staticmethod
-    async def _await_task(
-        task: "asyncio.Task[Any]",
-        *,
-        timeout: float | None,
-        timeout_message: str,
-    ) -> None:
-        try:
-            if timeout is None:
-                await task
-            else:
-                await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
-        except asyncio.TimeoutError as exc:
-            await AsgiHandler._cancel_task(task)
-            raise RuntimeError(timeout_message) from exc
-
-    def _raise_if_lifespan_task_exited(self) -> None:
-        session = self._lifespan_session
-        if not self._lifespan_started or session is None or not session.task.done():
-            return
-
-        self._lifespan_started = False
-        self._lifespan_state = {}
-        self._lifespan_session = None
-
-        exc = session.task.exception()
-        if exc is None:
-            raise RuntimeError("ASGI lifespan task exited unexpectedly before shutdown")
-        raise RuntimeError("ASGI lifespan task crashed after startup") from exc
-
-    async def _run_lifespan(self) -> None:
-        if not self.enable_lifespan or self._lifespan_started or not self._lifespan_supported:
-            return
-
-        async with self._lifespan_lock:
-            if self._lifespan_started or not self.enable_lifespan or not self._lifespan_supported:
-                return
-
-            state: dict[str, Any] = {}
-            receive_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-            send_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-
-            async def receive() -> dict[str, Any]:
-                return await receive_queue.get()
-
-            async def send(message: dict[str, Any]) -> None:
-                await send_queue.put(message)
-
-            scope = {
-                "type": "lifespan",
-                "asgi": {"version": "3.0", "spec_version": "2.0"},
-                "state": state,
-            }
-
-            task = asyncio.create_task(self.app(scope, receive, send))
-            session = LifespanSession(
-                state=state,
-                receive_queue=receive_queue,
-                send_queue=send_queue,
-                task=task,
-            )
-            self._lifespan_session = session
-
-            await receive_queue.put({"type": "lifespan.startup"})
-
-            try:
-                message = await self._wait_for_lifespan_message(
-                    session,
-                    timeout=self.startup_timeout,
-                )
-            except asyncio.TimeoutError as exc:
-                self._lifespan_session = None
-                self._lifespan_state = {}
-                await self._cancel_task(task)
-                raise RuntimeError("ASGI lifespan startup timed out") from exc
-
-            if message is None:
-                # App exited without sending startup.complete -> assume lifespan unsupported.
-                self._lifespan_supported = False
-                self._lifespan_session = None
-                self._lifespan_state = {}
-                return
-
-            msg_type = message["type"]
-
-            if msg_type == "lifespan.startup.complete":
-                self._lifespan_state = state
-                self._lifespan_started = True
-                return
-
-            self._lifespan_session = None
-            self._lifespan_state = {}
-            await self._cancel_task(task)
-
-            if msg_type == "lifespan.startup.failed":
-                detail = message.get("message", "")
-                raise RuntimeError(f"ASGI lifespan startup failed: {detail}")
-
-            raise RuntimeError(f"Unexpected ASGI lifespan startup message: {msg_type!r}")
+        self._asyncio_task: asyncio.Task[None] | None = None
 
     def _build_scope(self, request: Request) -> dict[str, Any]:
         headers = [(k.lower().encode("ascii"), v.encode("latin-1")) for k, v in request.headers.list()]
@@ -200,156 +95,209 @@ class AsgiHandler(AsyncBaseHandler):
             "server": (request.url.hostname, server_port),
         }
 
-        if self._lifespan_supported:
+        if self.enable_lifespan:
             scope["state"] = self._lifespan_state.copy()
 
         return scope
 
-    async def ahandle(self, request: Request) -> Response:
-        await self._run_lifespan()
-        self._raise_if_lifespan_task_exited()
+    async def _run_lifespan(self) -> None:
+        lifespan_startup_sent = False
 
-        scope = self._build_scope(request)
+        async def lifespan_receive() -> dict[str, Any]:
+            nonlocal lifespan_startup_sent
+            if not lifespan_startup_sent:
+                lifespan_startup_sent = True
+                return {"type": "lifespan.startup"}
 
-        # Buffer the request body up front so receive() is trivial.
-        assert not isinstance(request.body, Iterator)
-        request_body = (
-            request.body
-            if isinstance(request.body, bytes)
-            else b"".join([chunk async for chunk in request.body])
-            if request.body is not None
-            else b""
-        )
-        body_sent = False
-        disconnected = asyncio.Event()
+            await self._lifespan_close_event.wait()
+            return {"type": "lifespan.shutdown"}
 
-        async def receive() -> dict[str, Any]:
-            nonlocal body_sent
-            if not body_sent:
-                body_sent = True
-                return {
-                    "type": "http.request",
-                    "body": request_body,
-                    "more_body": False,
-                }
-            # After the body has been delivered there's no more input;
-            # block until disconnect (which only happens if the response
-            # is fully sent or the caller closes us).
-            await disconnected.wait()
-            return {"type": "http.disconnect"}
-
-        # Buffer the response. The app runs to completion before we
-        # return, so no background task / queue / stream wrapper is needed.
-        response_started = False
-        response_status: int | None = None
-        response_headers: list[tuple[str, str]] = []
-        body_chunks: list[bytes] = []
-        response_complete = False
-
-        async def send(message: dict[str, Any]) -> None:
-            nonlocal response_started, response_status, response_headers, response_complete
-
+        async def lifespan_send(message: dict[str, Any]) -> None:
             msg_type = message["type"]
+            if msg_type == "lifespan.startup.complete":
+                self._lifespan_startup_status = "complete"
+                self._lifespan_startup_event.set()
+            elif msg_type == "lifespan.startup.failed":
+                self._lifespan_startup_status = "failed"
+                self._lifespan_startup_failure_message = message.get("message")
+                self._lifespan_startup_event.set()
+            elif msg_type == "lifespan.shutdown.complete":
+                self._lifespan_shutdown_status = "complete"
+                self._lifespan_shutdown_event.set()
+            elif msg_type == "lifespan.shutdown.failed":
+                self._lifespan_shutdown_status = "failed"
+                self._lifespan_shutdown_failure_message = message.get("message")
+                self._lifespan_shutdown_event.set()
+            else:
+                raise RuntimeError(f"Unexpected ASGI lifespan message type: {msg_type!r}")
 
-            if msg_type == "http.response.start":
-                if response_started:
-                    raise RuntimeError("ASGI application sent multiple http.response.start messages")
-                if message.get("trailers", False):
-                    raise NotImplementedError("ASGI response trailers are not supported by AsgiHandler")
-                response_status = int(message["status"])
-                response_headers = [
-                    (bytes(k).decode("ascii"), bytes(v).decode("latin-1")) for k, v in message.get("headers", [])
-                ]
-                response_started = True
-                return
-
-            if msg_type == "http.response.body":
-                if not response_started:
-                    raise RuntimeError("ASGI application sent http.response.body before http.response.start")
-                if response_complete:
-                    # Extra body messages after end-of-response are ignored.
-                    return
-                body = message.get("body", b"")
-                if body:
-                    body_chunks.append(bytes(body))
-                if not message.get("more_body", False):
-                    response_complete = True
-                    disconnected.set()
-                return
-
-            if msg_type == "http.response.trailers":
-                raise NotImplementedError("ASGI response trailers are not supported by AsgiHandler")
-
-            raise RuntimeError(f"Unsupported ASGI send message type: {msg_type!r}")
+        scope = {
+            "type": "lifespan",
+            "asgi": {"version": "3.0", "spec_version": "2.0"},
+            "state": self._lifespan_state,
+        }
 
         try:
-            await self.app(scope, receive, send)
-        finally:
-            disconnected.set()
+            await self.app(
+                scope,
+                lifespan_receive,
+                lifespan_send,
+            )
+        except Exception:
+            # Per the specification, if the application throws an exception
+            # here we can continue without the lifespan protocol.
+            # If the application wants to stop the server
+            # (zapros's handler in our case) from starting up, it should instead
+            # respond with a `lifespan.startup.failed` event.
+            self._lifespan_startup_event.set()
+            self._lifespan_startup_status = "not_supported"
 
-        if not response_started or response_status is None:
-            raise RuntimeError("ASGI application returned without sending http.response.start")
+    async def ahandle(self, request: Request) -> Response:
+        if self.enable_lifespan:
+            if in_trio_run() and self._trio_nursery_cm is None:
+                raise RuntimeError(
+                    "When using `AsgiHandler` with Trio, you must use it as an async "
+                    "context manager (i.e. `async with AsgiHandler(...) as handler:`)"
+                )
+            else:
+                if self._asyncio_task is None and not in_trio_run():
+                    self._asyncio_task = asyncio.create_task(self._run_lifespan())
+
+                try:
+                    await self._lifespan_startup_event.wait(self.startup_timeout)
+                except AnyEventTimeoutError:
+                    raise AsgiLifespanStartupTimeoutError(
+                        f"ASGI application lifespan startup did not complete within {self.startup_timeout} seconds"
+                    )
+
+            if self._lifespan_startup_status == "failed":
+                # Per the specification, if the lifespan startup fails, server should the exit with an error.
+                raise RuntimeError(
+                    "ASGI application lifespan startup failed: "
+                    f"{self._lifespan_startup_failure_message or 'no message provided'}"
+                )
+
+        response_status: int | None = None
+        response_headers: list[tuple[str, str]] | None = None
+        response_body_chunks: list[bytes] = []
+        response_complete = False
+
+        async def receive() -> dict[str, Any]:
+            nonlocal response_complete
+
+            if response_complete:
+                return {"type": "http.disconnect"}
+
+            if isinstance(request.body, bytes):
+                # One-shot the body if it's already fully available as bytes.
+                body = request.body
+                response_complete = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            elif request.body is None:
+                response_complete = True
+                return {"type": "http.request", "more_body": False}
+            else:
+                assert not isinstance(request.body, Iterator)
+
+                try:
+                    chunk = await request.body.__anext__()
+                    return {"type": "http.request", "body": chunk, "more_body": True}
+                except StopAsyncIteration:
+                    response_complete = True
+                    return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(message: dict[str, Any]) -> None:
+            nonlocal response_status, response_headers, response_body_chunks
+
+            msg_type = message["type"]
+            if msg_type == "http.response.start":
+                status = message["status"]
+                headers = [(k.decode("ascii"), v.decode("latin-1")) for k, v in message.get("headers", [])]
+                response_status = status
+                response_headers = headers
+
+            elif msg_type == "http.response.body":
+                body = message.get("body", b"")
+                response_body_chunks.append(body)
+            else:
+                raise RuntimeError(f"Unexpected ASGI HTTP message type: {msg_type!r}")
+
+        try:
+            await self.app(
+                self._build_scope(request),
+                receive,
+                send,
+            )
+        except Exception:
+            # Treat exceptions as 500 Internal Server Errors, per ASGI spec recommendations.
+            response_status = 500
+            response_headers = []
+
+        assert response_status is not None
+        assert response_headers is not None
 
         return Response(
             status=response_status,
-            headers=response_headers,
-            content=b"".join(body_chunks),
+            headers=Headers([(k, v) for k, v in response_headers]),
+            content=b"".join(response_body_chunks),
         )
 
+    async def __aenter__(self) -> Self:
+        """
+        Trio's phylosophy is that you shouldn't have background tasks
+        running if you're not inside a nursery, so to respect that,
+        we require users to use `AsgiHandler` as an async context manager when using with Trio.
+        It's not required when using with asyncio, but it
+        doesn't hurt to use it as a context manager in that case either.
+        """
+
+        if in_trio_run() and self.enable_lifespan:
+            self._trio_nursery_cm = trio.open_nursery()
+            self._trio_nursery = await self._trio_nursery_cm.__aenter__()
+            self._trio_nursery.start_soon(self._run_lifespan)
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        if in_trio_run() and self._trio_nursery_cm is not None and self.enable_lifespan:
+            assert self._trio_nursery_cm is not None
+            await self._trio_nursery_cm.__aexit__(exc_type, exc, tb)
+
     async def aclose(self) -> None:
+        """
+        Ensures that the ASGI application's lifespan shutdown sequence is triggered (if supported by the application)
+        and waits for it to complete before returning. If the application does not support the lifespan protocol, this
+        method does nothing.
+        """
         if not self.enable_lifespan:
             return
-        if not self._lifespan_started or not self._lifespan_supported:
-            return
 
-        async with self._lifespan_lock:
-            if not self._lifespan_started or not self._lifespan_supported:
-                return
+        try:
+            await self._lifespan_startup_event.wait(self.startup_timeout)
+        except AnyEventTimeoutError:
+            raise AsgiLifespanStartupTimeoutError(
+                f"ASGI application lifespan startup did not complete within {self.startup_timeout} seconds"
+            )
 
-            session = self._lifespan_session
-            if session is None:
-                self._lifespan_started = False
-                self._lifespan_state = {}
-                return
-
-            await session.receive_queue.put({"type": "lifespan.shutdown"})
+        # Per spec, we only need to trigger the shutdown sequence if the startup completed successfully.
+        if self._lifespan_startup_status == "complete":
+            # Signal the lifespan task to start the shutdown sequence.
+            self._lifespan_close_event.set()
 
             try:
-                message = await self._wait_for_lifespan_message(
-                    session,
-                    timeout=self.shutdown_timeout,
+                # Wait for the shutdown sequence to complete (either successfully or with failure).
+                await self._lifespan_shutdown_event.wait(self.shutdown_timeout)
+            except AnyEventTimeoutError:
+                raise AsgiLifespanShutdownTimeoutError(
+                    f"ASGI application lifespan shutdown did not complete within {self.shutdown_timeout} seconds"
                 )
-            except asyncio.TimeoutError as exc:
-                self._lifespan_started = False
-                self._lifespan_state = {}
-                self._lifespan_session = None
-                await self._cancel_task(session.task)
-                raise RuntimeError("ASGI lifespan shutdown timed out") from exc
 
-            self._lifespan_started = False
-            self._lifespan_state = {}
-            self._lifespan_session = None
-
-            if message is None:
-                exc = session.task.exception()
-                if exc is None:
-                    raise RuntimeError("ASGI lifespan task exited during shutdown without a completion message")
-                raise RuntimeError("ASGI lifespan task crashed during shutdown") from exc
-
-            msg_type = message["type"]
-
-            if msg_type == "lifespan.shutdown.complete":
-                await self._await_task(
-                    session.task,
-                    timeout=self.shutdown_timeout,
-                    timeout_message="ASGI lifespan app did not exit after shutdown.complete",
+            # Per the specification, if the shutdown sequence fails,
+            # we should log/throw an exception
+            if self._lifespan_shutdown_status == "failed":
+                raise RuntimeError(
+                    "ASGI application lifespan shutdown failed: "
+                    f"{self._lifespan_shutdown_failure_message or 'no message provided'}"
                 )
-                return
 
-            await self._cancel_task(session.task)
-
-            if msg_type == "lifespan.shutdown.failed":
-                detail = message.get("message", "")
-                raise RuntimeError(f"ASGI lifespan shutdown failed: {detail}")
-
-            raise RuntimeError(f"Unexpected ASGI lifespan shutdown message: {msg_type!r}")
+        if self._asyncio_task is not None:
+            self._asyncio_task.cancel()

@@ -42,9 +42,65 @@ handler = AsgiHandler(
 )
 ```
 
+## Timeouts
+
+When an ASGI application's lifespan startup or shutdown takes too long, Zapros raises timeout exceptions:
+
+- **`AsgiLifespanStartupTimeoutError`** — raised if the application does not complete startup within `startup_timeout` seconds
+- **`AsgiLifespanShutdownTimeoutError`** — raised if the application does not complete shutdown within `shutdown_timeout` seconds
+
+Both default to 10 seconds. Set to `None` for no timeout, or adjust for applications with longer initialization:
+
+```python
+from zapros import AsgiHandler
+
+handler = AsgiHandler(
+    app,
+    startup_timeout=30.0,
+    shutdown_timeout=5.0,
+)
+```
+
+## Trio Support
+
+The `AsgiHandler` fully supports running under Trio. To respect Trio's philosophy that background tasks should only run within a nursery, you **must** use the handler as an async context manager when running in a Trio context:
+
+```python
+import trio
+from litestar import Litestar, get
+from zapros import AsyncClient
+from zapros import AsgiHandler
+
+
+@get("/hello")
+async def hello() -> dict:
+    return {"message": "Hello, World!"}
+
+
+app = Litestar(route_handlers=[hello])
+
+
+async def main():
+    async with AsgiHandler(app) as handler:
+        async with AsyncClient(handler=handler) as client:
+            response = await client.get("http://testserver/hello")
+            print(response.json)
+
+
+trio.run(main)
+```
+
+**Important**: If you attempt to use `AsgiHandler` in a Trio run without the async context manager, a `RuntimeError` will be raised:
+
+```
+RuntimeError: When using `AsgiHandler` with Trio, you must use it as an async context manager (i.e. `async with AsgiHandler(...) as handler:`)
+```
+
+When using the handler as a context manager with Trio, lifespan management is handled automatically—the nursery ensures proper startup and shutdown sequencing.
+
 ## Lifespan Management
 
-ASGI applications can implement startup and shutdown logic using the lifespan protocol. The `AsgiHandler` supports this:
+Zapros implements the [ASGI lifespan protocol](https://asgi.readthedocs.io/en/latest/specs/lifespan.html), allowing ASGI applications to implement startup and shutdown logic. The `AsgiHandler` supports this:
 
 ```python
 from litestar import Litestar, get
@@ -82,41 +138,3 @@ finally:
     await handler.aclose()
 ```
 
-**Important**: When using `enable_lifespan=True`, you must call `await handler.aclose()` to properly shut down the application.
-
-## Streaming Responses
-
-The handler fully supports streaming responses from ASGI applications:
-
-```python
-from litestar import (
-    Litestar,
-    get,
-    Response,
-    MediaType,
-)
-
-
-@get("/stream")
-async def stream_data() -> Response:
-    async def generate():
-        for i in range(5):
-            yield f"chunk-{i}\n".encode()
-
-    return Response(
-        content=generate(),
-        media_type=MediaType.TEXT,
-    )
-
-
-app = Litestar(route_handlers=[stream_data])
-handler = AsgiHandler(app, enable_lifespan=False)
-
-async with AsyncClient(handler=handler) as client:
-    async with client.stream(
-        "GET",
-        "http://testserver/stream",
-    ) as response:
-        async for chunk in response.async_iter_bytes():
-            print(chunk.decode())
-```

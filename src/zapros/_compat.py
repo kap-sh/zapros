@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     import sniffio
@@ -11,6 +11,60 @@ else:
     except ImportError:
         sniffio = None
         trio = None
+
+T = TypeVar("T")
+
+
+def in_trio_run() -> bool:
+    """Return True if we're currently running inside a trio.run() context."""
+    if trio is None:
+        return False
+
+    return trio.lowlevel.in_trio_run()
+
+
+class AnyEventTimeoutError(Exception):
+    """Raised when a timeout occurs while waiting for an AnyEvent."""
+
+
+class AnyEvent:
+    """
+    An event that can be used in both asyncio and trio contexts.
+
+    Must be constructed inside a running event loop.
+    """
+
+    def __init__(self) -> None:
+        self._event: Any = None
+
+        if not in_trio_run():
+            self._event = asyncio.Event()
+        elif in_trio_run():
+            self._event = trio.Event()
+        else:
+            raise RuntimeError("Unsupported async library")
+
+    def set(self) -> None:
+        self._event.set()
+
+    def is_set(self) -> bool:
+        return self._event.is_set()
+
+    async def wait(self, timeout: float | None = None) -> None:
+
+        if timeout is None:
+            await self._event.wait()
+        elif in_trio_run():
+            try:
+                with trio.fail_after(timeout):
+                    await self._event.wait()
+            except trio.TooSlowError:
+                raise AnyEventTimeoutError("Timeout while waiting for event") from None
+        else:
+            try:
+                await asyncio.wait_for(self._event.wait(), timeout)
+            except asyncio.TimeoutError:
+                raise AnyEventTimeoutError("Timeout while waiting for event") from None
 
 
 class AnyLock:

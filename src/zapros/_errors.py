@@ -127,3 +127,15 @@ class HeaderParseError(ZaprosError):
     """Raised when an error occurs while parsing a header value."""
 
     pass
+
+
+class AsgiLifespanStartupTimeoutError(TimeoutError):
+    """Raised when the ASGI lifespan startup sequence times out."""
+
+    pass
+
+
+class AsgiLifespanShutdownTimeoutError(TimeoutError):
+    """Raised when the ASGI lifespan shutdown sequence times out."""
+
+    pass
