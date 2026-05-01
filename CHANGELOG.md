@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/kap-sh/zapros/compare/v0.10.0...v0.11.0) (2026-05-01)
+
+
+### Features
+
+* allow PathMatcher to match url using regex ([#29](https://github.com/kap-sh/zapros/issues/29)) ([c61e454](https://github.com/kap-sh/zapros/commit/c61e454b2862412393e7ddda73b0584e493f8dec))
+* **asgi:** add Trio backend support to AsgiHandler ([1ed340f](https://github.com/kap-sh/zapros/commit/1ed340f7e35770b719f85f27da74e876c9099f6d))
+
+
+### Chores
+
+* add parser for Connection header ([367e402](https://github.com/kap-sh/zapros/commit/367e40230252435d36b126e22ff845a294af260d))
+* explicitly set build-system in pyproject.toml ([aaa6e56](https://github.com/kap-sh/zapros/commit/aaa6e56b6949db08c31a1ccb891952ed136c26ed))
+
+
+### Refactors
+
+* simplify asgi handler by buffering the bodies ([b84e1e1](https://github.com/kap-sh/zapros/commit/b84e1e1067a7b6fec156333d51cc1a771843d458))
+
 ## [0.10.0](https://github.com/kap-sh/zapros/compare/v0.9.0...v0.10.0) (2026-04-27)
 
 
