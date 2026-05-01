@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
     import sniffio
@@ -166,3 +166,53 @@ async def anysleep(delay: float) -> None:
         await trio.sleep(delay)
     else:
         raise RuntimeError(f"Unsupported async library: {current_async_library}")
+
+
+class AnyQueue(Generic[T]):
+    """
+    A minimal queue that can be used in both asyncio and trio contexts.
+    Backend (asyncio.Queue or trio memory channel) is created lazily
+    on first use, so the object can be constructed outside a running loop.
+    """
+
+    def __init__(self, maxsize: int = 0) -> None:
+        self._maxsize = maxsize
+        self._queue: Optional[asyncio.Queue[T]] = None  # asyncio.Queue
+        self._send: Optional["trio.MemorySendChannel[T]"] = None  # trio send channel
+        self._recv: Optional["trio.MemoryReceiveChannel[T]"] = None  # trio receive channel
+
+    def _ensure_initialized(self) -> None:
+        if self._queue is not None or (self._send is not None and self._recv is not None):
+            return
+        if in_trio_run():
+            buffer_size = float("inf") if self._maxsize <= 0 else self._maxsize
+            self._send, self._recv = trio.open_memory_channel(buffer_size)
+        else:
+            self._queue = asyncio.Queue(maxsize=self._maxsize)
+
+    async def put(self, item: T) -> None:
+        self._ensure_initialized()
+        if self._send is not None:
+            assert self._send is not None
+            await self._send.send(item)
+        else:
+            assert self._queue is not None
+            await self._queue.put(item)
+
+    async def get(self) -> T:
+        self._ensure_initialized()
+        if self._recv is not None:
+            assert self._recv is not None
+            return await self._recv.receive()
+        else:
+            assert self._queue is not None
+            return await self._queue.get()
+
+    async def aclose(self) -> None:
+        if self._send is not None:
+            await self._send.aclose()
+        else:
+            # No explicit close method for asyncio.Queue, but we can clear it to unblock any waiting getters
+            if self._queue is not None:
+                while not self._queue.empty():
+                    self._queue.get_nowait()
