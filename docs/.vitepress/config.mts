@@ -74,6 +74,7 @@ export default defineConfig({
       {
         text: "Common Features",
         items: [
+          { text: "WebSockets", link: "/websockets" },
           { text: "Authentication", link: "/authentication" },
           { text: "Cookies", link: "/cookies" },
           { text: "Redirects", link: "/redirects" },

@@ -51,6 +51,9 @@ caching = [
 socks = [
     "socksio>=1.0.0",
 ]
+websocket = [
+    "wsproto>=1.2.0",
+]
 
 [dependency-groups]
 dev = [
@@ -68,6 +71,7 @@ dev = [
     "sniffio>=1.3.1",
     "anyio>=4.12.1",
     "uvicorn>=0.38.0",
+    "wsproto>=1.3.2",
 ]
 
 [tool.pytest.ini_options]
@@ -90,6 +94,8 @@ exclude = [
     "tests/test_sync_auth.py",
     "tests/handlers/test_sync_cassette.py",
     "tests/handlers/test_sync_caching.py",
+    "src/zapros/websocket/_sync.py",
+    "tests/websocket/test_sync.py",
 ]
 
 [tool.ruff.lint]

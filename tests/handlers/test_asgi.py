@@ -3,13 +3,16 @@ from inline_snapshot import snapshot
 from litestar import (
     Litestar,
     Response,
+    WebSocket,
     get,
     post,
+    websocket,
 )
 from litestar.datastructures import (
     State,
 )
 from litestar.response import Stream
+from pywhatwgurl import URL
 
 from zapros import AsyncClient
 from zapros._compat import anysleep
@@ -19,7 +22,10 @@ from zapros._errors import (
 )
 from zapros._handlers._asgi import (
     AsgiHandler,
+    AsgiWebSocketStream,
 )
+from zapros._models import Request, Response as ZaprosResponse
+from zapros.websocket._errors import ConnectionClosed
 
 
 @get("/")
@@ -313,19 +319,20 @@ async def test_status_codes(
             assert response_500.status == snapshot(500)
 
 
-# async def test_lifespan_disabled(
-#     litestar_app_with_lifespan,
-# ):
-#     handler = AsgiHandler(
-#         litestar_app_with_lifespan,
-#         enable_lifespan=False,
-#     )
-#     async with AsyncClient(handler=handler) as client:
-#         response = await client.get(
-#             "http://testserver/state",
-#         )
-#         data = response.json
-#         assert data == snapshot({"startup_value": "not set"})
+async def test_lifespan_disabled(
+    litestar_app_with_lifespan,
+):
+    handler = AsgiHandler(
+        litestar_app_with_lifespan,
+        enable_lifespan=False,
+    )
+    async with handler:
+        async with AsyncClient(handler=handler) as client:
+            response = await client.get(
+                "http://testserver/state",
+            )
+            data = response.json
+            assert data == snapshot({"startup_value": "not set"})
 
 
 async def test_lifespan_enabled(
@@ -402,3 +409,139 @@ async def test_http_version():
         async with AsyncClient(handler=handler) as client:
             response = await client.get("http://testserver/")
             assert response.status == snapshot(200)
+
+
+def _ws_request(path: str = "/") -> Request:
+    return Request(URL(f"ws://testserver{path}"), method="GET")
+
+
+def _handoff(response: ZaprosResponse) -> AsgiWebSocketStream:
+    ws = response.context.get("handoff", {}).get("_asgi_websocket_stream")
+    assert isinstance(ws, AsgiWebSocketStream)
+    return ws
+
+
+class TestAsgiWebSocketStream:
+    async def test_handshake_accepted(self):
+        async def app(scope, receive, send):
+            assert scope["type"] == "websocket"
+            event = await receive()
+            assert event["type"] == "websocket.connect"
+            await send({"type": "websocket.accept"})
+            await receive()
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            assert response.status == snapshot(101)
+            ws = _handoff(response)
+            assert ws.state == "connected"
+            await ws.aclose()
+
+    async def test_handshake_with_subprotocol_and_headers(self):
+        async def app(scope, receive, send):
+            await receive()
+            await send(
+                {
+                    "type": "websocket.accept",
+                    "subprotocol": "graphql-ws",
+                    "headers": [(b"x-extra", b"yes")],
+                }
+            )
+            await receive()
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            ws = _handoff(response)
+            assert ws.accept_subprotocol == snapshot("graphql-ws")
+            assert ws.accept_headers == snapshot([("x-extra", "yes")])
+            await ws.aclose()
+
+    async def test_handshake_rejected_via_close(self):
+        async def app(scope, receive, send):
+            await receive()
+            await send({"type": "websocket.close", "code": 4000, "reason": "no thanks"})
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            assert response.status == snapshot(403)
+            assert "_asgi_websocket_stream" not in response.context.get("handoff", {})
+
+    async def test_handshake_rejected_when_app_raises(self):
+        async def app(scope, receive, send):
+            raise RuntimeError("boom")
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            assert response.status == snapshot(403)
+            assert "_asgi_websocket_stream" not in response.context.get("handoff", {})
+
+    async def test_send_and_receive_text(self):
+        async def app(scope, receive, send):
+            await receive()
+            await send({"type": "websocket.accept"})
+            msg = await receive()
+            assert msg["type"] == "websocket.receive"
+            await send({"type": "websocket.send", "text": f"echo:{msg['text']}"})
+            await receive()
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            ws = _handoff(response)
+            await ws.asend(text="hello")
+            received = await ws.areceive()
+            assert received["type"] == snapshot("websocket.send")
+            assert received["text"] == snapshot("echo:hello")
+            await ws.aclose()
+
+    async def test_areceive_raises_on_app_close(self):
+        async def app(scope, receive, send):
+            await receive()
+            await send({"type": "websocket.accept"})
+            await send({"type": "websocket.close", "code": 4001, "reason": "done"})
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            ws = _handoff(response)
+            with pytest.raises(ConnectionClosed) as exc_info:
+                await ws.areceive()
+            assert exc_info.value.code == snapshot(4001)
+            assert exc_info.value.reason == snapshot("done")
+            assert ws.state == "disconnected"
+            await ws.aclose()
+
+    async def test_asend_validation(
+        self,
+    ):
+        async def app(scope, receive, send):
+            await receive()
+            await send({"type": "websocket.accept"})
+            await receive()
+
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request())
+            ws = _handoff(response)
+            with pytest.raises(ValueError):
+                await ws.asend()
+            with pytest.raises(ValueError):
+                await ws.asend(text="x", bytes=b"y")
+            await ws.aclose()
+
+    async def test_litestar_websocket_echo(self):
+        @websocket("/ws/echo")
+        async def echo(socket: WebSocket) -> None:
+            await socket.accept()
+            data = await socket.receive_text()
+            await socket.send_text(f"echo:{data}")
+            await socket.close()
+
+        app = Litestar(route_handlers=[echo])
+        async with AsgiHandler(app, enable_lifespan=False) as handler:
+            response = await handler.ahandle(_ws_request("/ws/echo"))
+            assert response.status == snapshot(101)
+            ws = _handoff(response)
+            await ws.asend(text="hello")
+            received = await ws.areceive()
+            assert received["text"] == snapshot("echo:hello")
+            with pytest.raises(ConnectionClosed):
+                await ws.areceive()
+            await ws.aclose()
