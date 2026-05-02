@@ -780,11 +780,21 @@ class StdNetworkHandler(BaseHandler):
             if status == 101:
                 # We won't be able to reuse this connection, so we can release the pool reservation now.
                 self._pool.release_reservation(key)
+                # h11 reads in DEFAULT_READ_SIZE chunks, so any bytes the peer sent
+                # immediately after the 101 (e.g. WebSocket frames) are sitting in
+                # h11's buffer rather than on the socket. Hand them to the caller
+                # so it can re-inject them into the upgraded protocol parser.
+                trailing_data, _ = conn.h11.trailing_data
                 return Response(
                     status=status,
                     headers=resp_headers,
                     content=None,
-                    context={"handoff": ResponseHandoffContext(network_stream=conn.stream)},
+                    context={
+                        "handoff": ResponseHandoffContext(
+                            network_stream=conn.stream,
+                            trailing_data=bytes(trailing_data),
+                        )
+                    },
                 )
 
         except BaseException:

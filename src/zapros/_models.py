@@ -29,6 +29,8 @@ from zapros._multidict import (
 from zapros._utils import get_host_header_value
 
 if TYPE_CHECKING:
+    from zapros._handlers._asgi import AsgiWebSocketStream
+
     from ._multipart import Multipart
 
 
@@ -104,6 +106,8 @@ class ResponseCachingContext(TypedDict, total=False):
 
 class ResponseHandoffContext(TypedDict, total=False):
     network_stream: AsyncBaseNetworkStream | BaseNetworkStream
+    trailing_data: bytes
+    _asgi_websocket_stream: "AsgiWebSocketStream"
 
 
 class ResponseContext(TypedDict, total=False):
