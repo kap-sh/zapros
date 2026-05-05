@@ -44,6 +44,13 @@ packages:
       - id: aread
         match: '\baread\b'
         replace: 'read'
+      
+      - id: async-base-websocket
+        match: '\bAsyncBaseWebSocket\b'
+        replace: 'BaseWebSocket'
+      - id: async-websocket
+        match: '\bAsyncWebSocket\b'
+        replace: 'WebSocket'
 
   zapros-internal:
     rules:
@@ -56,8 +63,8 @@ packages:
       - match: '\baconnect\b'
         replace: 'connect'
 
-      - match: '\baconnect_tcp\b'
-        replace: 'connect_tcp'
+      - match: '\baconnect_ws\b'
+        replace: 'connect_ws'
 
       - match: '\basync_next\b'
         replace: 'next'
@@ -244,3 +251,28 @@ targets:
     rules:
       - match: '\btest_async\b'
         replace: 'test_sync'
+
+  - input: src/zapros/websocket/_async.py
+    output: src/zapros/websocket/_sync.py
+    rules:
+      - match: '\bfrom zapros\._compat import AnyLock\b'
+        replace: 'from threading import Lock'
+      - match: '\bfrom zapros\._compat import AnyLock, AnySemaphore\b'
+        replace: 'from threading import Lock, Semaphore'
+      - match: '\bAnyLock\b'
+        replace: 'Lock'
+      - match: '\bAnySemaphore\b'
+        replace: 'Semaphore'
+      - match: '\bfrom zapros\._compat import AnyEvent\b'
+        replace: 'from threading import Event'
+      - match: '\bAnyEvent\b'
+        replace: 'Event'
+  - input: tests/websocket/test_async.py
+    output: tests/websocket/test_sync.py
+    rules:
+      - match: 'from zapros._websocket._async'
+        replace: 'from zapros._websocket._sync'
+      - match: '\bfrom zapros._compat import anysleep\b'
+        replace: 'from time import sleep'
+      - match: '\banysleep\b'
+        replace: 'sleep'

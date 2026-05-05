@@ -32,5 +32,9 @@ features:
   - icon: ⚡
     title: Async & Sync Support
     details: Use the same clean interface in both async and sync environments.
+
+  - icon: 🔗
+    title: WebSocket Support
+    details: A WebSocket client built on top of Zapros primitives.
 ---
 

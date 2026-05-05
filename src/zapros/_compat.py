@@ -23,10 +23,6 @@ def in_trio_run() -> bool:
     return trio.lowlevel.in_trio_run()
 
 
-class AnyEventTimeoutError(Exception):
-    """Raised when a timeout occurs while waiting for an AnyEvent."""
-
-
 class AnyEvent:
     """
     An event that can be used in both asyncio and trio contexts.
@@ -50,7 +46,11 @@ class AnyEvent:
     def is_set(self) -> bool:
         return self._event.is_set()
 
-    async def wait(self, timeout: float | None = None) -> None:
+    async def wait(self, timeout: float | None = None) -> bool:
+        """
+        Wait until the event is set. If timeout is provided, wait at most timeout seconds.
+        Returns True if the event is set, False if the timeout was reached.
+        """
 
         if timeout is None:
             await self._event.wait()
@@ -59,12 +59,13 @@ class AnyEvent:
                 with trio.fail_after(timeout):
                     await self._event.wait()
             except trio.TooSlowError:
-                raise AnyEventTimeoutError("Timeout while waiting for event") from None
+                return False
         else:
             try:
                 await asyncio.wait_for(self._event.wait(), timeout)
             except asyncio.TimeoutError:
-                raise AnyEventTimeoutError("Timeout while waiting for event") from None
+                return False
+        return True
 
 
 class AnyLock:

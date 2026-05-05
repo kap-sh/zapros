@@ -8,7 +8,7 @@ from urllib.parse import unquote
 
 from typing_extensions import Self
 
-from zapros._compat import AnyEvent, AnyEventTimeoutError, AnyQueue, in_trio_run
+from zapros._compat import AnyEvent, AnyQueue, in_trio_run
 from zapros._constants import DEFAULT_PORTS
 from zapros._errors import AsgiLifespanShutdownTimeoutError, AsgiLifespanStartupTimeoutError
 
@@ -29,6 +29,9 @@ LifespanStatus = Literal["pending", "complete", "failed"]
 LifespanStartupStatus = Literal["pending", "complete", "failed", "not_supported"]
 
 ResponseHeadersAndStatus = tuple[int, list[tuple[str, str]]]
+
+# WebSocket stream lifecycle states.
+WebSocketState = Literal["connecting", "connected", "disconnected"]
 
 
 class AsgiStream(AsyncClosableStream):
@@ -204,6 +207,275 @@ class AsgiStream(AsyncClosableStream):
         await self._send_queue.aclose()
 
 
+class AsgiWebSocketStream:
+    """
+    A bidirectional handle to an ASGI WebSocket connection.
+
+    This object is exposed to upstream code via `Response(context={"handoff": {"_asgi_websocket_stream": ...}})`
+    once the handshake has completed successfully. The application is driven by a background
+    task that:
+      * delivers `websocket.connect` / `websocket.receive` / `websocket.disconnect` events
+        to the app via `receive()`, by reading from `_client_to_app_queue`
+      * collects `websocket.accept` / `websocket.send` / `websocket.close` events from the app
+        via `send()`, by writing to `_app_to_client_queue`
+
+    Upstream usage:
+        await stream.asend(text="hello")
+        msg = await stream.areceive()   # raises
+        await stream.aclose(code=1000, reason="bye")
+    """
+
+    def __init__(
+        self,
+        client_to_app_queue: AnyQueue[dict[str, Any]],
+        app_to_client_queue: AnyQueue[dict[str, Any]],
+        accept_subprotocol: Optional[str],
+        accept_headers: list[tuple[str, str]],
+        asyncio_task: Optional[asyncio.Task[None]] = None,
+    ) -> None:
+        # Queue we put `websocket.receive` / `websocket.disconnect` events into
+        # for the ASGI application to consume.
+        self._client_to_app_queue: AnyQueue[dict[str, Any]] = client_to_app_queue
+
+        # Queue the ASGI application puts `websocket.send` / `websocket.close` events into
+        # for upstream code to consume via `areceive()`.
+        self._app_to_client_queue: AnyQueue[dict[str, Any]] = app_to_client_queue
+
+        # Subprotocol & extra headers chosen by the application during accept;
+        # exposed so upstream code (e.g. a real WS proxy) can mirror them on the
+        # wire when completing the handshake with the actual client.
+        self.accept_subprotocol = accept_subprotocol
+        self.accept_headers = accept_headers
+
+        self._asyncio_task = asyncio_task
+
+        self._state: WebSocketState = "connected"
+
+    @property
+    def state(self) -> WebSocketState:
+        return self._state
+
+    @classmethod
+    async def _create_response_with_stream(
+        cls,
+        app: Any,
+        scope: dict[str, Any],
+        trio_nursery: Optional["trio.Nursery"] = None,
+    ) -> Response:
+        """
+        Drive the ASGI websocket handshake and, once completed, return an
+        HTTP-shaped `Response` that carries the live `AsgiWebSocketStream` in
+        `context["handoff"]["_asgi_websocket_stream"]`.
+
+        On accept: returns a 101 response with the stream in context.
+        On reject (close before accept, or app raised before accept): returns a
+        403 response with no stream in context.
+        """
+        client_to_app_queue = AnyQueue[dict[str, Any]]()
+        app_to_client_queue = AnyQueue[dict[str, Any]]()
+
+        # Fired once the app has either accepted or closed the handshake;
+        # `handshake_result` carries the outcome.
+        handshake_done_event = AnyEvent()
+        handshake_result: dict[str, Any] = {}
+
+        close_was_received = False
+
+        # Pre-load the `websocket.connect` event so the very first
+        # `receive()` call from the app returns it without blocking.
+        await client_to_app_queue.put({"type": "websocket.connect"})
+
+        async def _run() -> None:
+            async def receive() -> dict[str, Any]:
+                msg = await client_to_app_queue.get()
+                logger.debug("ASGI websocket app receive(): %s", msg.get("type"))
+                return msg
+
+            async def send(message: dict[str, Any]) -> None:
+                msg_type = message["type"]
+                logger.debug("ASGI websocket app send(): %s", msg_type)
+                if msg_type == "websocket.accept":
+                    if handshake_done_event.is_set():
+                        # Spec: accept after accept (or after close) is invalid.
+                        raise RuntimeError("websocket.accept sent after handshake already completed")
+                    subprotocol = message.get("subprotocol")
+                    raw_headers: list[tuple[bytes, bytes]] = message.get("headers", []) or []
+                    headers = [(k.decode("ascii"), v.decode("latin-1")) for k, v in raw_headers]
+                    handshake_result["accepted"] = True
+                    handshake_result["subprotocol"] = subprotocol
+                    handshake_result["headers"] = headers
+                    handshake_done_event.set()
+
+                elif msg_type == "websocket.close":
+                    code = message.get("code", 1000)
+                    reason = message.get("reason", "") or ""
+                    if not handshake_done_event.is_set():
+                        # Close before accept = reject; per spec this is HTTP 403.
+                        handshake_result["accepted"] = False
+                        handshake_result["code"] = code
+                        handshake_result["reason"] = reason
+                        handshake_done_event.set()
+                    else:
+                        nonlocal close_was_received
+                        # Close after accept = normal end-of-stream; deliver to consumer.
+                        close_was_received = True
+                        await app_to_client_queue.put(message)
+
+                elif msg_type == "websocket.send":
+                    if not handshake_done_event.is_set():
+                        raise RuntimeError("websocket.send sent before websocket.accept")
+                    await app_to_client_queue.put(message)
+
+                else:
+                    raise RuntimeError(f"Unexpected ASGI websocket message type: {msg_type!r}")
+
+            try:
+                await app(scope, receive, send)
+            except BaseException:
+                # If the app dies before completing the handshake, treat as a
+                # rejection (HTTP 403). If it dies after accept, push a synthetic
+                # close into the consumer queue so `areceive()` raises a clean
+                # disconnect rather than hanging.
+                if not handshake_done_event.is_set():
+                    handshake_result["accepted"] = False
+                    handshake_result["code"] = 1011  # internal error
+                    handshake_result["reason"] = "ASGI application raised before accept"
+                    handshake_done_event.set()
+                elif not close_was_received:
+                    await app_to_client_queue.put(
+                        {"type": "websocket.close", "code": 1011, "reason": "ASGI application raised"}
+                    )
+                return
+
+            # App returned without explicit close. If accept happened, that's an
+            # implicit graceful close; if not, it's a rejection.
+            if not handshake_done_event.is_set():
+                handshake_result["accepted"] = False
+                handshake_result["code"] = 1006
+                handshake_result["reason"] = "ASGI application returned before accept"
+                handshake_done_event.set()
+            elif not close_was_received:
+                await app_to_client_queue.put({"type": "websocket.close", "code": 1000, "reason": ""})
+
+        task: Optional[asyncio.Task[None]] = None
+        if trio_nursery is not None:
+            trio_nursery.start_soon(_run)
+        else:
+            task = asyncio.create_task(_run())
+
+        logger.debug("Waiting for ASGI application to complete websocket handshake...")
+        await handshake_done_event.wait()
+        logger.debug("ASGI websocket handshake completed: %s", handshake_result)
+
+        if not handshake_result.get("accepted"):
+            # Rejected handshake: surface as HTTP 403, no stream handoff.
+            # Cancel the background task — there is no further work for it to do.
+            if task is not None:
+                task.cancel()
+                try:
+                    await task
+                except (asyncio.CancelledError, BaseException):
+                    pass
+            return Response(
+                status=403,
+                headers=Headers([]),
+                content=b"",
+            )
+
+        stream = cls(
+            client_to_app_queue=client_to_app_queue,
+            app_to_client_queue=app_to_client_queue,
+            accept_subprotocol=handshake_result.get("subprotocol"),
+            accept_headers=handshake_result.get("headers", []),
+            asyncio_task=task,
+        )
+
+        # Build the accept-time HTTP response. Status 101 is the on-the-wire
+        # equivalent of a successful WS handshake; upstream code that's
+        # bridging to a real socket can use this together with `accept_headers`
+        # / `accept_subprotocol` to complete the wire handshake.
+        return Response(
+            status=101,
+            headers=Headers(handshake_result.get("headers", [])),
+            content=b"",
+            context={"handoff": {"_asgi_websocket_stream": stream}},
+        )
+
+    async def asend(
+        self,
+        *,
+        text: Optional[str] = None,
+        bytes: Optional[bytes] = None,  # noqa: A002 - matches ASGI spec key name
+    ) -> None:
+        """
+        Send a `websocket.receive` event to the ASGI application. Per spec,
+        exactly one of `text` or `bytes` must be non-None.
+        """
+        if self._state != "connected":
+            raise RuntimeError(f"Cannot send on websocket in state {self._state!r}")
+        if (text is None) == (bytes is None):
+            raise ValueError("Exactly one of `text` or `bytes` must be provided")
+
+        message: dict[str, Any] = {"type": "websocket.receive"}
+        if text is not None:
+            message["text"] = text
+        else:
+            message["bytes"] = bytes
+        await self._client_to_app_queue.put(message)
+
+    async def areceive(self) -> dict[str, Any]:
+        """
+        Read the next event the ASGI application has sent to the client.
+
+        Returns the raw ASGI message dict for `websocket.send` events
+        (`{"type": "websocket.send", "text"/"bytes": ...}`).
+
+        Raises `ConnectionClosed` when the application closes the
+        connection (either via an explicit `websocket.close` or by returning).
+        """
+        from zapros.websocket._errors import ConnectionClosed
+
+        if self._state == "disconnected":
+            raise ConnectionClosed(code=1006, reason="")
+
+        message = await self._app_to_client_queue.get()
+        msg_type = message.get("type")
+
+        if msg_type == "websocket.close":
+            self._state = "disconnected"
+            raise ConnectionClosed(
+                code=message.get("code", 1000),
+                reason=message.get("reason", "") or "",
+            )
+
+        return message
+
+    async def aclose(self, code: int = 1000, reason: str = "") -> None:
+        """
+        Tell the ASGI application that the client has disconnected, then tear
+        down the background task. Idempotent.
+        """
+        if self._state != "disconnected":
+            self._state = "disconnected"
+            # Best-effort: notify the app. If the app has already exited, the
+            # queue put still succeeds — no one will read it, but that's fine.
+            try:
+                await self._client_to_app_queue.put({"type": "websocket.disconnect", "code": code, "reason": reason})
+            except Exception:
+                # Queue may already be closed if the app exited first; ignore.
+                pass
+
+        if self._asyncio_task is not None and not self._asyncio_task.done():
+            self._asyncio_task.cancel()
+            try:
+                await self._asyncio_task
+            except asyncio.CancelledError:
+                pass
+
+        await self._client_to_app_queue.aclose()
+        await self._app_to_client_queue.aclose()
+
+
 class AsgiHandler(AsyncBaseHandler):
     def __init__(
         self,
@@ -250,6 +522,14 @@ class AsgiHandler(AsyncBaseHandler):
 
         self._asyncio_task: asyncio.Task[None] | None = None
 
+    def _is_websocket_request(self, request: Request) -> bool:
+        scheme = request.url.protocol[:-1].lower()
+        if scheme in ("ws", "wss"):
+            return True
+        # Also detect HTTP requests that are upgrading to WebSocket.
+        upgrade = request.headers.get("upgrade", "")
+        return upgrade.lower() == "websocket"
+
     def _build_scope(self, request: Request) -> dict[str, Any]:
         headers = [(k.lower().encode("ascii"), v.encode("latin-1")) for k, v in request.headers.list()]
 
@@ -270,6 +550,42 @@ class AsgiHandler(AsyncBaseHandler):
             "headers": headers,
             "client": self.client,
             "server": (request.url.hostname, server_port),
+        }
+
+        if self.enable_lifespan:
+            scope["state"] = self._lifespan_state.copy()
+
+        return scope
+
+    def _build_websocket_scope(self, request: Request) -> dict[str, Any]:
+        headers = [(k.lower().encode("ascii"), v.encode("latin-1")) for k, v in request.headers.list()]
+
+        # Map http(s) -> ws(s) when caller routed an upgrading HTTP request here.
+        scheme = request.url.protocol[:-1].lower()
+        ws_scheme_map = {"http": "ws", "https": "wss"}
+        scheme = ws_scheme_map.get(scheme, scheme) if scheme not in ("ws", "wss") else scheme
+
+        server_port = request.url.port or DEFAULT_PORTS.get(scheme, 80)
+        raw_path = request.url.pathname.encode("utf-8")
+
+        # Subprotocols come from the Sec-WebSocket-Protocol request header,
+        # comma-separated per RFC 6455.
+        subprotocols_header = request.headers.get("sec-websocket-protocol", "")
+        subprotocols = [p.strip() for p in subprotocols_header.split(",") if p.strip()] if subprotocols_header else []
+
+        scope: dict[str, Any] = {
+            "type": "websocket",
+            "asgi": {"version": "3.0", "spec_version": "2.5"},
+            "http_version": self.http_version,
+            "scheme": scheme,
+            "path": unquote(request.url.pathname) or "/",
+            "raw_path": raw_path or b"/",
+            "query_string": request.url.search[1:].encode("utf-8"),
+            "root_path": self.root_path,
+            "headers": headers,
+            "client": self.client,
+            "server": (request.url.hostname, server_port),
+            "subprotocols": subprotocols,
         }
 
         if self.enable_lifespan:
@@ -331,33 +647,45 @@ class AsgiHandler(AsyncBaseHandler):
             self._lifespan_startup_event.set()
             self._lifespan_startup_status = "not_supported"
 
+    async def _ensure_lifespan_started(self) -> None:
+        """Block until lifespan startup is done (or raise on timeout/failure)."""
+        if not self.enable_lifespan:
+            return
+
+        if self._asyncio_task is None and not in_trio_run():
+            self._asyncio_task = asyncio.create_task(self._run_lifespan())
+
+        logger.debug("Waiting for ASGI application lifespan startup to complete...")
+        was_set = await self._lifespan_startup_event.wait(self.startup_timeout)
+        logger.debug("ASGI application lifespan startup completed with status: %s", self._lifespan_startup_status)
+
+        if not was_set:
+            raise AsgiLifespanStartupTimeoutError(
+                f"ASGI application lifespan startup did not complete within {self.startup_timeout} seconds"
+            )
+
+        if self._lifespan_startup_status == "failed":
+            # Per the specification, if the lifespan startup fails, server should the exit with an error.
+            raise RuntimeError(
+                "ASGI application lifespan startup failed: "
+                f"{self._lifespan_startup_failure_message or 'no message provided'}"
+            )
+
     async def ahandle(self, request: Request) -> Response:
         if in_trio_run() and self._trio_nursery is None:
             raise RuntimeError(
                 "When using `AsgiHandler` with Trio, you must use it as an async "
                 "context manager (i.e. `async with AsgiHandler(...) as handler:`)"
             )
-        if self.enable_lifespan:
-            if self._asyncio_task is None and not in_trio_run():
-                self._asyncio_task = asyncio.create_task(self._run_lifespan())
 
-            try:
-                logger.debug("Waiting for ASGI application lifespan startup to complete...")
-                await self._lifespan_startup_event.wait(self.startup_timeout)
-                logger.debug(
-                    "ASGI application lifespan startup completed with status: %s", self._lifespan_startup_status
-                )
-            except AnyEventTimeoutError:
-                raise AsgiLifespanStartupTimeoutError(
-                    f"ASGI application lifespan startup did not complete within {self.startup_timeout} seconds"
-                )
+        await self._ensure_lifespan_started()
 
-            if self._lifespan_startup_status == "failed":
-                # Per the specification, if the lifespan startup fails, server should the exit with an error.
-                raise RuntimeError(
-                    "ASGI application lifespan startup failed: "
-                    f"{self._lifespan_startup_failure_message or 'no message provided'}"
-                )
+        if self._is_websocket_request(request):
+            return await AsgiWebSocketStream._create_response_with_stream(  # type: ignore[reportPrivateUsage]
+                app=self.app,
+                scope=self._build_websocket_scope(request),
+                trio_nursery=self._trio_nursery,
+            )
 
         assert not isinstance(request.body, Iterator)
         response = await AsgiStream._create_response_with_stream(  # type: ignore[reportPrivateUsage]
@@ -398,15 +726,14 @@ class AsgiHandler(AsyncBaseHandler):
         if not self.enable_lifespan:
             return
 
-        try:
-            logger.debug("Waiting for ASGI application lifespan startup to complete before triggering shutdown...")
-            await self._lifespan_startup_event.wait(self.startup_timeout)
-            logger.debug(
-                "ASGI application lifespan startup completed with status: %s, "
-                "proceeding to trigger shutdown if supported",
-                self._lifespan_startup_status,
-            )
-        except AnyEventTimeoutError:
+        logger.debug("Waiting for ASGI application lifespan startup to complete before triggering shutdown...")
+        was_set = await self._lifespan_startup_event.wait(self.startup_timeout)
+        logger.debug(
+            "ASGI application lifespan startup completed with status: %s, proceeding to trigger shutdown if supported",
+            self._lifespan_startup_status,
+        )
+
+        if not was_set:
             raise AsgiLifespanStartupTimeoutError(
                 f"ASGI application lifespan startup did not complete within {self.startup_timeout} seconds"
             )
@@ -416,14 +743,12 @@ class AsgiHandler(AsyncBaseHandler):
             # Signal the lifespan task to start the shutdown sequence.
             self._lifespan_close_event.set()
 
-            try:
-                logger.debug("Waiting for ASGI application lifespan shutdown to complete...")
-                # Wait for the shutdown sequence to complete (either successfully or with failure).
-                await self._lifespan_shutdown_event.wait(self.shutdown_timeout)
-                logger.debug(
-                    "ASGI application lifespan shutdown completed with status: %s", self._lifespan_shutdown_status
-                )
-            except AnyEventTimeoutError:
+            logger.debug("Waiting for ASGI application lifespan shutdown to complete...")
+            # Wait for the shutdown sequence to complete (either successfully or with failure).
+            was_set = await self._lifespan_shutdown_event.wait(self.shutdown_timeout)
+            logger.debug("ASGI application lifespan shutdown completed with status: %s", self._lifespan_shutdown_status)
+
+            if not was_set:
                 raise AsgiLifespanShutdownTimeoutError(
                     f"ASGI application lifespan shutdown did not complete within {self.shutdown_timeout} seconds"
                 )
