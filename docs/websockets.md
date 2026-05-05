@@ -112,18 +112,31 @@ with connect_ws("wss://stream.example.com/ws") as ws:
 
 Wrap `bytes` payloads in `BinaryMessage`:
 
-```python
+::: code-group
+
+```python [Async]
 from zapros.websocket import BinaryMessage, aconnect_ws
 
 async with aconnect_ws("wss://api.example.com/upload") as ws:
     await ws.send(BinaryMessage(data=b"\x00\x01\x02"))
 ```
 
+```python [Sync]
+from zapros.websocket import BinaryMessage, connect_ws
+
+with connect_ws("wss://api.example.com/upload") as ws:
+    ws.send(BinaryMessage(data=b"\x00\x01\x02"))
+```
+
+:::
+
 ## Subprotocols
 
 Pass a list of preferred subprotocols. The server picks one and includes it in the handshake response:
 
-```python
+::: code-group
+
+```python [Async]
 from zapros.websocket import aconnect_ws
 
 async with aconnect_ws(
@@ -133,11 +146,25 @@ async with aconnect_ws(
     ...
 ```
 
+```python [Sync]
+from zapros.websocket import connect_ws
+
+with connect_ws(
+    "wss://api.example.com/ws",
+    subprotocols=["graphql-ws", "json"],
+) as ws:
+    ...
+```
+
+:::
+
 ## permessage-deflate
 
 Enable the [permessage-deflate](https://datatracker.ietf.org/doc/html/rfc7692) extension by passing `permessage_deflate=True`, or pass a `PerMessageDeflateExtension` to customize the parameters:
 
-```python
+::: code-group
+
+```python [Async]
 from zapros.websocket import (
     PerMessageDeflateExtension,
     aconnect_ws,
@@ -154,6 +181,26 @@ async with aconnect_ws(
 ) as ws:
     ...
 ```
+
+```python [Sync]
+from zapros.websocket import (
+    PerMessageDeflateExtension,
+    connect_ws,
+)
+
+with connect_ws(
+    "wss://api.example.com/ws",
+    permessage_deflate=PerMessageDeflateExtension(
+        client_no_context_takeover=True,
+        server_no_context_takeover=True,
+        client_max_window_bits=12,
+        server_max_window_bits=12,
+    ),
+) as ws:
+    ...
+```
+
+:::
 
 ## Reusing a client
 
@@ -236,7 +283,9 @@ The ASGI WebSocket spec only carries text and binary payloads — there is no in
 
 Leaving the `with` / `async with` block closes the connection with code `1000` (normal closure). To send a specific close code or reason, call `close()` explicitly before exiting:
 
-```python
+::: code-group
+
+```python [Async]
 from zapros.websocket import CloseCode, aconnect_ws
 
 async with aconnect_ws("wss://api.example.com/ws") as ws:
@@ -246,13 +295,27 @@ async with aconnect_ws("wss://api.example.com/ws") as ws:
     )
 ```
 
+```python [Sync]
+from zapros.websocket import CloseCode, connect_ws
+
+with connect_ws("wss://api.example.com/ws") as ws:
+    ws.close(
+        code=CloseCode.GOING_AWAY,
+        reason="client shutting down",
+    )
+```
+
+:::
+
 After the connection closes, `ws.close_code` and `ws.close_reason` expose the negotiated close code and reason.
 
 ## Error handling
 
 Calling `send` or `recv` on a closed connection raises `ConnectionClosed`. The exception carries the close code and reason, so you can distinguish a clean close from an abnormal one:
 
-```python
+::: code-group
+
+```python [Async]
 from zapros.websocket import (
     CloseCode,
     ConnectionClosed,
@@ -271,5 +334,27 @@ async with aconnect_ws("wss://api.example.com/ws") as ws:
         else:
             print(f"closed with {exc.code}: {exc.reason}")
 ```
+
+```python [Sync]
+from zapros.websocket import (
+    CloseCode,
+    ConnectionClosed,
+    TextMessage,
+    connect_ws,
+)
+
+with connect_ws("wss://api.example.com/ws") as ws:
+    try:
+        while True:
+            ws.send(TextMessage(data="ping"))
+            ws.recv()
+    except ConnectionClosed as exc:
+        if exc.code == CloseCode.NORMAL:
+            print("server closed cleanly")
+        else:
+            print(f"closed with {exc.code}: {exc.reason}")
+```
+
+:::
 
 When iterating with `async for` / `for`, a peer-initiated close ends the loop without raising — the loop simply stops at the close frame.
