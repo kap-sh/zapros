@@ -23,11 +23,7 @@ features:
 
   - icon: 🛠️
     title: Batteries Included
-    details: Authentication, cookies, timeouts, redirects, retries, caching, and custom handlers out of the box.
-
-  - icon: 🧪
-    title: Easily Testable
-    details: Powerful built-in mock handler for unit tests and HTTP cassettes library for recording and replaying real requests.
+    details: Authentication, cookies, timeouts, redirects, retries, caching, custom handlers, mock handler, and HTTP cassettes out of the box.
 
   - icon: ⚡
     title: Async & Sync Support
