@@ -201,7 +201,7 @@ class AsyncIOTransport(AsyncBaseTransport):
                         server_hostname=server_hostname if tls else None,
                         happy_eyeballs_delay=0.25,
                         interleave=1,
-                        ssl_handshake_timeout=timeout,
+                        ssl_handshake_timeout=timeout if tls else None,
                     ),
                     timeout,
                 )
