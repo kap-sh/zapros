@@ -1745,8 +1745,8 @@ wheels = [
 
 [[package]]
 name = "zapros"
-version = "0.8.0"
-source = { virtual = "." }
+version = "0.10.0"
+source = { editable = "." }
 dependencies = [
     { name = "h11" },
     { name = "pywhatwgurl" },

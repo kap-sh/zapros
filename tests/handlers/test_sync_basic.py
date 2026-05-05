@@ -1,13 +1,19 @@
 import gzip
+from typing import TYPE_CHECKING
 
 import pytest
+from inline_snapshot import snapshot
 
 from tests.mock_server import MockServer
 
-pytest.importorskip("pyreqwest", reason="pyreqwest is not supported for python 3.10 and below")
-import pytest
-from inline_snapshot import snapshot
-from pyreqwest.client import SyncClientBuilder
+if TYPE_CHECKING:
+    from pyreqwest.client import SyncClientBuilder
+else:
+    try:
+        from pyreqwest.client import SyncClientBuilder
+    except ImportError:
+        SyncClientBuilder = None
+
 
 from zapros import (
     BaseMiddleware,
@@ -20,8 +26,10 @@ from zapros import (
 
 CASES = [
     pytest.param(("stdnetwork", "asyncio"), id="stdnetwork-asyncio"),
+    pytest.param(("stdnetwork", ("asyncio", {"use_uvloop": True})), id="stdnetwork-asyncio-uvloop"),
     pytest.param(("stdnetwork", "trio"), id="stdnetwork-trio"),
     pytest.param(("pyreqwest", "asyncio"), id="pyreqwest-asyncio"),
+    pytest.param(("pyreqwest", ("asyncio", {"use_uvloop": True})), id="pyreqwest-asyncio-uvloop"),
 ]
 
 
@@ -43,6 +51,8 @@ def anyio_backend(case):
 @pytest.fixture
 def handler(handler_kind):
     if handler_kind == "pyreqwest":
+        if SyncClientBuilder is None:
+            pytest.skip("pyreqwest is not supported for python 3.10 and below")
         return PyreqwestHandler(client=SyncClientBuilder())
     return StdNetworkHandler()
 

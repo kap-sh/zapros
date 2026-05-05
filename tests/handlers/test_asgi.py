@@ -247,7 +247,7 @@ async def test_startup_timeout(anyio_backend):
         startup_timeout=0.01,
     )
 
-    if anyio_backend == "asyncio":
+    if anyio_backend == "asyncio" or isinstance(anyio_backend, tuple) and anyio_backend[0] == "asyncio":
         with pytest.raises(AsgiLifespanStartupTimeoutError):
             async with handler:
                 async with AsyncClient(handler=handler) as client:

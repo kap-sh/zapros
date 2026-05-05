@@ -15,6 +15,17 @@ from zapros._handlers._mock import (
 )
 
 
+@pytest.fixture(
+    params=[
+        "asyncio",
+        ("asyncio", {"use_uvloop": True}),
+        "trio",
+    ]
+)
+def anyio_backend(request):
+    return request.param
+
+
 @pytest.fixture(scope="session")
 def mock_server():
     server = MockServer()

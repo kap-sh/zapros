@@ -24,6 +24,17 @@ else:
 T = TypeVar("T")
 
 
+def is_uvloop() -> bool:
+    """Return True if the current event loop is uvloop."""
+
+    try:
+        import uvloop
+
+        return isinstance(asyncio.get_running_loop(), uvloop.Loop)
+    except (ImportError, AttributeError):
+        return False
+
+
 class _AsyncTLSState:
     def __init__(
         self,
@@ -164,14 +175,23 @@ class AsyncIOTransport(AsyncBaseTransport):
     ) -> AsyncBaseNetworkStream:
         with map_asyncio_connect_exceptions():
             if timeout is None:
-                reader, writer = await asyncio.open_connection(
-                    host,
-                    port,
-                    ssl=self.ssl_context if tls else None,
-                    server_hostname=server_hostname if tls else None,
-                    happy_eyeballs_delay=0.25,
-                    interleave=1,
-                )
+                if is_uvloop():
+                    # uvloop's open_connection doesn't support `happy_eyeballs_delay` and `interleave`
+                    reader, writer = await asyncio.open_connection(
+                        host,
+                        port,
+                        ssl=self.ssl_context if tls else None,
+                        server_hostname=server_hostname if tls else None,
+                    )
+                else:
+                    reader, writer = await asyncio.open_connection(
+                        host,
+                        port,
+                        ssl=self.ssl_context if tls else None,
+                        server_hostname=server_hostname if tls else None,
+                        happy_eyeballs_delay=0.25,
+                        interleave=1,
+                    )
             else:
                 reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(
