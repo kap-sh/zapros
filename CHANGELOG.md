@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.1](https://github.com/kap-sh/zapros/compare/v0.11.0...v0.11.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* ssl_handshake_timeout is only meaningful with ssl ([#34](https://github.com/kap-sh/zapros/issues/34)) ([f35c63b](https://github.com/kap-sh/zapros/commit/f35c63bfbe3975ebee3b2de7cbf51a3bb1ffc1d0))
+
+
+### Documentation
+
+* add missing sync examples in websocket page ([a657026](https://github.com/kap-sh/zapros/commit/a657026f0aeea5b485a76eb1191d4190f9a931fe))
+
 ## [0.11.0](https://github.com/kap-sh/zapros/compare/v0.10.0...v0.11.0) (2026-05-05)
 
 
