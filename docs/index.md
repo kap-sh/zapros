@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Zapros"
   text: "modern and extensible Python HTTP client"
-  tagline: Clean HTTP semantics, bring your own transport
+  tagline: Clean HTTP semantics on the transport of your choice
   image:
     src: /red-spider-side.png
     alt: Zapros
