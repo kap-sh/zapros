@@ -66,6 +66,12 @@ def _remaining_time(
 def _js_error_name(
     exc: BaseException,
 ) -> str | None:
+    """
+    Pyodide wraps JS exceptions in a Python exception (pyodide.ffi.JsException) and
+    provides access to the original JS error via the `js_error` attribute.
+    This function tries to extract the error name from both the Python exception
+    and the underlying JS error, returning None if it cannot be found.
+    """
     name = getattr(exc, "name", None)
     if isinstance(name, str):
         return name
