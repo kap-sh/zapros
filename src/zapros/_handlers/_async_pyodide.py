@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import (
     AsyncIterable as ABCAsyncIterable,
 )
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterable, AsyncIterator
 
 from .._errors import (
     ConnectionError,
@@ -20,6 +21,11 @@ from .._models import (
 )
 from ._async_base import (
     AsyncBaseHandler,
+)
+from ._common import (
+    min_with_optionals,
+    remaining_timeout,
+    resolve_timeouts,
 )
 
 if TYPE_CHECKING:
@@ -50,36 +56,11 @@ else:
         to_js = None
 
 
-def _deadline_after(
-    timeout: float | None,
-) -> float | None:
-    if timeout is None:
-        return None
-    return asyncio.get_running_loop().time() + timeout
-
-
 def _remaining_time(
     deadline: float | None,
 ) -> float | None:
-    if deadline is None:
-        return None
-    remaining = deadline - asyncio.get_running_loop().time()
-    return max(0.0, remaining)
-
-
-def _combine_timeouts(
-    *timeouts: float | None,
-) -> float | None:
-    values = [t for t in timeouts if t is not None]
-    if not values:
-        return None
-    return min(values)
-
-
-def _is_async_iterable(
-    value: object,
-) -> bool:
-    return hasattr(value, "__aiter__")
+    remaining = remaining_timeout(deadline)
+    return None if remaining is None else max(0.0, remaining)
 
 
 def _js_error_name(
@@ -107,7 +88,7 @@ async def _await_with_timeout(
     return await asyncio.wait_for(awaitable, timeout=timeout)
 
 
-class _JSTimeoutAbort:
+class JSTimeoutAbort:
     def __init__(self, timeout: float | None) -> None:
         self._controller = AbortController.new()  # type: ignore
         self._timeout_id: Any | None = None
@@ -142,7 +123,7 @@ class PyodideAsyncClosableStream(AsyncClosableStream):  # type: ignore[reportRed
         *,
         read_timeout: float | None = None,
         total_deadline: float | None = None,
-        total_abort: _JSTimeoutAbort | None = None,
+        total_abort: JSTimeoutAbort | None = None,
     ) -> None:
         if AbortController is None:
             raise RuntimeError("Cannot use PyodideAsyncClosableStream outside of a Pyodide environment")
@@ -164,7 +145,7 @@ class PyodideAsyncClosableStream(AsyncClosableStream):  # type: ignore[reportRed
         total_remaining = _remaining_time(self._total_deadline)
         if total_remaining == 0:
             return 0.0
-        return _combine_timeouts(
+        return min_with_optionals(
             self._read_timeout,
             total_remaining,
         )
@@ -230,34 +211,8 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
         self.read_timeout = read_timeout
         self.write_timeout = write_timeout
 
-    def _resolve_timeouts(
-        self,
-        request: Request,
-    ) -> tuple[
-        float | None,
-        float | None,
-        float | None,
-        float | None,
-    ]:
-        timeouts_context = request.context.get("timeouts", {})
-
-        req_total = timeouts_context.get("total")
-        req_connect = timeouts_context.get("connect")
-        req_read = timeouts_context.get("read")
-        req_write = timeouts_context.get("write")
-
-        total_timeout = req_total if req_total is not None else self.total_timeout
-        connect_timeout = req_connect if req_connect is not None else self.connect_timeout
-        read_timeout = req_read if req_read is not None else self.read_timeout
-        write_timeout = req_write if req_write is not None else self.write_timeout
-
-        return (
-            total_timeout,
-            connect_timeout,
-            read_timeout,
-            write_timeout,
-        )
-
+    # TODO: think about how to implement the actual streaming of request
+    # body instead of buffering it all in memory before sending the request
     async def _buffer_async_body(
         self,
         body: ABCAsyncIterable[bytes],
@@ -269,7 +224,7 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
         iterator = body.__aiter__()
 
         while True:
-            next_timeout = _combine_timeouts(
+            next_timeout = min_with_optionals(
                 write_timeout,
                 _remaining_time(total_deadline),
             )
@@ -306,14 +261,15 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
         return headers_list
 
     async def ahandle(self, request: Request) -> Response:
-        (
-            total_timeout,
-            connect_timeout,
-            read_timeout,
-            write_timeout,
-        ) = self._resolve_timeouts(request)
+        total_timeout, connect_timeout, read_timeout, write_timeout = resolve_timeouts(
+            request,
+            total_timeout=self.total_timeout,
+            connect_timeout=self.connect_timeout,
+            read_timeout=self.read_timeout,
+            write_timeout=self.write_timeout,
+        )
 
-        total_deadline = _deadline_after(total_timeout)
+        total_deadline = time.monotonic() + total_timeout if total_timeout is not None else None
 
         body_js = None
         if request.body is not None:
@@ -326,7 +282,7 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
                 ),
             ):
                 body_js = to_js(bytes(request.body))
-            elif _is_async_iterable(request.body):
+            elif isinstance(request.body, AsyncIterable):
                 buffered = await self._buffer_async_body(
                     request.body,  # type: ignore
                     write_timeout=write_timeout,
@@ -337,16 +293,16 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
                 raise NotImplementedError("Sync iterators are not supported by AsyncPyodideHandler")
 
         total_remaining = _remaining_time(total_deadline)
-        fetch_timeout = _combine_timeouts(
+        fetch_timeout = min_with_optionals(
             connect_timeout,
             total_remaining,
         )
 
-        total_abort = _JSTimeoutAbort(total_remaining)
+        total_abort = JSTimeoutAbort(total_remaining)
         if fetch_timeout == total_remaining:
             fetch_abort = total_abort
         else:
-            fetch_abort = _JSTimeoutAbort(fetch_timeout)
+            fetch_abort = JSTimeoutAbort(fetch_timeout)
 
         fetch_options: dict[str, Any] = {
             "method": request.method,

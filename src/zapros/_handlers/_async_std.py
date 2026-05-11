@@ -13,7 +13,7 @@ from pywhatwgurl import URL
 from typing_extensions import override
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
-from zapros._handlers._common import min_with_optionals
+from zapros._handlers._common import min_with_optionals, remaining_timeout, resolve_timeouts
 from zapros._headers import Connection
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
@@ -394,10 +394,8 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
     @staticmethod
     def _remaining_timeout(deadline: float | None) -> float | None:
-        if deadline is None:
-            return None
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
+        remaining = remaining_timeout(deadline)
+        if remaining is not None and remaining <= 0:
             raise TotalTimeoutError("Operation timed out")
         return remaining
 
@@ -609,39 +607,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
             raise ConnectionError(f"Unexpected HTTP event while reading headers: {event!r}")
 
-    def _resolve_timeouts(
-        self,
-        request: Request,
-    ) -> tuple[
-        float | None,
-        float | None,
-        float | None,
-        float | None,
-    ]:
-        """Return (total_timeout, connect_timeout, read_timeout, write_timeout).
-
-        Per-request values from request.context["timeouts"] take priority over
-        handler defaults.
-        """
-        timeouts_context = request.context.get("timeouts", {})
-
-        req_total = timeouts_context.get("total")
-        req_connect = timeouts_context.get("connect")
-        req_read = timeouts_context.get("read")
-        req_write = timeouts_context.get("write")
-
-        total_timeout = req_total if req_total is not None else self.total_timeout
-        connect_timeout = req_connect if req_connect is not None else self.connect_timeout
-        read_timeout = req_read if req_read is not None else self.read_timeout
-        write_timeout = req_write if req_write is not None else self.write_timeout
-
-        return (
-            total_timeout,
-            connect_timeout,
-            read_timeout,
-            write_timeout,
-        )
-
     async def _acquire_conn_for_request(
         self,
         request: Request,
@@ -672,7 +637,13 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             raise
 
     async def ahandle(self, request: Request) -> Response:
-        total_timeout, connect_timeout, read_timeout, write_timeout = self._resolve_timeouts(request)
+        total_timeout, connect_timeout, read_timeout, write_timeout = resolve_timeouts(
+            request,
+            total_timeout=self.total_timeout,
+            connect_timeout=self.connect_timeout,
+            read_timeout=self.read_timeout,
+            write_timeout=self.write_timeout,
+        )
         deadline = None if total_timeout is None else (time.monotonic() + total_timeout)
 
         scheme = request.url.protocol[:-1]
