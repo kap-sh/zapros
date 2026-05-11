@@ -84,7 +84,7 @@ with client:
 
 ## Caching policies
 
-Customize caching behavior with different policies. See [Hishel policies documentation](https://hishel.com/1.0/policies/) for more details.
+Customize caching behavior with different policies. See [Hishel policies documentation](https://hishel.com/policies.html) for more details.
 
 ### SpecificationPolicy (default)
 
@@ -226,7 +226,7 @@ client = Client(
 
 ## Custom storage
 
-By default, responses are cached in an SQLite database (`hishel_cache.db`). You can customize the storage backend to use different databases or in-memory storage. See [Hishel storage documentation](https://hishel.com/1.0/storages/) for more options.
+By default, responses are cached in an SQLite database (`hishel_cache.db`). You can customize the storage backend to use different databases or in-memory storage. See [Hishel storage documentation](https://hishel.com/storages.html) for more options.
 
 ### In-memory storage
 
