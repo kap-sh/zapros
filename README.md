@@ -3,6 +3,8 @@
 
   # Zapros
 
+  **/zəˈproʊz/** · the "za" from "bizarre" + "prose"
+
   ### Modern and extensible Python HTTP client
 
   [![PyPI version](https://badge.fury.io/py/zapros.svg)](https://badge.fury.io/py/zapros)
