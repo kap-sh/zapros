@@ -29,10 +29,10 @@ async def main():
     )
 
     async with AsyncClient(handler=handler) as client:
-         response = await client.get(
-             "https://api.github.com/users/octocat",
-         )
-         print(response.json)
+        response = await client.get(
+            "https://api.github.com/users/octocat",
+        )
+        print(response.json)
 
 
 asyncio.run(main())
@@ -229,21 +229,17 @@ from zapros import (
     CassetteMode,
     ModifierRouter,
 )
-from zapros.mock import (
-    Mock,
-    MockMiddleware,
-    MockRouter,
-)
+from zapros.mock import Mock, MockMiddleware
 from zapros.matchers import path
 
 
 async def main():
-    router = MockRouter()
-    Mock.given(path("/api")).respond(
-        status=200, text="ok"
-    ).mount(router)
+    mock_middleware = MockMiddleware()
+    mock_middleware.router.add(
+        Mock.given(path("/api")).respond(status=200, text="ok")
+    )
 
-    router = ModifierRouter()
+    modifier_router = ModifierRouter()
 
     def strip_query(
         req: Request,
@@ -253,13 +249,11 @@ async def main():
             req.method,
         )
 
-    router.modifier(path("/api")).map_network_request(
-        strip_query
-    )
+    modifier_router.modifier(path("/api")).map_network_request(strip_query)
 
     handler = CassetteMiddleware(
-        MockMiddleware(router),
-        router=router,
+        mock_middleware,
+        router=modifier_router,
         mode=CassetteMode.ALL,
         cassette_name="test",
     )
@@ -280,19 +274,15 @@ from zapros import (
     CassetteMode,
     ModifierRouter,
 )
-from zapros.mock import (
-    Mock,
-    MockMiddleware,
-    MockRouter,
-)
+from zapros.mock import Mock, MockMiddleware
 from zapros.matchers import path
 
-router = MockRouter()
-Mock.given(path("/api")).respond(
-    status=200, text="ok"
-).mount(router)
+mock_middleware = MockMiddleware()
+mock_middleware.router.add(
+    Mock.given(path("/api")).respond(status=200, text="ok")
+)
 
-router = ModifierRouter()
+modifier_router = ModifierRouter()
 
 
 def strip_query(
@@ -304,13 +294,11 @@ def strip_query(
     )
 
 
-router.modifier(path("/api")).map_network_request(
-    strip_query
-)
+modifier_router.modifier(path("/api")).map_network_request(strip_query)
 
 handler = CassetteMiddleware(
-    MockMiddleware(router),
-    router=router,
+    mock_middleware,
+    router=modifier_router,
     mode=CassetteMode.ALL,
     cassette_name="test",
 )
@@ -345,9 +333,7 @@ def redact_headers(
     )
 
 
-router.modifier(path("/login")).map_network_response(
-    redact_headers
-)
+router.modifier(path("/login")).map_network_response(redact_headers)
 ```
 
 Recorded responses won't include `Set-Cookie` headers.

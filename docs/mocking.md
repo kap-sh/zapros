@@ -27,9 +27,9 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).mount(router)
+router.add(
+    Mock.given(path("/api")).respond(Response(status=200))
+)
 
 
 async def main():
@@ -56,9 +56,9 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).mount(router)
+router.add(
+    Mock.given(path("/api")).respond(Response(status=200))
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
@@ -87,9 +87,11 @@ from zapros.matchers import path
 async def main():
     async with AsyncClient() as client:
         with mock_http() as router:
-            Mock.given(path("/api")).respond(
-                Response(status=200)
-            ).mount(router)
+            router.add(
+                Mock.given(path("/api")).respond(
+                    Response(status=200)
+                )
+            )
             response = await client.get(
                 "https://api.example.com/api",
             )
@@ -110,9 +112,11 @@ from zapros.matchers import path
 
 with Client() as client:
     with mock_http() as router:
-        Mock.given(path("/api")).respond(
-            Response(status=200)
-        ).mount(router)
+        router.add(
+            Mock.given(path("/api")).respond(
+                Response(status=200)
+            )
+        )
         response = client.get(
             "https://api.example.com/api",
         )
@@ -137,13 +141,17 @@ from zapros.mock import Mock, MockMiddleware, MockRouter
 
 
 @pytest.fixture
-def mock_client() -> Iterator[tuple[zapros.Client, MockRouter]]:
+def mock_client() -> Iterator[
+    tuple[zapros.Client, MockRouter]
+]:
     mock_middleware = MockMiddleware()
     with zapros.Client(mock_middleware) as client:
         yield client, mock_middleware.router
 
 
-def test_client(mock_client: tuple[zapros.Client, MockRouter]) -> None:
+def test_client(
+    mock_client: tuple[zapros.Client, MockRouter],
+) -> None:
     client, router = mock_client
 
     router.add(Mock().respond(zapros.Response(200)))
@@ -178,9 +186,11 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/data")).respond(
-    Response(status=200, json={"key": "value"})
-).mount(router)
+router.add(
+    Mock.given(path("/data")).respond(
+        Response(status=200, json={"key": "value"})
+    )
+)
 
 
 async def main():
@@ -207,9 +217,11 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/data")).respond(
-    Response(status=200, json={"key": "value"})
-).mount(router)
+router.add(
+    Mock.given(path("/data")).respond(
+        Response(status=200, json={"key": "value"})
+    )
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
@@ -236,9 +248,11 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/hello")).respond(
-    Response(status=200, text="Hello World")
-).mount(router)
+router.add(
+    Mock.given(path("/hello")).respond(
+        Response(status=200, text="Hello World")
+    )
+)
 
 
 async def main():
@@ -265,9 +279,11 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/hello")).respond(
-    Response(status=200, text="Hello World")
-).mount(router)
+router.add(
+    Mock.given(path("/hello")).respond(
+        Response(status=200, text="Hello World")
+    )
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
@@ -294,13 +310,15 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/custom")).respond(
-    Response(
-        status=201,
-        text="Created",
-        headers={"x-custom": "header"},
+router.add(
+    Mock.given(path("/custom")).respond(
+        Response(
+            status=201,
+            text="Created",
+            headers={"x-custom": "header"},
+        )
     )
-).mount(router)
+)
 
 
 async def main():
@@ -328,13 +346,15 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/custom")).respond(
-    Response(
-        status=201,
-        text="Created",
-        headers={"x-custom": "header"},
+router.add(
+    Mock.given(path("/custom")).respond(
+        Response(
+            status=201,
+            text="Created",
+            headers={"x-custom": "header"},
+        )
     )
-).mount(router)
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     response = client.get(
@@ -371,7 +391,7 @@ def handler(req):
     return Response(status=200)
 
 
-Mock.given(method("GET")).callback(handler).mount(router)
+router.add(Mock.given(method("GET")).callback(handler))
 
 
 async def main():
@@ -411,7 +431,7 @@ def handler(req):
     return Response(status=200)
 
 
-Mock.given(method("GET")).callback(handler).mount(router)
+router.add(Mock.given(method("GET")).callback(handler))
 
 with Client(handler=MockMiddleware(router)) as client:
     assert (
@@ -450,9 +470,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).expect(2).mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .expect(2)
+)
 
 
 async def main():
@@ -483,9 +506,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).expect(2).mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .expect(2)
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     client.get(
@@ -518,7 +544,8 @@ router = MockRouter()
 
 mock = Mock.given(path("/api")).respond(
     Response(status=200)
-).mount(router)
+)
+router.add(mock)
 
 
 async def main():
@@ -551,7 +578,8 @@ router = MockRouter()
 
 mock = Mock.given(path("/api")).respond(
     Response(status=200)
-).mount(router)
+)
+router.add(mock)
 
 with Client(handler=MockMiddleware(router)) as client:
     client.get(
@@ -582,9 +610,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).once().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .once()
+)
 
 
 async def main():
@@ -612,9 +643,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).once().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .once()
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     client.get(
@@ -642,9 +676,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).never().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .never()
+)
 
 # No requests made
 
@@ -662,9 +699,12 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).never().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .never()
+)
 
 router.verify()
 ```
@@ -689,12 +729,18 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).once().mount(router)
-Mock.given(path("/api")).respond(
-    Response(status=500)
-).once().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .once()
+)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=500))
+    .once()
+)
 
 
 async def main():
@@ -727,12 +773,18 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/api")).respond(
-    Response(status=200)
-).once().mount(router)
-Mock.given(path("/api")).respond(
-    Response(status=500)
-).once().mount(router)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=200))
+    .once()
+)
+router.add(
+    Mock
+    .given(path("/api"))
+    .respond(Response(status=500))
+    .once()
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     assert (
@@ -771,12 +823,16 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/health")).respond(
-    Response(status=200)
-).mount(router)
-Mock.given(path("/status")).respond(
-    Response(status=204)
-).mount(router)
+router.add(
+    Mock.given(path("/health")).respond(
+        Response(status=200)
+    )
+)
+router.add(
+    Mock.given(path("/status")).respond(
+        Response(status=204)
+    )
+)
 
 
 async def main():
@@ -809,12 +865,16 @@ from zapros.matchers import path
 
 router = MockRouter()
 
-Mock.given(path("/health")).respond(
-    Response(status=200)
-).mount(router)
-Mock.given(path("/status")).respond(
-    Response(status=204)
-).mount(router)
+router.add(
+    Mock.given(path("/health")).respond(
+        Response(status=200)
+    )
+)
+router.add(
+    Mock.given(path("/status")).respond(
+        Response(status=204)
+    )
+)
 
 with Client(handler=MockMiddleware(router)) as client:
     assert (
@@ -833,7 +893,7 @@ with Client(handler=MockMiddleware(router)) as client:
 
 :::
 
-`.mount(router)` is the preferred way to register a mock. If you need to add a pre-built `Mock` object directly, `router.add(mock)` is also available.
+`router.add(mock)` registers a `Mock` with the router.
 
 Dispatching happens automatically when used with `MockMiddleware`.
 
@@ -891,9 +951,12 @@ from zapros.matchers import path
 async def test_api():
     router = MockRouter()
 
-    Mock.given(path("/users").method("GET")).respond(
-        Response(status=200, json=[])
-    ).once().mount(router)
+    router.add(
+        Mock
+        .given(path("/users").method("GET"))
+        .respond(Response(status=200, json=[]))
+        .once()
+    )
 
     async with AsyncClient(
         handler=MockMiddleware(router)
@@ -920,9 +983,12 @@ from zapros.matchers import path
 def test_api():
     router = MockRouter()
 
-    Mock.given(path("/users").method("GET")).respond(
-        Response(status=200, json=[])
-    ).once().mount(router)
+    router.add(
+        Mock
+        .given(path("/users").method("GET"))
+        .respond(Response(status=200, json=[]))
+        .once()
+    )
 
     with Client(handler=MockMiddleware(router)) as client:
         response = client.get(
