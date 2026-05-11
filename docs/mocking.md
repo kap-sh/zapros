@@ -489,8 +489,6 @@ async def main():
             "https://api.example.com/api",
         )
 
-    router.verify()
-
 
 asyncio.run(main())
 ```
@@ -520,8 +518,6 @@ with Client(handler=MockMiddleware(router)) as client:
     client.get(
         "https://api.example.com/api",
     )
-
-router.verify()
 ```
 
 :::
@@ -626,8 +622,6 @@ async def main():
             "https://api.example.com/api",
         )
 
-    router.verify()
-
 
 asyncio.run(main())
 ```
@@ -654,8 +648,6 @@ with Client(handler=MockMiddleware(router)) as client:
     client.get(
         "https://api.example.com/api",
     )
-
-router.verify()
 ```
 
 :::
@@ -683,9 +675,15 @@ router.add(
     .never()
 )
 
-# No requests made
 
-router.verify()
+async def main():
+    async with AsyncClient(
+        handler=MockMiddleware(router)
+    ) as client:
+        pass  # no requests made
+
+
+asyncio.run(main())
 ```
 
 ```python [Sync]
@@ -706,7 +704,8 @@ router.add(
     .never()
 )
 
-router.verify()
+with Client(handler=MockMiddleware(router)) as client:
+    pass  # no requests made
 ```
 
 :::
@@ -897,21 +896,14 @@ with Client(handler=MockMiddleware(router)) as client:
 
 Dispatching happens automatically when used with `MockMiddleware`.
 
-## Verifying Mocks
+## Verifying and Resetting Mocks
 
-At the end of a test you can verify all expectations:
+Most of the time you don't need to call `router.verify()` or `router.reset()` yourself — closing the `MockMiddleware` does both for you. When you use `MockMiddleware` inside a `Client` (or `AsyncClient`) context manager, the client closes the middleware on exit, which calls `router.verify()` followed by `router.reset()`. If any expectation is unmet, `verify()` raises `AssertionError` from the `__exit__`.
+
+If you build the `MockMiddleware` without a surrounding `with` block, you can run them manually:
 
 ```python
 router.verify()
-```
-
-If expectations are not met, an `AssertionError` is raised.
-
-## Resetting Mocks
-
-Reset call counts between tests:
-
-```python
 router.reset()
 ```
 
