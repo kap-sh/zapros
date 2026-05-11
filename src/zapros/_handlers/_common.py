@@ -9,6 +9,14 @@ from zapros._handlers._sync_base import (
 )
 
 
+def min_with_optionals(a: float | None, b: float | None) -> float | None:
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return min(a, b)
+
+
 def ensure_async_handler(
     handler: AsyncBaseHandler | BaseHandler,
 ) -> AsyncBaseHandler:

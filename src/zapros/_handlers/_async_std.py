@@ -13,6 +13,7 @@ from pywhatwgurl import URL
 from typing_extensions import override
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
+from zapros._handlers._common import min_with_optionals
 from zapros._headers import Connection
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
@@ -56,27 +57,7 @@ from .._models import (
 from ._async_base import AsyncBaseHandler
 
 
-def _encode_target(path: str, query: str) -> bytes:
-    """Encode an already-prepared request target without rewriting semantics.
-
-    The request object is expected to contain a fully prepared / already-encoded
-    path and query. We only join them and convert to ASCII bytes for h11.
-    """
-    prepared_path = path or "/"
-    if query:
-        return f"{prepared_path}?{query}".encode("ascii")
-    return prepared_path.encode("ascii")
-
-
-def _min_timeout(a: float | None, b: float | None) -> float | None:
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return min(a, b)
-
-
-def _connection_wants_close(headers: list[tuple[str, str]]) -> bool:
+def connection_wants_close(headers: list[tuple[str, str]]) -> bool:
     connection_values = Headers(headers).getall("connection")
 
     if not connection_values:
@@ -701,7 +682,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         key, use_full_url = get_pool_key(request, scheme, host, port)
 
         def phase_timeout(value: float | None) -> float | None:
-            return _min_timeout(value, self._remaining_timeout(deadline))
+            return min_with_optionals(value, self._remaining_timeout(deadline))
 
         conn, from_pool = await self._acquire_conn_for_request(
             request,
@@ -715,7 +696,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         if use_full_url:
             target = str(request.url).encode("ascii")
         else:
-            target = _encode_target(request.url.pathname, request.url.search[1:])
+            target = f"{request.url.pathname}{request.url.search}".encode("ascii")
         headers = list(request.headers.list())
 
         proxy_context = request.context.get("network", {}).get("proxy")
@@ -732,7 +713,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     auth_value = base64.b64encode(credentials).decode("ascii")
                     headers.append(("Proxy-Authorization", f"Basic {auth_value}"))
 
-        request_wants_close = _connection_wants_close(headers)
+        request_wants_close = connection_wants_close(headers)
 
         try:
             # When using a pooled connection, we might noticed that it was closed by the server when it was idle.
@@ -808,7 +789,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             status,
             resp_headers,
         )
-        response_wants_close = _connection_wants_close(resp_headers)
+        response_wants_close = connection_wants_close(resp_headers)
 
         return Response(
             status=status,
