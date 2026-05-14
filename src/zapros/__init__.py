@@ -53,9 +53,6 @@ from ._handlers._async_pyodide import (
 from ._handlers._async_pyreqwest import (
     AsyncPyreqwestHandler as AsyncPyreqwestHandler,
 )
-from ._handlers._async_std import (
-    AsyncStdNetworkHandler as AsyncStdNetworkHandler,
-)
 from ._handlers._caching import (
     CacheMiddleware as CacheMiddleware,
     CachingHandler as CachingHandler,  # type: ignore[reportDeprecated]
@@ -68,15 +65,18 @@ from ._handlers._cassette import (
     Modifier as Modifier,
     ModifierRouter as ModifierRouter,
 )
+from ._handlers._std._async import (
+    AsyncStdNetworkHandler as AsyncStdNetworkHandler,
+)
+from ._handlers._std._sync import (
+    StdNetworkHandler as StdNetworkHandler,
+)
 from ._handlers._sync_base import (
     BaseHandler as BaseHandler,
     BaseMiddleware as BaseMiddleware,
 )
 from ._handlers._sync_pyreqwest import (
     PyreqwestHandler as PyreqwestHandler,
-)
-from ._handlers._sync_std import (
-    StdNetworkHandler as StdNetworkHandler,
 )
 from ._io._base import (
     AsyncBaseNetworkStream as AsyncBaseNetworkStream,

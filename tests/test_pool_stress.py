@@ -20,7 +20,7 @@ class FakeConn(AsyncPoolConnection):
     def is_closed(self) -> bool:
         return self._closed
 
-    def can_reuse(self) -> bool:
+    def can_handle_request(self) -> bool:
         return self.reusable and not self._closed
 
     async def close(self) -> None:
@@ -62,7 +62,7 @@ async def test_pool_stress() -> None:
             await asyncio.sleep(rng.uniform(0.0005, 0.003))
 
             in_flight[key] -= 1
-            await pool.release(key, conn, reuse=conn.can_reuse())
+            await pool.release(key, conn, reuse=conn.can_handle_request())
 
     await asyncio.gather(*(worker() for _ in range(200)))
 

@@ -23,7 +23,7 @@ class MockAsyncConnection:
     def is_closed(self) -> bool:
         return self._closed
 
-    def can_reuse(self) -> bool:
+    def can_handle_request(self) -> bool:
         return self._reusable and not self._closed
 
 

@@ -81,6 +81,18 @@ packages:
       - match: '\bAsyncStdNetworkHandler\b'
         replace: 'StdNetworkHandler'
 
+      - match: '\bAsyncHttp1Connection\b'
+        replace: 'Http1Connection'
+
+      - match: '\bAsyncHttp1ResponseStream\b'
+        replace: 'Http1ResponseStream'
+
+      - match: '\bAsyncHttpConnection\b'
+        replace: 'HttpConnection'
+
+      - match: '\b_async_http1\b'
+        replace: '_sync_http1'
+
       - match: '\bAsyncIterable\b'
         replace: 'Iterable'
 
@@ -178,8 +190,11 @@ targets:
   - input: src/zapros/_handlers/_async_pyreqwest.py
     output: src/zapros/_handlers/_sync_pyreqwest.py
 
-  - input: src/zapros/_handlers/_async_std.py
-    output: src/zapros/_handlers/_sync_std.py
+  - input: src/zapros/_handlers/_std/_async.py
+    output: src/zapros/_handlers/_std/_sync.py
+
+  - input: src/zapros/_handlers/_std/_async_http1.py
+    output: src/zapros/_handlers/_std/_sync_http1.py
 
   - input: src/zapros/_async_client.py
     output: src/zapros/_sync_client.py

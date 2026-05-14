@@ -98,7 +98,7 @@ class ConnPool:
 
             while dq:
                 item = dq.pop()
-                if (now - item.last_used) <= self._max_age and item.conn.can_reuse():
+                if (now - item.last_used) <= self._max_age and item.conn.can_handle_request():
                     if not dq:
                         state.idle = None  # type: ignore[reportOptionalMemberAccess]
                     return item.conn, stale
