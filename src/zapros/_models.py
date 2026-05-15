@@ -787,3 +787,27 @@ class Response:
         exc_tb: Any,
     ) -> None:
         await self.aclose()
+
+    @property
+    def is_informational(self):
+        return 100 <= self.status <= 199
+
+    @property
+    def is_success(self):
+        return 200 <= self.status <= 299
+
+    @property
+    def is_redirection(self):
+        return 300 <= self.status <= 399
+
+    @property
+    def is_client_error(self):
+        return 400 <= self.status <= 499
+
+    @property
+    def is_server_error(self):
+        return 500 <= self.status <= 599
+
+    @property
+    def is_error(self):
+        return 400 <= self.status <= 599
