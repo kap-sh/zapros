@@ -11,6 +11,19 @@ from zapros._headers import Connection
 from ..._models import Headers, Request
 
 
+class BrokenConnectionError(ConnectionError):
+    """
+    Raised when a connection from the pool which was expected to be alive is
+    found to be closed or otherwise unusable. This can happen when the server
+    closes an idle connection, and the client tries to reuse it from the pool.
+    When this happens, the connection should not be returned to the pool, and
+    the request should be retried with a new connection.
+    This should be raised by the connection's send_request() when the first operation on the connection fails.
+    """
+
+    pass
+
+
 def remaining_timeout_or_raise(deadline: float | None) -> float | None:
     remaining = remaining_timeout(deadline)
     if remaining is not None and remaining <= 0:
