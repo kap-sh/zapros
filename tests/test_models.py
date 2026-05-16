@@ -16,7 +16,7 @@ from zapros import (
     Response,
     ResponseContext,
 )
-from zapros._errors import StatusCodeError
+from zapros._errors import StatusCodeError, StreamExhausted
 
 
 class StreamWrapper(ClosableStream):
@@ -1032,3 +1032,12 @@ class TestResponse:
         with pytest.raises(StatusCodeError) as exc_info:
             response.raise_for_status()
         assert exc_info.value.response == response
+
+    def test_reading_exhausted_stream_raises(self) -> None:
+        response = Response(200, content=iter([b"chunk"]))
+
+        for _ in response.iter_bytes():
+            pass
+
+        with pytest.raises(StreamExhausted):
+            next(response.iter_bytes())

@@ -21,7 +21,7 @@ import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
 from typing_extensions import deprecated
 
-from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError
+from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError, StreamExhausted
 from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
 from zapros._multidict import (
     CIMultiDict,
@@ -673,6 +673,11 @@ class Response:
         if isinstance(self._content, bytes):
             yield self._content
             return
+        if self._consumed:
+            raise StreamExhausted(
+                "The response body has already been consumed. Call `.aread()` first "
+                "to cache the body before iterating multiple times."
+            )
         if not isinstance(self._content, AsyncIterator):
             raise AsyncSyncMismatchError("Can't iterate content in this context")
         async for chunk in self._content:
@@ -685,6 +690,11 @@ class Response:
         if isinstance(self._content, bytes):
             yield self._content
             return
+        if self._consumed:
+            raise StreamExhausted(
+                "The response body has already been consumed. Call `.read()` first "
+                "to cache the body before iterating multiple times."
+            )
         if not isinstance(self._content, Iterator):
             raise AsyncSyncMismatchError("Can't iterate content in this context")
         for chunk in self._content:
