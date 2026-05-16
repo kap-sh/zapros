@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zapros"
-version = "0.11.1"
+version = "0.12.0"
 description = "Modern and extensible HTTP client for Python."
 readme = "README.md"
 requires-python = ">=3.10"

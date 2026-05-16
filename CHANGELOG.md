@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.12.0](https://github.com/kap-sh/zapros/compare/v0.11.1...v0.12.0) (2026-05-16)
+
+
+### Features
+
+* raise StreamExhausted when reading exhausted response stream ([dfacd4f](https://github.com/kap-sh/zapros/commit/dfacd4f39e2e350eb6e967c4dee65ab4b18cec71))
+
+
+### Bug Fixes
+
+* **docs:** update the hishel references ([f840441](https://github.com/kap-sh/zapros/commit/f8404412c9aef2d0e1e72f6a0fe3a05a05f349a6))
+
+
+### Chores
+
+* make test script to pass additional arguments to pytest ([83f1c10](https://github.com/kap-sh/zapros/commit/83f1c10598248834b3bd9e58fa1f7e9f3c92a278))
+
+
+### Documentation
+
+* add pronunciation guide ([553a812](https://github.com/kap-sh/zapros/commit/553a812407e653b868900d900adc13a2dd0b59db))
+* use router.add instead of Mock.mount for better formatting ([34c54e4](https://github.com/kap-sh/zapros/commit/34c54e4a069e6bbfe2eb9773997c526f40f2e57b))
+
+
+### Refactors
+
+* **handlers:** abstract connections from std handlers ([a29f728](https://github.com/kap-sh/zapros/commit/a29f72828e807e7dbb09380e1f1d3040780fa0a5))
+* **handlers:** consolidate timeout helpers in _common ([f62ff18](https://github.com/kap-sh/zapros/commit/f62ff18655d4e28332eefb555a8b96231db0725e))
+* **handlers:** deduplicate the broken connection error ([a7e0d6c](https://github.com/kap-sh/zapros/commit/a7e0d6ca7897140060398d98d9ee79a26d9e4b1f))
+* **handlers:** streamline HTTP request-line target construction ([88238dd](https://github.com/kap-sh/zapros/commit/88238dd84d057eafacb7b9f318cee9e985e3f1dd))
+
 ## [0.11.1](https://github.com/kap-sh/zapros/compare/v0.11.0...v0.11.1) (2026-05-05)
 
 
