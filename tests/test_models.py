@@ -1,7 +1,9 @@
 import gzip
 import json as json_module
 import zlib
-from typing import AsyncIterator, Iterator
+from collections.abc import Mapping, Sequence
+from http import HTTPStatus
+from typing import AsyncIterator, Iterator, Literal
 
 import pytest
 from pywhatwgurl import URL
@@ -1032,3 +1034,101 @@ class TestResponse:
         with pytest.raises(StatusCodeError) as exc_info:
             response.raise_for_status()
         assert exc_info.value.response == response
+
+
+_CODES_MAPPING: Mapping[str, Sequence[HTTPStatus]] = {
+    "is_success": (
+        HTTPStatus.OK,
+        HTTPStatus.CREATED,
+        HTTPStatus.ACCEPTED,
+        HTTPStatus.NON_AUTHORITATIVE_INFORMATION,
+        HTTPStatus.NO_CONTENT,
+        HTTPStatus.RESET_CONTENT,
+        HTTPStatus.PARTIAL_CONTENT,
+        HTTPStatus.MULTI_STATUS,
+        HTTPStatus.ALREADY_REPORTED,
+        HTTPStatus.IM_USED,
+    ),
+    "is_redirection": (
+        HTTPStatus.MULTIPLE_CHOICES,
+        HTTPStatus.MOVED_PERMANENTLY,
+        HTTPStatus.FOUND,
+        HTTPStatus.SEE_OTHER,
+        HTTPStatus.NOT_MODIFIED,
+        HTTPStatus.USE_PROXY,
+        HTTPStatus.TEMPORARY_REDIRECT,
+        HTTPStatus.PERMANENT_REDIRECT,
+    ),
+    "is_client_error": (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.UNAUTHORIZED,
+        HTTPStatus.PAYMENT_REQUIRED,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.METHOD_NOT_ALLOWED,
+        HTTPStatus.NOT_ACCEPTABLE,
+        HTTPStatus.PROXY_AUTHENTICATION_REQUIRED,
+        HTTPStatus.REQUEST_TIMEOUT,
+        HTTPStatus.CONFLICT,
+        HTTPStatus.GONE,
+        HTTPStatus.LENGTH_REQUIRED,
+        HTTPStatus.PRECONDITION_FAILED,
+        HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+        HTTPStatus.REQUEST_URI_TOO_LONG,
+        HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+        HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
+        HTTPStatus.EXPECTATION_FAILED,
+        HTTPStatus.IM_A_TEAPOT,
+        HTTPStatus.MISDIRECTED_REQUEST,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+        HTTPStatus.LOCKED,
+        HTTPStatus.FAILED_DEPENDENCY,
+        HTTPStatus.TOO_EARLY,
+        HTTPStatus.UPGRADE_REQUIRED,
+        HTTPStatus.PRECONDITION_REQUIRED,
+        HTTPStatus.TOO_MANY_REQUESTS,
+        HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
+    ),
+    "is_server_error": (
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        HTTPStatus.NOT_IMPLEMENTED,
+        HTTPStatus.BAD_GATEWAY,
+        HTTPStatus.SERVICE_UNAVAILABLE,
+        HTTPStatus.GATEWAY_TIMEOUT,
+        HTTPStatus.HTTP_VERSION_NOT_SUPPORTED,
+        HTTPStatus.VARIANT_ALSO_NEGOTIATES,
+        HTTPStatus.INSUFFICIENT_STORAGE,
+        HTTPStatus.LOOP_DETECTED,
+        HTTPStatus.NOT_EXTENDED,
+        HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED,
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    ("property_name", "status"),
+    [(property_name, status) for property_name, values in _CODES_MAPPING.items() for status in values],
+)
+async def test_response_status_code_properties(
+    property_name: Literal[
+        "is_success",
+        "is_redirection",
+        "is_client_error",
+        "is_server_error",
+    ],
+    status: HTTPStatus,
+) -> None:
+    response = Response(status=status)
+
+    match property_name:
+        case "is_success":
+            assert response.is_success
+        case "is_redirection":
+            assert response.is_redirection
+        case "is_client_error":
+            assert response.is_client_error
+            assert response.is_error
+
+        case "is_server_error":
+            assert response.is_server_error
+            assert response.is_error
