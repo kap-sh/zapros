@@ -1071,8 +1071,10 @@ async def test_response_status_code_properties(
     match property_name:
         case "is_success":
             assert response.is_success
+
         case "is_redirection":
             assert response.is_redirection
+
         case "is_client_error":
             assert response.is_client_error
             assert response.is_error
