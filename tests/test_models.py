@@ -18,7 +18,7 @@ from zapros import (
     Response,
     ResponseContext,
 )
-from zapros._errors import StatusCodeError
+from zapros._errors import StatusCodeError, StreamExhausted
 
 
 class StreamWrapper(ClosableStream):

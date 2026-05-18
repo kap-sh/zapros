@@ -93,6 +93,12 @@ class ResponseNotRead(ZaprosError):
     pass
 
 
+class StreamExhausted(ZaprosError):
+    """Raised when attempting to consume a stream that has already been consumed."""
+
+    pass
+
+
 class StatusCodeError(ZaprosError):
     """Might be raised when a response has an error status code."""
 

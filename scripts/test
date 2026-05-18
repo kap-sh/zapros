@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 echo "==> Running tests"
-uv run --all-extras pytest tests "$@"
+uv run --all-extras pytest "$@"

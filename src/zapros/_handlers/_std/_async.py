@@ -10,8 +10,8 @@ from pywhatwgurl import URL
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._handlers._common import min_with_optionals, resolve_timeouts
 from zapros._handlers._std._async_http1 import AsyncHttp1Connection
-from zapros._handlers._std._common import proxy_basic_auth_header, remaining_timeout_or_raise
-from zapros._handlers._std._conn import AsyncHttpConnection, BrokenConnectionError
+from zapros._handlers._std._common import BrokenConnectionError, proxy_basic_auth_header, remaining_timeout_or_raise
+from zapros._handlers._std._conn import AsyncHttpConnection
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
 from zapros._io._trio import TrioTransport
