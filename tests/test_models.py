@@ -1035,6 +1035,15 @@ class TestResponse:
             response.raise_for_status()
         assert exc_info.value.response == response
 
+    def test_reading_exhausted_stream_raises(self) -> None:
+        response = Response(200, content=iter([b"chunk"]))
+
+        for _ in response.iter_bytes():
+            pass
+
+        with pytest.raises(StreamExhausted):
+            next(response.iter_bytes())
+
 
 _CODES_MAPPING: Mapping[str, Sequence[HTTPStatus]] = {
     "is_success": (
