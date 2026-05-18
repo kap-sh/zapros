@@ -1,7 +1,9 @@
 import gzip
 import json as json_module
 import zlib
-from typing import AsyncIterator, Iterator
+from collections.abc import Mapping, Sequence
+from http import HTTPStatus
+from typing import AsyncIterator, Iterator, Literal
 
 import pytest
 from pywhatwgurl import URL
@@ -1041,3 +1043,42 @@ class TestResponse:
 
         with pytest.raises(StreamExhausted):
             next(response.iter_bytes())
+
+
+_CODES_MAPPING: Mapping[str, Sequence[HTTPStatus]] = {
+    "is_success": [status for status in HTTPStatus if 200 <= status <= 299],
+    "is_redirection": [status for status in HTTPStatus if 300 <= status <= 399],
+    "is_client_error": [status for status in HTTPStatus if 400 <= status <= 499],
+    "is_server_error": [status for status in HTTPStatus if 500 <= status <= 599],
+}
+
+
+@pytest.mark.parametrize(
+    ("property_name", "status"),
+    [(property_name, status) for property_name, values in _CODES_MAPPING.items() for status in values],
+)
+async def test_response_status_code_properties(
+    property_name: Literal[
+        "is_success",
+        "is_redirection",
+        "is_client_error",
+        "is_server_error",
+    ],
+    status: HTTPStatus,
+) -> None:
+    response = Response(status=status)
+
+    match property_name:
+        case "is_success":
+            assert response.is_success
+
+        case "is_redirection":
+            assert response.is_redirection
+
+        case "is_client_error":
+            assert response.is_client_error
+            assert response.is_error
+
+        case "is_server_error":
+            assert response.is_server_error
+            assert response.is_error
