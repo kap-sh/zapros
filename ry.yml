@@ -111,8 +111,11 @@ packages:
       - match: '\bAsyncBaseTransport\b'
         replace: 'BaseTransport'
 
-      - match: '\bAsyncConnPool\b'
-        replace: 'ConnPool'
+      - match: '\bAsyncHttp1ConnectionPool\b'
+        replace: 'Http1ConnectionPool'
+
+      - match: '\bAsyncHttp2ConnectionPool\b'
+        replace: 'Http2ConnectionPool'
 
       - match: '\bAsyncConn\b'
         replace: 'Conn'
@@ -183,6 +186,36 @@ packages:
       - match: '\bAsyncMockServer\b'
         replace: 'MockServer'
 
+      - match: '\bis_sync_iterator\b'
+        replace: is_async_iterator
+
+      - match: '\bachunked_stream\b'
+        replace: 'chunked_stream'
+
+      - match: '\b_aiter_single\b'
+        replace: '_iter_single'
+
+      - match: '\bAsyncStreamLimiter\b'
+        replace: 'StreamLimiter'
+
+      - match: '\bAsyncHttp2Connection\b'
+        replace: 'Http2Connection'
+
+      - match: '\bAsyncHttp2ResponseStream\b'
+        replace: 'Http2ResponseStream'
+
+      - match: 'from zapros._compat import AnyLock'
+        replace: 'from threading import Lock'
+
+      - match: 'from ._compat import AnyLock'
+        replace: 'from threading import Lock'
+
+      - match: '_async_http2'
+        replace: '_sync_http2'
+
+      - match: '\bAnyLock\b'
+        replace: 'Lock'
+
 targets:
   - input: src/zapros/_handlers/_async_base.py
     output: src/zapros/_handlers/_sync_base.py
@@ -195,6 +228,17 @@ targets:
 
   - input: src/zapros/_handlers/_std/_async_http1.py
     output: src/zapros/_handlers/_std/_sync_http1.py
+
+  - input: src/zapros/_handlers/_std/_async_http2.py
+    output: src/zapros/_handlers/_std/_sync_http2.py
+    rules:
+      - match: '\bfrom zapros\._compat import AnyLock\b'
+        replace: 'from threading import Lock'
+      - match: '\bAnyLock\b'
+        replace: 'Lock'
+      - match: '\bAsyncHttp2Connection\b'
+        replace: 'Http2Connection'
+
 
   - input: src/zapros/_async_client.py
     output: src/zapros/_sync_client.py

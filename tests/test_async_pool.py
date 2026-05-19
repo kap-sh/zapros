@@ -1,6 +1,6 @@
 import pytest
 
-from zapros._async_pool import AsyncConnPool
+from zapros._async_pool import AsyncHttp1ConnectionPool
 from zapros._compat import anysleep
 
 
@@ -12,7 +12,7 @@ class MockAsyncConnection:
         self._fail_on_close = fail_on_close
         self.close_count = 0
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         self.close_count += 1
         self._closed = True
         if self._fail_on_close:
@@ -29,14 +29,14 @@ class MockAsyncConnection:
 
 @pytest.fixture
 def pool():
-    return AsyncConnPool(
+    return AsyncHttp1ConnectionPool(
         max_connections_per_host=10,
         max_idle_per_host=5,
         max_idle_seconds=30.0,
     )
 
 
-async def get_state(pool: AsyncConnPool, key):
+async def get_state(pool: AsyncHttp1ConnectionPool, key):
     async with pool._lock:
         return pool._states.get(key)
 
@@ -131,7 +131,7 @@ async def test_max_idle_connections_enforced(pool):
 
 #
 # async def test_acquire_semaphore_limits_concurrent_connections():
-#     pool = AsyncConnPool(max_connections_per_host=2)
+#     pool = AsyncHttp1ConnectionPool(max_connections_per_host=2)
 #     key = ("http", "example.com", 80)
 
 #     state = await pool._get_state(key)
@@ -162,7 +162,7 @@ async def test_max_idle_connections_enforced(pool):
 
 
 async def test_semaphore_per_key():
-    pool = AsyncConnPool(max_connections_per_host=2)
+    pool = AsyncHttp1ConnectionPool(max_connections_per_host=2)
     key1 = ("http", "example.com", 80)
     key2 = ("http", "other.com", 80)
 
@@ -259,7 +259,7 @@ async def test_lifo_order_for_idle_connections(pool):
 
 #
 # async def test_concurrent_acquire_release_stress():
-#     pool = AsyncConnPool(max_connections_per_host=20, max_idle_per_host=10)
+#     pool = AsyncHttp1ConnectionPool(max_connections_per_host=20, max_idle_per_host=10)
 #     key = ("http", "example.com", 80)
 
 #     async def worker(worker_id: int):
@@ -280,7 +280,7 @@ async def test_lifo_order_for_idle_connections(pool):
 
 
 async def test_connection_expiry_during_mixed_operations():
-    pool = AsyncConnPool(max_connections_per_host=5, max_idle_seconds=0.1)
+    pool = AsyncHttp1ConnectionPool(max_connections_per_host=5, max_idle_seconds=0.1)
     key = ("http", "example.com", 80)
 
     old_conn = MockAsyncConnection(conn_id=1)
@@ -300,7 +300,7 @@ async def test_connection_expiry_during_mixed_operations():
 
 
 async def test_partial_reusable_connections():
-    pool = AsyncConnPool()
+    pool = AsyncHttp1ConnectionPool()
     key = ("http", "example.com", 80)
 
     connections = [
@@ -340,7 +340,7 @@ async def test_semaphore_release_on_acquire_failure(pool):
 
 #
 # async def test_many_keys_concurrent_operations():
-#     pool = AsyncConnPool(max_connections_per_host=5)
+#     pool = AsyncHttp1ConnectionPool(max_connections_per_host=5)
 #     keys = [("http", f"host{i}.com", 80) for i in range(20)]
 
 #     async def work_on_key(key):
@@ -361,7 +361,7 @@ async def test_semaphore_release_on_acquire_failure(pool):
 
 
 async def test_rapid_acquire_release_same_connection():
-    pool = AsyncConnPool()
+    pool = AsyncHttp1ConnectionPool()
     key = ("http", "example.com", 80)
     conn = MockAsyncConnection(conn_id=1)
 
@@ -388,7 +388,7 @@ async def test_empty_idle_queue_after_stale_connections(pool):
 
 
 async def test_release_reservation_for_nonexistent_key():
-    pool = AsyncConnPool()
+    pool = AsyncHttp1ConnectionPool()
     key = ("http", "example.com", 80)
 
     await pool.release_reservation(key)
@@ -410,7 +410,7 @@ async def test_close_all_clears_semaphores(pool):
 
 
 async def test_semaphore_entry_removed_after_reservation_released():
-    pool = AsyncConnPool()
+    pool = AsyncHttp1ConnectionPool()
     key = ("http", "example.com", 80)
 
     acquired = await pool.acquire(key)
@@ -425,7 +425,7 @@ async def test_semaphore_entry_removed_after_reservation_released():
 
 #
 # async def test_high_load_no_deadlock():
-#     pool = AsyncConnPool(max_connections_per_host=10, max_idle_per_host=5)
+#     pool = AsyncHttp1ConnectionPool(max_connections_per_host=10, max_idle_per_host=5)
 #     key = ("http", "example.com", 80)
 #     results = []
 
@@ -450,7 +450,7 @@ async def test_semaphore_entry_removed_after_reservation_released():
 
 
 async def test_acquire_all_connections_then_release():
-    pool = AsyncConnPool(max_connections_per_host=3)
+    pool = AsyncHttp1ConnectionPool(max_connections_per_host=3)
     key = ("http", "example.com", 80)
 
     state = await pool._get_state(key)

@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from typing_extensions import Protocol, runtime_checkable
+from typing_extensions import Literal, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -17,6 +17,9 @@ class BaseNetworkStream(Protocol):
     ) -> "BaseNetworkStream":
         return self
 
+    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
+        return None
+
 
 @runtime_checkable
 class AsyncBaseNetworkStream(Protocol):
@@ -32,6 +35,8 @@ class AsyncBaseNetworkStream(Protocol):
         return self
 
     async def close(self) -> None: ...
+    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
+        return None
 
 
 class BaseTransport(Protocol):
@@ -42,6 +47,7 @@ class BaseTransport(Protocol):
         server_hostname: str | None = None,
         tls: bool = False,
         *,
+        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
         timeout: float | None = None,
     ) -> BaseNetworkStream: ...
 
@@ -54,5 +60,6 @@ class AsyncBaseTransport(Protocol):
         server_hostname: str | None = None,
         tls: bool = False,
         *,
+        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
         timeout: float | None = None,
     ) -> AsyncBaseNetworkStream: ...

@@ -7,6 +7,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Iterable,
+    Literal,
     Mapping,
     MutableMapping,
     Sequence,
@@ -110,9 +111,14 @@ class ResponseHandoffContext(TypedDict, total=False):
     _asgi_websocket_stream: "AsgiWebSocketStream"
 
 
+class ResponseNetworkContext(TypedDict, total=False):
+    http_protocol: Literal["HTTP/1.1", "HTTP/2"] | None
+
+
 class ResponseContext(TypedDict, total=False):
     caching: ResponseCachingContext
     handoff: ResponseHandoffContext
+    network: ResponseNetworkContext
 
 
 Stream: TypeAlias = Union[Iterator[bytes], ClosableStream]
@@ -284,7 +290,7 @@ class Request:
         if "host" not in self.headers and url.hostname:
             self.headers.add(
                 "Host",
-                get_host_header_value(url.hostname, url.protocol[:-1], url.port),
+                get_host_header_value(url),
             )
 
         if "accept" not in self.headers:
@@ -774,7 +780,12 @@ class Response:
         return self._decoder
 
     def __repr__(self) -> str:
-        return f"Response(status={self.status!r})"
+        network_context = self.context.get("network", {})
+        http_protocol = network_context.get("http_protocol")
+        if http_protocol:
+            return f"<Response [{self.status}] via {http_protocol}>"
+        else:
+            return f"<Response [{self.status}]>"
 
     def __enter__(self) -> "Response":
         return self

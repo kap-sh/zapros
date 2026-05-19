@@ -113,6 +113,11 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
             status=pyreqwest_response.status,
             headers=pyreqwest_response.headers,
             content=AsyncPyreqwestStream(pyreqwest_response, stream_request),
+            context={
+                "network": {
+                    "http_protocol": "HTTP/1.1" if pyreqwest_response.version == "HTTP/1.1" else "HTTP/2",
+                }
+            },
         )
 
     async def aclose(self) -> None:

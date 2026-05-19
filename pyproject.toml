@@ -54,6 +54,9 @@ socks = [
 websocket = [
     "wsproto>=1.2.0",
 ]
+http2 = [
+    "h2>=4.3.0",
+]
 
 [dependency-groups]
 dev = [
@@ -87,6 +90,7 @@ exclude = [
     "src/zapros/_sync_pool.py",
     "src/zapros/_sync_io.py",
     "src/zapros/_handlers/_std/_sync_http1.py",
+    "src/zapros/_handlers/_std/_sync_http2.py",
     "src/zapros/_handlers/_std/_sync.py",
     "src/zapros/_sync_client.py",
     "tests/handlers/test_sync_basic.py",
@@ -114,6 +118,7 @@ exclude = [
     "src/zapros/_handlers/_async_pyreqwest.py",
     "src/zapros/_handlers/_sync_pyreqwest.py",
     "src/zapros/_handlers/_std/_sync_http1.py",
+    "src/zapros/_handlers/_std/_sync_http2.py",
     "src/zapros/_handlers/_std/_sync.py",
     "tests/handlers/test_async_basic.py",
     "tests/handlers/test_sync_basic.py",

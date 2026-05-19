@@ -2,14 +2,11 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
-    import sniffio
     import trio
 else:
     try:
-        import sniffio
         import trio
     except ImportError:
-        sniffio = None
         trio = None
 
 T = TypeVar("T")
@@ -80,14 +77,10 @@ class AnyLock:
         if self._lock is not None:
             return
 
-        current_async_library = sniffio.current_async_library() if sniffio is not None else None
-
-        if current_async_library is None or current_async_library == "asyncio":
-            self._lock = asyncio.Lock()
-        elif current_async_library == "trio":
+        if in_trio_run():
             self._lock = trio.Lock()
         else:
-            raise RuntimeError(f"Unsupported async library: {current_async_library}")
+            self._lock = asyncio.Lock()
 
     async def acquire(self) -> None:
         self._ensure_lock()
@@ -120,14 +113,10 @@ class AnySemaphore:
         if self._semaphore is not None:
             return
 
-        current_async_library = sniffio.current_async_library() if sniffio is not None else None
-
-        if current_async_library is None or current_async_library == "asyncio":
-            self._semaphore = asyncio.Semaphore(self._initial_value)
-        elif current_async_library == "trio":
+        if in_trio_run():
             self._semaphore = trio.Semaphore(self._initial_value)
         else:
-            raise RuntimeError(f"Unsupported async library: {current_async_library}")
+            self._semaphore = asyncio.Semaphore(self._initial_value)
 
     async def acquire(self) -> None:
         self._ensure_semaphore()
@@ -159,14 +148,10 @@ async def anysleep(delay: float) -> None:
     """
     Sleep for the given number of seconds, using the appropriate sleep function for the current async library.
     """
-    current_async_library = sniffio.current_async_library() if sniffio is not None else None
-
-    if current_async_library is None or current_async_library == "asyncio":
-        await asyncio.sleep(delay)
-    elif current_async_library == "trio":
+    if in_trio_run():
         await trio.sleep(delay)
     else:
-        raise RuntimeError(f"Unsupported async library: {current_async_library}")
+        await asyncio.sleep(delay)
 
 
 class AnyQueue(Generic[T]):

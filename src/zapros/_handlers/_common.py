@@ -1,4 +1,5 @@
 import time
+from typing import TypeVar
 
 from zapros._errors import (
     AsyncSyncMismatchError,
@@ -10,6 +11,8 @@ from zapros._handlers._sync_base import (
     BaseHandler,
 )
 from zapros._models import Request
+
+T = TypeVar("T")
 
 
 def min_with_optionals(a: float | None, b: float | None) -> float | None:

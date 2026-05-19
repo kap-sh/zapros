@@ -884,8 +884,9 @@ class TestResponse:
         chunks = list(response.iter_bytes())
         result = b"".join(chunks)
         assert result == b"chunk1chunk2"
-        content = response.read()
-        assert content == b""
+
+        with pytest.raises(StreamExhausted):
+            response.read()
 
     def test_response_iter_bytes_does_not_buffer_content(self):
         stream = StreamWrapper(iter([b"chunk1", b"chunk2"]))

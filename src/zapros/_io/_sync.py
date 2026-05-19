@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from threading import Lock
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._handlers._exc_map import (
@@ -125,6 +126,15 @@ class SyncStream(BaseNetworkStream):
 
         return self
 
+    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
+        if self._tls_state is not None:
+            return cast(Literal["http/1.1", "h2"], self._tls_state.ssl_object.selected_alpn_protocol())
+
+        if isinstance(self.sock, ssl.SSLSocket):
+            return cast(Literal["http/1.1", "h2"], self.sock.selected_alpn_protocol())
+
+        return None
+
 
 class SyncTransport(BaseTransport):
     def __init__(
@@ -133,6 +143,7 @@ class SyncTransport(BaseTransport):
         ssl_context: "ssl.SSLContext | None" = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
+        self._lock = Lock()
 
     def connect(
         self,
@@ -141,8 +152,13 @@ class SyncTransport(BaseTransport):
         server_hostname: str | None = None,
         tls: bool = False,
         *,
+        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
         timeout: float | None = None,
     ) -> BaseNetworkStream:
+        if alpn_protocols is not None:
+            with self._lock:
+                self.ssl_context.set_alpn_protocols(alpn_protocols)
+
         with map_socket_connect_exceptions():
             sock = socket.create_connection((host, port), timeout=timeout)
 

@@ -40,17 +40,17 @@ class HostState:
     """
 
 
-class AsyncConnPool:
+class AsyncHttp1ConnectionPool:
     def __init__(
         self,
         *,
-        max_connections_per_host: int = 10,
-        max_idle_per_host: int = 10,
-        max_idle_seconds: float = 30.0,
+        max_connections_per_host: int | None = None,
+        max_idle_per_host: int | None = None,
+        max_idle_seconds: float | None = None,
     ) -> None:
-        self._max_connections_per_host = max_connections_per_host
-        self._max_idle_per_host = max_idle_per_host
-        self._max_age = max_idle_seconds
+        self._max_connections_per_host = max_connections_per_host if max_connections_per_host is not None else 10
+        self._max_idle_per_host = max_idle_per_host if max_idle_per_host is not None else 10
+        self._max_age = max_idle_seconds if max_idle_seconds is not None else 30.0
 
         self._lock = AnyLock()
         self._states: dict[PoolKey, HostState] = {}
@@ -187,6 +187,13 @@ class AsyncConnPool:
         finally:
             await self._release_state_ref(key, state)
 
+    async def acquire_reservation(self, key: PoolKey) -> None:
+        state = await self._get_state(key)
+        try:
+            await state.semaphore.acquire()
+        finally:
+            await self._release_state_ref(key, state)
+
     async def release(
         self,
         key: PoolKey,
@@ -230,6 +237,103 @@ class AsyncConnPool:
                 await _close_quietly(item.conn)
 
 
+class AsyncHttp2ConnectionPool:
+    """
+    Single-connection-per-key pool for multiplexing connections (HTTP/2).
+
+    HTTP/2 connections serve many concurrent requests over a single socket,
+    so this pool stores at most one connection per host key. Stale
+    connections (closed by peer, terminated, or stream-id exhausted) are
+    filtered at acquire time and replaced at register time. All operations
+    are coroutine-safe; callers do not need any additional locking.
+    """
+
+    def __init__(self) -> None:
+        self._lock = AnyLock()
+        self._conns: dict[PoolKey, AsyncPoolConnection] = {}
+        self._closed = False
+
+    async def acquire(self, key: PoolKey) -> AsyncPoolConnection | None:
+        """
+        Return a usable connection for the key, or None.
+
+        If the stored connection is no longer usable it is evicted and
+        closed before returning None — the next caller will create a fresh
+        one.
+        """
+        stale: AsyncPoolConnection | None = None
+        async with self._lock:
+            conn = self._conns.get(key)
+            if conn is None:
+                return None
+            if conn.can_handle_request():
+                return conn
+            del self._conns[key]
+            stale = conn
+
+        await _close_quietly(stale)
+        return None
+
+    async def register(
+        self,
+        key: PoolKey,
+        conn: AsyncPoolConnection,
+    ) -> AsyncPoolConnection:
+        """
+        Install conn at key and return the canonical connection for that key.
+
+        Races are resolved by the pool: if another coroutine already
+        installed a usable connection for the same key, the caller's conn
+        is closed and the existing one is returned. If the existing entry
+        is stale, it is replaced and closed. If the pool has been closed,
+        the caller's conn is closed and the pool raises.
+        """
+        to_close: AsyncPoolConnection | None = None
+        winner: AsyncPoolConnection | None = None
+        async with self._lock:
+            if self._closed:
+                to_close = conn
+            else:
+                existing = self._conns.get(key)
+                if existing is not None and existing.can_handle_request():
+                    to_close = conn
+                    winner = existing
+                else:
+                    if existing is not None:
+                        to_close = existing
+                    self._conns[key] = conn
+                    winner = conn
+
+        if to_close is not None:
+            await _close_quietly(to_close)
+
+        if winner is None:
+            raise RuntimeError("Pool is closed")
+        return winner
+
+    async def discard(self, key: PoolKey, conn: AsyncPoolConnection) -> None:
+        """
+        Evict conn from the pool (if still installed at key) and close it.
+
+        If another connection has already replaced conn at this key, the
+        replacement is left alone. The given conn is always closed.
+        """
+        async with self._lock:
+            if self._conns.get(key) is conn:
+                del self._conns[key]
+        await _close_quietly(conn)
+
+    async def close_all(self) -> None:
+        async with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            conns, self._conns = list(self._conns.values()), {}
+
+        for conn in conns:
+            await _close_quietly(conn)
+
+
 async def _close_many_quietly(conns: list[AsyncPoolConnection]) -> None:
     for conn in conns:
         await _close_quietly(conn)
@@ -237,6 +341,6 @@ async def _close_many_quietly(conns: list[AsyncPoolConnection]) -> None:
 
 async def _close_quietly(conn: AsyncPoolConnection) -> None:
     try:
-        await conn.close()
+        await conn.aclose()
     except Exception:
         pass

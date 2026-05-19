@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from zapros._async_pool import AsyncConnPool, AsyncPoolConnection
+from zapros._async_pool import AsyncHttp1ConnectionPool, AsyncPoolConnection
 
 
 @dataclass
@@ -23,7 +23,7 @@ class FakeConn(AsyncPoolConnection):
     def can_handle_request(self) -> bool:
         return self.reusable and not self._closed
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         self.close_calls += 1
         self._closed = True
 
@@ -37,7 +37,7 @@ async def test_pool_stress() -> None:
         ("https", "c.example.com", 443),
     ]
 
-    pool = AsyncConnPool(
+    pool = AsyncHttp1ConnectionPool(
         max_connections_per_host=MAX_PER_HOST,
         max_idle_per_host=3,
         max_idle_seconds=0.05,
