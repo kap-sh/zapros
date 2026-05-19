@@ -26,7 +26,7 @@ from ._async_base import (
     AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
-from ._sync_base import BaseHandler
+from ._sync_base import BaseHandler, BaseMiddleware
 
 DEFAULT_RETRY_STATUS_CODES = frozenset(
     {
@@ -144,7 +144,7 @@ def _calculate_backoff(
     return delay
 
 
-class RetryMiddleware(AsyncBaseMiddleware, BaseHandler):
+class RetryMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(
         self,
         next_handler: AsyncBaseHandler | BaseHandler,

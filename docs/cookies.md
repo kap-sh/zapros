@@ -116,14 +116,13 @@ If you need custom cookie logic (e.g., encrypted cookies, JWT in cookies, cookie
 
 ```python
 from zapros import (
-    AsyncBaseHandler,
-    BaseHandler,
+    AsyncBaseMiddleware,
     Request,
     Response,
 )
 
 
-class MyCookieMiddleware(AsyncBaseHandler, BaseHandler):
+class MyCookieMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def __init__(self, handler):
         self._handler = handler
 
