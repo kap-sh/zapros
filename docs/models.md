@@ -6,7 +6,7 @@ Zapros uses three core models: `Headers`, `Request`, and `Response`. It's import
 
 Case-insensitive dictionary for HTTP headers with multi-value support.
 
-**Creating and accessing:**
+### Creating and accessing
 
 ```python
 from zapros import Headers
@@ -20,7 +20,7 @@ headers.get("Accept", "*/*")  # With default
 len(headers)  # Number of unique headers
 ```
 
-**Multi-value headers:**
+### Multi-value headers
 
 ```python
 headers = Headers()
@@ -31,7 +31,7 @@ headers["Set-Cookie"]  # "session=abc" (first value)
 headers.getall("Set-Cookie")  # ["session=abc", "user=john"]
 ```
 
-**Dictionary operations:**
+### Dictionary operations
 
 ```python
 headers = Headers({"Accept": "application/json"})
@@ -46,7 +46,7 @@ headers.list()  # [("accept", "application/json")]
 copied = headers.copy()  # Independent copy
 ```
 
-**Using in requests:**
+### Using in requests
 
 ::: code-group
 
@@ -78,7 +78,7 @@ with Client() as client:
 
 :::
 
-**Accessing response headers:**
+### Accessing response headers
 
 ::: code-group
 
@@ -126,7 +126,7 @@ request.headers["Accept"]  # "*/*" (auto-set)
 request.body  # b'{"name": "Alice"}'
 ```
 
-**Body convenience parameters:**
+### Body convenience parameters
 
 ```python
 Request(url, "POST", json={"key": "value"})
@@ -153,7 +153,7 @@ Request(
 )
 ```
 
-**Replayability:**
+### Replayability
 
 ```python
 Request(url, "POST", body=b"data").is_replayable()  # True
@@ -172,7 +172,7 @@ Streaming bodies can't be replayed because the iterator is consumed.
 
 Represents an HTTP response with automatic decompression.
 
-**Basic attributes:**
+### Basic attributes
 
 ::: code-group
 
@@ -202,7 +202,7 @@ with Client() as client:
 
 :::
 
-**Creating responses:**
+### Creating responses
 
 ```python
 from zapros import Response
@@ -212,7 +212,7 @@ response = Response(200, text="Hello")
 response = Response(200, content=b"raw bytes")
 ```
 
-**Reading content:**
+### Reading content
 
 ::: code-group
 
@@ -236,7 +236,7 @@ with Client() as client:
 
 :::
 
-**Character encoding:**
+### Character encoding
 
 ```python
 response.headers[
@@ -249,7 +249,7 @@ response.text  # Decoded with iso-8859-1
 
 If no charset is specified, defaults to `utf-8`.
 
-**Streaming content:**
+### Streaming content
 
 ::: code-group
 
@@ -294,7 +294,7 @@ for chunk in response.iter_bytes(chunk_size=4096):
     process(chunk)
 ```
 
-**Stream caching:**
+### Stream caching
 
 Once consumed, content is cached as bytes:
 
@@ -304,7 +304,7 @@ data2 = response.read()  # Returns cached (same object)
 assert data is data2
 ```
 
-**Automatic decompression:**
+### Automatic decompression
 
 ```python
 import gzip
@@ -322,7 +322,7 @@ response.iter_raw()  # Returns compressed bytes
 
 Supports: `gzip`, `deflate`, `br` (brotli), `zstd`, multiple encodings.
 
-**Type safety:**
+### Type safety
 
 ```python
 sync_response.iter_bytes()  # OK
@@ -332,7 +332,7 @@ async_response.async_iter_bytes()  # OK
 async_response.iter_bytes()  # TypeError: use `async_iter_bytes`
 ```
 
-**Accessing the originating request:**
+### Accessing the originating request
 
 If a handler attached the request that produced this response, you can read it back via `.request`:
 
@@ -372,7 +372,7 @@ response.request is request  # True
 
 `.request` is `None` when the response was not generated in the context of a request, or the handler didn't set it.
 
-**Resource cleanup:**
+### Resource cleanup
 
 When using `client.stream()`, always use context managers:
 
