@@ -32,7 +32,13 @@ with Client() as client:
 
 Handlers expose `http1` and `http2` flags to enable or disable support for each protocol.
 
-Note that by default only the `http1` flag is enabled. To enable HTTP/2 support, you must set `http2=True` on the handler:
+Note that by default only the `http1` flag is enabled. To use HTTP/2, install Zapros with the `http2` feature:
+
+```bash
+pip install zapros[http2]
+```
+
+Then set `http2=True` on the handler:
 
 ### HTTP/2 Auto-Negotiation
 
