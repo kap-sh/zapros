@@ -28,6 +28,87 @@ with Client() as client:
 
 :::
 
+## HTTP1/HTTP2 Support
+
+Handlers expose `http1` and `http2` flags to enable or disable support for each protocol.
+
+Note that by default only the `http1` flag is enabled. To enable HTTP/2 support, you must set `http2=True` on the handler:
+
+### HTTP/2 Auto-Negotiation
+
+::: code-group
+
+```python [Async]
+from zapros import AsyncClient, AsyncStdNetworkHandler
+async with AsyncClient(
+    handler=AsyncStdNetworkHandler(http2=True)
+) as client:
+    response = await client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+```
+
+```python [Sync]
+from zapros import Client, StdNetworkHandler
+async with Client(
+    handler=StdNetworkHandler(http2=True)
+) as client:
+    response = client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+```
+
+:::
+
+### HTTP/2 Prior knowledge
+
+::: code-group
+
+```python [Async]
+from zapros import AsyncClient, AsyncStdNetworkHandler
+async with AsyncClient(
+    handler=AsyncStdNetworkHandler(http1=False, http2=True)
+) as client:
+    response = await client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+``` 
+
+```python [Sync]
+from zapros import Client, StdNetworkHandler
+with Client(
+    handler=StdNetworkHandler(http1=False, http2=True)
+) as client:
+    response = client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+```
+
+:::
+
+### HTTP/1 Configuration
+
+Alongside boolean, `http1` can also accept a dictionary of HTTP/1-specific configuration options:
+
+::: code-group
+
+```python [Async]
+from zapros import AsyncClient, AsyncStdNetworkHandler
+async with AsyncClient(
+    handler=AsyncStdNetworkHandler(http1={"max_connections_per_host": 10})
+) as client:
+    response = await client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+``` 
+
+```python [Sync]
+from zapros import Client, StdNetworkHandler
+with Client(
+    handler=StdNetworkHandler(http1={"max_connections_per_host": 10})
+) as client:
+    response = client.get("https://api.example.com/data")
+    print(response)  # <Response [200] via HTTP/2>
+```
+
+:::
+
+
 ## Timeouts
 
 Timeouts are configured on the standard library handlers and can be overridden per request.
