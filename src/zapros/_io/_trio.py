@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 if TYPE_CHECKING:
     import ssl
@@ -93,6 +93,13 @@ class TrioStream(AsyncBaseNetworkStream):
         self._server_hostname = hostname
         return self
 
+    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
+        if not isinstance(self._stream, trio.SSLStream):
+            return None
+        # trio.SSLStream wraps an ssl.SSLObject internally
+        ssl_object = self._stream._ssl_object  # type: ignore[attr-defined]
+        return ssl_object.selected_alpn_protocol()  # type: ignore[return-value]
+
 
 class TrioTransport(AsyncBaseTransport):
     def __init__(
@@ -101,6 +108,7 @@ class TrioTransport(AsyncBaseTransport):
         ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
+        self._lock = trio.Lock()
 
     async def aconnect(
         self,
@@ -109,8 +117,14 @@ class TrioTransport(AsyncBaseTransport):
         server_hostname: str | None = None,
         tls: bool = False,
         *,
+        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
         timeout: float | None = None,
     ) -> AsyncBaseNetworkStream:
+
+        if alpn_protocols is not None:
+            async with self._lock:
+                self.ssl_context.set_alpn_protocols(alpn_protocols)
+
         with map_trio_connect_exceptions():
             if timeout is None:
                 stream = await trio.open_tcp_stream(host, port)

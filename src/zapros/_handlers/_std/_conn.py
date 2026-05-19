@@ -1,9 +1,7 @@
 from abc import abstractmethod
 
-from zapros._async_pool import AsyncConnPool
 from zapros._base_pool import AsyncPoolConnection, PoolConnection
 from zapros._models import Request, Response
-from zapros._sync_pool import ConnPool
 
 
 class AsyncHttpConnection(AsyncPoolConnection):
@@ -12,7 +10,6 @@ class AsyncHttpConnection(AsyncPoolConnection):
         self,
         request: Request,
         *,
-        conn_pool: AsyncConnPool,
         read_timeout: float | None = None,
         write_timeout: float | None = None,
         deadline: float | None = None,
@@ -26,7 +23,6 @@ class HttpConnection(PoolConnection):
         self,
         request: Request,
         *,
-        conn_pool: ConnPool,
         read_timeout: float | None,
         write_timeout: float | None,
         deadline: float | None,

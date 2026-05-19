@@ -40,17 +40,17 @@ class HostState:
     """
 
 
-class ConnPool:
+class Http1ConnectionPool:
     def __init__(
         self,
         *,
-        max_connections_per_host: int = 10,
-        max_idle_per_host: int = 10,
-        max_idle_seconds: float = 30.0,
+        max_connections_per_host: int | None = None,
+        max_idle_per_host: int | None = None,
+        max_idle_seconds: float | None = None,
     ) -> None:
-        self._max_connections_per_host = max_connections_per_host
-        self._max_idle_per_host = max_idle_per_host
-        self._max_age = max_idle_seconds
+        self._max_connections_per_host = max_connections_per_host if max_connections_per_host is not None else 10
+        self._max_idle_per_host = max_idle_per_host if max_idle_per_host is not None else 10
+        self._max_age = max_idle_seconds if max_idle_seconds is not None else 30.0
 
         self._lock = Lock()
         self._states: dict[PoolKey, HostState] = {}
@@ -187,6 +187,13 @@ class ConnPool:
         finally:
             self._release_state_ref(key, state)
 
+    def acquire_reservation(self, key: PoolKey) -> None:
+        state = self._get_state(key)
+        try:
+            state.semaphore.acquire()
+        finally:
+            self._release_state_ref(key, state)
+
     def release(
         self,
         key: PoolKey,
@@ -228,6 +235,103 @@ class ConnPool:
         for state in states.values():
             for item in state.idle or ():
                 _close_quietly(item.conn)
+
+
+class Http2ConnectionPool:
+    """
+    Single-connection-per-key pool for multiplexing connections (HTTP/2).
+
+    HTTP/2 connections serve many concurrent requests over a single socket,
+    so this pool stores at most one connection per host key. Stale
+    connections (closed by peer, terminated, or stream-id exhausted) are
+    filtered at acquire time and replaced at register time. All operations
+    are coroutine-safe; callers do not need any additional locking.
+    """
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._conns: dict[PoolKey, PoolConnection] = {}
+        self._closed = False
+
+    def acquire(self, key: PoolKey) -> PoolConnection | None:
+        """
+        Return a usable connection for the key, or None.
+
+        If the stored connection is no longer usable it is evicted and
+        closed before returning None — the next caller will create a fresh
+        one.
+        """
+        stale: PoolConnection | None = None
+        with self._lock:
+            conn = self._conns.get(key)
+            if conn is None:
+                return None
+            if conn.can_handle_request():
+                return conn
+            del self._conns[key]
+            stale = conn
+
+        _close_quietly(stale)
+        return None
+
+    def register(
+        self,
+        key: PoolKey,
+        conn: PoolConnection,
+    ) -> PoolConnection:
+        """
+        Install conn at key and return the canonical connection for that key.
+
+        Races are resolved by the pool: if another coroutine already
+        installed a usable connection for the same key, the caller's conn
+        is closed and the existing one is returned. If the existing entry
+        is stale, it is replaced and closed. If the pool has been closed,
+        the caller's conn is closed and the pool raises.
+        """
+        to_close: PoolConnection | None = None
+        winner: PoolConnection | None = None
+        with self._lock:
+            if self._closed:
+                to_close = conn
+            else:
+                existing = self._conns.get(key)
+                if existing is not None and existing.can_handle_request():
+                    to_close = conn
+                    winner = existing
+                else:
+                    if existing is not None:
+                        to_close = existing
+                    self._conns[key] = conn
+                    winner = conn
+
+        if to_close is not None:
+            _close_quietly(to_close)
+
+        if winner is None:
+            raise RuntimeError("Pool is closed")
+        return winner
+
+    def discard(self, key: PoolKey, conn: PoolConnection) -> None:
+        """
+        Evict conn from the pool (if still installed at key) and close it.
+
+        If another connection has already replaced conn at this key, the
+        replacement is left alone. The given conn is always closed.
+        """
+        with self._lock:
+            if self._conns.get(key) is conn:
+                del self._conns[key]
+        _close_quietly(conn)
+
+    def close_all(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            conns, self._conns = list(self._conns.values()), {}
+
+        for conn in conns:
+            _close_quietly(conn)
 
 
 def _close_many_quietly(conns: list[PoolConnection]) -> None:

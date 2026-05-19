@@ -1,6 +1,6 @@
 import pytest
 
-from zapros._sync_pool import ConnPool
+from zapros._sync_pool import Http1ConnectionPool
 from time import sleep
 
 
@@ -29,14 +29,14 @@ class MockConnection:
 
 @pytest.fixture
 def pool():
-    return ConnPool(
+    return Http1ConnectionPool(
         max_connections_per_host=10,
         max_idle_per_host=5,
         max_idle_seconds=30.0,
     )
 
 
-def get_state(pool: ConnPool, key):
+def get_state(pool: Http1ConnectionPool, key):
     with pool._lock:
         return pool._states.get(key)
 
@@ -131,7 +131,7 @@ def test_max_idle_connections_enforced(pool):
 
 #
 # def test_acquire_semaphore_limits_concurrent_connections():
-#     pool = ConnPool(max_connections_per_host=2)
+#     pool = Http1ConnectionPool(max_connections_per_host=2)
 #     key = ("http", "example.com", 80)
 
 #     state = pool._get_state(key)
@@ -162,7 +162,7 @@ def test_max_idle_connections_enforced(pool):
 
 
 def test_semaphore_per_key():
-    pool = ConnPool(max_connections_per_host=2)
+    pool = Http1ConnectionPool(max_connections_per_host=2)
     key1 = ("http", "example.com", 80)
     key2 = ("http", "other.com", 80)
 
@@ -259,7 +259,7 @@ def test_lifo_order_for_idle_connections(pool):
 
 #
 # def test_concurrent_acquire_release_stress():
-#     pool = ConnPool(max_connections_per_host=20, max_idle_per_host=10)
+#     pool = Http1ConnectionPool(max_connections_per_host=20, max_idle_per_host=10)
 #     key = ("http", "example.com", 80)
 
 #     def worker(worker_id: int):
@@ -280,7 +280,7 @@ def test_lifo_order_for_idle_connections(pool):
 
 
 def test_connection_expiry_during_mixed_operations():
-    pool = ConnPool(max_connections_per_host=5, max_idle_seconds=0.1)
+    pool = Http1ConnectionPool(max_connections_per_host=5, max_idle_seconds=0.1)
     key = ("http", "example.com", 80)
 
     old_conn = MockConnection(conn_id=1)
@@ -300,7 +300,7 @@ def test_connection_expiry_during_mixed_operations():
 
 
 def test_partial_reusable_connections():
-    pool = ConnPool()
+    pool = Http1ConnectionPool()
     key = ("http", "example.com", 80)
 
     connections = [
@@ -340,7 +340,7 @@ def test_semaphore_release_on_acquire_failure(pool):
 
 #
 # def test_many_keys_concurrent_operations():
-#     pool = ConnPool(max_connections_per_host=5)
+#     pool = Http1ConnectionPool(max_connections_per_host=5)
 #     keys = [("http", f"host{i}.com", 80) for i in range(20)]
 
 #     def work_on_key(key):
@@ -361,7 +361,7 @@ def test_semaphore_release_on_acquire_failure(pool):
 
 
 def test_rapid_acquire_release_same_connection():
-    pool = ConnPool()
+    pool = Http1ConnectionPool()
     key = ("http", "example.com", 80)
     conn = MockConnection(conn_id=1)
 
@@ -388,7 +388,7 @@ def test_empty_idle_queue_after_stale_connections(pool):
 
 
 def test_release_reservation_for_nonexistent_key():
-    pool = ConnPool()
+    pool = Http1ConnectionPool()
     key = ("http", "example.com", 80)
 
     pool.release_reservation(key)
@@ -410,7 +410,7 @@ def test_close_all_clears_semaphores(pool):
 
 
 def test_semaphore_entry_removed_after_reservation_released():
-    pool = ConnPool()
+    pool = Http1ConnectionPool()
     key = ("http", "example.com", 80)
 
     acquired = pool.acquire(key)
@@ -425,7 +425,7 @@ def test_semaphore_entry_removed_after_reservation_released():
 
 #
 # def test_high_load_no_deadlock():
-#     pool = ConnPool(max_connections_per_host=10, max_idle_per_host=5)
+#     pool = Http1ConnectionPool(max_connections_per_host=10, max_idle_per_host=5)
 #     key = ("http", "example.com", 80)
 #     results = []
 
@@ -450,7 +450,7 @@ def test_semaphore_entry_removed_after_reservation_released():
 
 
 def test_acquire_all_connections_then_release():
-    pool = ConnPool(max_connections_per_host=3)
+    pool = Http1ConnectionPool(max_connections_per_host=3)
     key = ("http", "example.com", 80)
 
     state = pool._get_state(key)

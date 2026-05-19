@@ -18,7 +18,8 @@ DEFAULT_PORTS = {
 }
 
 
-def get_host_header_value(host: str, scheme: str, port: str) -> str:
+def get_host_header_value(url: URL) -> str:
+    host, scheme, port = url.hostname, url.protocol[:-1], url.port
     default_port = DEFAULT_PORTS.get(scheme.lower())
     if port == "" or port == default_port:
         return host

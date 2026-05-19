@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, TypeVar, cast
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 
@@ -155,6 +155,16 @@ class AsyncIOStream(AsyncBaseNetworkStream):
 
         return self
 
+    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
+        if self._tls_state is not None:
+            return cast(Literal["http/1.1", "h2"], self._tls_state.ssl_object.selected_alpn_protocol())
+
+        ssl_object = self._writer.get_extra_info("ssl_object")
+        if ssl_object is None:
+            return None
+
+        return ssl_object.selected_alpn_protocol()
+
 
 class AsyncIOTransport(AsyncBaseTransport):
     def __init__(
@@ -163,6 +173,7 @@ class AsyncIOTransport(AsyncBaseTransport):
         ssl_context: Optional["ssl.SSLContext"] = None,
     ) -> None:
         self.ssl_context = default_ssl_context() if ssl_context is None else ssl_context
+        self._lock = asyncio.Lock()
 
     async def aconnect(
         self,
@@ -171,8 +182,14 @@ class AsyncIOTransport(AsyncBaseTransport):
         server_hostname: str | None = None,
         tls: bool = False,
         *,
+        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
         timeout: float | None = None,
     ) -> AsyncBaseNetworkStream:
+
+        if alpn_protocols is not None:
+            async with self._lock:
+                self.ssl_context.set_alpn_protocols(alpn_protocols)
+
         with map_asyncio_connect_exceptions():
             if timeout is None:
                 if is_uvloop():

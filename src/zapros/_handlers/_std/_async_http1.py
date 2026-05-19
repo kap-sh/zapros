@@ -5,7 +5,7 @@ from typing import AsyncIterator
 import h11
 from typing_extensions import override
 
-from zapros._async_pool import AsyncConnPool
+from zapros._async_pool import AsyncHttp1ConnectionPool
 from zapros._base_pool import PoolKey
 from zapros._constants import DEFAULT_READ_SIZE
 from zapros._errors import ConnectionError, WriteError
@@ -69,7 +69,7 @@ class AsyncHttp1ResponseStream(AsyncClosableStream):
     def __init__(
         self,
         conn: AsyncHttp1Connection,
-        pool: AsyncConnPool,
+        pool: AsyncHttp1ConnectionPool,
         key: PoolKey,
         *,
         read_timeout: float | None = None,
@@ -158,15 +158,13 @@ class AsyncHttp1ResponseStream(AsyncClosableStream):
 
 
 class AsyncHttp1Connection(AsyncHttpConnection):
-    def __init__(
-        self,
-        stream: AsyncBaseNetworkStream,
-    ) -> None:
+    def __init__(self, stream: AsyncBaseNetworkStream, *, pool: AsyncHttp1ConnectionPool) -> None:
         self.stream = stream
         self.h11 = h11.Connection(h11.CLIENT)
         self._closed = False
+        self._pool = pool
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         if self._closed:
             return
         self._closed = True
@@ -186,7 +184,6 @@ class AsyncHttp1Connection(AsyncHttpConnection):
         self,
         request: Request,
         *,
-        conn_pool: AsyncConnPool,
         read_timeout: float | None = None,
         write_timeout: float | None = None,
         deadline: float | None = None,
@@ -235,7 +232,10 @@ class AsyncHttp1Connection(AsyncHttpConnection):
                     "handoff": ResponseHandoffContext(
                         network_stream=self.stream,
                         trailing_data=bytes(trailing_data),
-                    )
+                    ),
+                    "network": {
+                        "http_protocol": "HTTP/1.1",
+                    },
                 },
             )
         return Response(
@@ -243,12 +243,17 @@ class AsyncHttp1Connection(AsyncHttpConnection):
             headers=resp_headers,
             content=AsyncHttp1ResponseStream(
                 self,
-                pool=conn_pool,
+                pool=self._pool,
                 key=key,
                 read_timeout=read_timeout,
                 no_body_response=response_has_no_body(request.method, status),
                 must_close=connection_wants_close(request_headers_list) or connection_wants_close(resp_headers),
             ),
+            context={
+                "network": {
+                    "http_protocol": "HTTP/1.1",
+                },
+            },
         )
 
     async def _send_request_headers(
