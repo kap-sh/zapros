@@ -237,6 +237,7 @@ class AsyncHttp1Connection(AsyncHttpConnection):
                         "http_protocol": "HTTP/1.1",
                     },
                 },
+                request=request,
             )
         return Response(
             status=status,
@@ -254,6 +255,7 @@ class AsyncHttp1Connection(AsyncHttpConnection):
                     "http_protocol": "HTTP/1.1",
                 },
             },
+            request=request,
         )
 
     async def _send_request_headers(

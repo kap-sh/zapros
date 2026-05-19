@@ -61,6 +61,7 @@ class AsgiStream(AsyncClosableStream):
         app: Any,
         scope: dict[str, Any],
         request_body: bytes | AsyncIterator[bytes] | None,
+        request: Request,
         trio_nursery: Optional["trio.Nursery"] = None,
     ) -> Response:
         send_queue = AnyQueue[dict[str, Any]]()
@@ -162,6 +163,7 @@ class AsgiStream(AsyncClosableStream):
                 status=response_headers_and_status[0],
                 headers=Headers(response_headers_and_status[1]),
                 content=b"Internal Server Error",
+                request=request,
             )
         stream = cls(
             send_queue=send_queue,
@@ -173,6 +175,7 @@ class AsgiStream(AsyncClosableStream):
             status=response_headers_and_status[0],
             headers=Headers(response_headers_and_status[1]),
             content=stream,
+            request=request,
         )
 
     def __aiter__(self) -> AsyncIterator[bytes]:
@@ -260,6 +263,7 @@ class AsgiWebSocketStream:
         cls,
         app: Any,
         scope: dict[str, Any],
+        request: Request,
         trio_nursery: Optional["trio.Nursery"] = None,
     ) -> Response:
         """
@@ -380,6 +384,7 @@ class AsgiWebSocketStream:
                 status=403,
                 headers=Headers([]),
                 content=b"",
+                request=request,
             )
 
         stream = cls(
@@ -399,6 +404,7 @@ class AsgiWebSocketStream:
             headers=Headers(handshake_result.get("headers", [])),
             content=b"",
             context={"handoff": {"_asgi_websocket_stream": stream}},
+            request=request,
         )
 
     async def asend(
@@ -684,6 +690,7 @@ class AsgiHandler(AsyncBaseHandler):
             return await AsgiWebSocketStream._create_response_with_stream(  # type: ignore[reportPrivateUsage]
                 app=self.app,
                 scope=self._build_websocket_scope(request),
+                request=request,
                 trio_nursery=self._trio_nursery,
             )
 
@@ -692,6 +699,7 @@ class AsgiHandler(AsyncBaseHandler):
             app=self.app,
             scope=self._build_scope(request),
             request_body=request.body,
+            request=request,
             trio_nursery=self._trio_nursery,
         )
         return response

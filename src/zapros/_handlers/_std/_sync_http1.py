@@ -237,6 +237,7 @@ class Http1Connection(HttpConnection):
                         "http_protocol": "HTTP/1.1",
                     },
                 },
+                request=request,
             )
         return Response(
             status=status,
@@ -254,6 +255,7 @@ class Http1Connection(HttpConnection):
                     "http_protocol": "HTTP/1.1",
                 },
             },
+            request=request,
         )
 
     def _send_request_headers(

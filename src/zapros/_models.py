@@ -384,6 +384,7 @@ class Response:
         "_decoder",
         "_consumed",
         "context",
+        "_request",
     )
 
     @overload
@@ -394,6 +395,7 @@ class Response:
         *,
         content: AsyncStream | Stream | bytes | None,
         context: ResponseContext | None = None,
+        request: Request | None = None,
     ) -> None: ...
 
     @overload
@@ -404,6 +406,7 @@ class Response:
         *,
         text: str,
         context: ResponseContext | None = None,
+        request: Request | None = None,
     ) -> None: ...
 
     @overload
@@ -414,6 +417,7 @@ class Response:
         *,
         json: Any,
         context: ResponseContext | None = None,
+        request: Request | None = None,
     ) -> None: ...
 
     @overload
@@ -423,6 +427,7 @@ class Response:
         headers: Headers | Mapping[str, str] | Iterable[tuple[str, str]] | None = None,
         *,
         context: ResponseContext | None = None,
+        request: Request | None = None,
     ) -> None: ...
 
     def __init__(
@@ -434,6 +439,7 @@ class Response:
         text: str | None = None,
         json: Any | None = None,
         context: ResponseContext | None = None,
+        request: Request | None = None,
     ) -> None:
         provided_bodies = sum(value is not None for value in (content, text, json))
         if provided_bodies > 1:
@@ -445,6 +451,7 @@ class Response:
         self._content: AsyncStream | Stream | bytes | None = content
         self._decoded_content: bytes | None = None
         self._decoder: ContentDecoder | None = None
+        self._request: Request | None = request
 
         if text is not None:
             encoding = self.encoding
@@ -742,6 +749,22 @@ class Response:
             raise AsyncSyncMismatchError("Can't call `close` in this context")
         if isinstance(self._content, ClosableStream):
             self._content.close()
+
+    @property
+    def request(self) -> Request | None:
+        """
+        The original `Request` object that resulted in this response, if available.
+        """
+        return self._request
+
+    @request.setter
+    def request(self, value: Request | None) -> None:
+        """
+        Sets the `Request` which should be associated with this `Response`.
+        It's useful in some cases, where initially the `Response` is created without
+        a reference to the originating `Request`. Like when using `MockMiddleware`
+        """
+        self._request = value
 
     def _set_static_content(self, data: bytes, *, content_type: str) -> None:
         self._content = data

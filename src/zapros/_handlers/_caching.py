@@ -134,11 +134,10 @@ def _hishel_to_zapros(
     model: "HishelRequest",
 ) -> Request: ...
 @overload
-def _hishel_to_zapros(
-    model: "HishelResponse",
-) -> Response: ...
+def _hishel_to_zapros(model: "HishelResponse", request: Request) -> Response: ...
 def _hishel_to_zapros(
     model: Union[HishelRequest, HishelResponse],
+    request: Request | None = None,
 ) -> Request | Response:
     if isinstance(model, HishelRequest):
         return Request(
@@ -171,6 +170,7 @@ def _hishel_to_zapros(
             headers=Headers(dict(model.headers)),
             content=model.stream,
             context={"caching": context},
+            request=request,
         )
 
 
@@ -289,13 +289,13 @@ class CacheMiddleware(AsyncBaseMiddleware, BaseMiddleware):
         hishel_request = _zapros_to_hishel(request)
         proxy = await self._get_async_cache_proxy()
         hishel_response = await proxy.handle_request(hishel_request)
-        return _hishel_to_zapros(hishel_response)
+        return _hishel_to_zapros(hishel_response, request=request)
 
     def handle(self, request: Request) -> Response:  # unasync: generated @cacheMiddleware
         hishel_request = _zapros_to_hishel(request)
         proxy = self._get_sync_cache_proxy()
         hishel_response = proxy.handle_request(hishel_request)
-        return _hishel_to_zapros(hishel_response)
+        return _hishel_to_zapros(hishel_response, request=request)
 
 
 @typing_extensions.deprecated(

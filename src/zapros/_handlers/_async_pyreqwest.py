@@ -118,6 +118,7 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
                     "http_protocol": "HTTP/1.1" if pyreqwest_response.version == "HTTP/1.1" else "HTTP/2",
                 }
             },
+            request=request,
         )
 
     async def aclose(self) -> None:

@@ -364,6 +364,7 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
             # We are stripping out content-encoding as browser's fetch always return decompressed bytes
             headers=[(k, v) for k, v in headers_list if k.lower() != "content-encoding"],
             content=stream,
+            request=request,
         )
 
     async def aclose(self) -> None:

@@ -182,6 +182,7 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     async def ahandle(self, request: Request) -> Response:  # unasync: generate
         response = self.router.dispatch(request)
         if response is not None:
+            response.request = request
             return response
 
         if not self._passthrough:
@@ -193,6 +194,7 @@ class MockMiddleware(AsyncBaseMiddleware, BaseMiddleware):
     def handle(self, request: Request) -> Response:  # unasync: generated
         response = self.router.dispatch(request)
         if response is not None:
+            response.request = request
             return response
 
         if not self._passthrough:

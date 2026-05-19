@@ -93,6 +93,7 @@ user-agent: python-zapros\r
                 "content-length": "121",
             }
         )
+        assert response.request is not None
 
 
 def test_json_body(
@@ -122,6 +123,9 @@ user-agent: python-zapros\r
         assert strip_date_header(lowercase_headers(dict(response.headers))) == snapshot(
             {"server": "uvicorn", "content-type": "text/plain; charset=utf-8", "content-length": "198"}
         )
+        assert response.request is not None
+        assert response.request.body == b'{"key":"value","num":42}'
+        assert str(response.request.url) == f"{mock_server.url}/echo"
 
 
 def test_json_nested(

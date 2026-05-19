@@ -332,6 +332,46 @@ async_response.async_iter_bytes()  # OK
 async_response.iter_bytes()  # TypeError: use `async_iter_bytes`
 ```
 
+**Accessing the originating request:**
+
+If a handler attached the request that produced this response, you can read it back via `.request`:
+
+::: code-group
+
+```python [Async]
+async with AsyncClient() as client:
+    response = await client.get("https://httpbin.org/get")
+
+    if response.request is not None:
+        print(response.request.method)  # "GET"
+        print(response.request.url)
+```
+
+```python [Sync]
+with Client() as client:
+    response = client.get("https://httpbin.org/get")
+
+    if response.request is not None:
+        print(response.request.method)  # "GET"
+        print(response.request.url)
+```
+
+:::
+
+You can also pair them explicitly when constructing a `Response` yourself:
+
+```python
+from zapros import Request, Response
+from pywhatwgurl import URL
+
+request = Request(URL("https://api.example.com/users"), "GET")
+response = Response(200, json={"ok": True}, request=request)
+
+response.request is request  # True
+```
+
+`.request` is `None` when the response was not generated in the context of a request, or the handler didn't set it.
+
 **Resource cleanup:**
 
 When using `client.stream()`, always use context managers:

@@ -271,6 +271,7 @@ class AsyncHttp2Connection(AsyncHttpConnection):
                     "http_protocol": "HTTP/2",
                 }
             },
+            request=request,
         )
 
     async def aclose(self) -> None:

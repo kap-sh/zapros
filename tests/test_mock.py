@@ -886,3 +886,12 @@ async def test_async_mock_handler_with_fallback():
     )
     response = await handler.ahandle(request)
     assert response.status == 404
+
+
+def test_mock_sets_request_on_response():
+    router = MockRouter()
+
+    router.add(Mock().respond(Response(status=200)))
+    request = Request(URL("https://example.com"), "GET")
+    response = MockMiddleware(router).handle(request=request)
+    assert response.request is request

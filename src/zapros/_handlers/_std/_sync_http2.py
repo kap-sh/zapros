@@ -271,6 +271,7 @@ class Http2Connection(HttpConnection):
                     "http_protocol": "HTTP/2",
                 }
             },
+            request=request,
         )
 
     def close(self) -> None:
