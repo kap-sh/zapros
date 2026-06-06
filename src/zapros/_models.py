@@ -200,7 +200,7 @@ class Request:
         method: str,
         headers: Headers | Mapping[str, str] | None = None,
         *,
-        json: Any,
+        json: Any | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -216,7 +216,8 @@ class Request:
             Iterable[Sequence[str]],
             Mapping[str, Union[str, Sequence[str]]],
             URLSearchParams,
-        ],
+        ]
+        | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -227,7 +228,7 @@ class Request:
         method: str,
         headers: Headers | Mapping[str, str] | None = None,
         *,
-        body: bytes | Stream | AsyncStream,
+        body: bytes | Stream | AsyncStream | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -238,7 +239,7 @@ class Request:
         method: str,
         headers: Headers | Mapping[str, str] | None = None,
         *,
-        multipart: "Multipart",
+        multipart: "Multipart | None" = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -249,17 +250,7 @@ class Request:
         method: str,
         headers: Headers | Mapping[str, str] | None = None,
         *,
-        text: str,
-        context: RequestContext | None = None,
-    ) -> None: ...
-
-    @overload
-    def __init__(
-        self,
-        url: URL,
-        method: str,
-        headers: Headers | Mapping[str, str] | None = None,
-        *,
+        text: str | None,
         context: RequestContext | None = None,
     ) -> None: ...
 
