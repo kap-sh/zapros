@@ -12,7 +12,6 @@ from typing import (
     MutableMapping,
     Sequence,
     TypeAlias,
-    TypedDict,
     TypeVar,
     Union,
     overload,
@@ -20,7 +19,7 @@ from typing import (
 
 import typing_extensions
 from pywhatwgurl import URL, URLSearchParams
-from typing_extensions import deprecated
+from typing_extensions import TypedDict, deprecated
 
 from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError, StreamExhausted
 from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
@@ -92,7 +91,7 @@ class NetworkContext(TypedDict, total=False):
     proxy: ProxyContext
 
 
-class RequestContext(TypedDict, total=False):
+class RequestContext(TypedDict, total=False, extra_items=Any):
     timeouts: TimeoutsContext
     caching: CachingContext
     network: NetworkContext
@@ -115,7 +114,7 @@ class ResponseNetworkContext(TypedDict, total=False):
     http_protocol: Literal["HTTP/1.1", "HTTP/2"] | None
 
 
-class ResponseContext(TypedDict, total=False):
+class ResponseContext(TypedDict, total=False, extra_items=Any):
     caching: ResponseCachingContext
     handoff: ResponseHandoffContext
     network: ResponseNetworkContext
