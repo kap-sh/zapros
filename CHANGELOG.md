@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/kap-sh/zapros/compare/v0.12.0...v0.13.0) (2026-06-06)
+
+
+### Features
+
+* allow extra items in request and response contextes ([339be31](https://github.com/kap-sh/zapros/commit/339be316cb928d2e1b22edf206e44e2fb3f18af1))
+* **types:** allow None for Request's content-type arguments ([c7625fa](https://github.com/kap-sh/zapros/commit/c7625fa2a08ba91217419ae9e08fc251eea8e19b))
+
 ## [0.12.0](https://github.com/kap-sh/zapros/compare/v0.11.1...v0.12.0) (2026-05-19)
 
 
