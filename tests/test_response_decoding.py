@@ -9,7 +9,9 @@ from typing import (
 import pytest
 
 from zapros import Headers, Response
+from zapros._decoders import DecodingError
 from zapros._models import (
+    MAX_DECODE_LAYERS,
     AsyncClosableStream,
     ClosableStream,
 )
@@ -541,3 +543,19 @@ def test_iter_bytes_bounds_decoded_output():
     pieces = list(response.iter_bytes(chunk_size=4096))
     assert b"".join(pieces) == original
     assert max(len(p) for p in pieces) <= 4096
+
+
+def test_response_too_many_encoding_layers():
+    """Test that too many Content-Encoding layers raises DecodingError."""
+
+    # Create a Content-Encoding header with more layers than allowed
+    encodings = ", ".join(["gzip"] * (MAX_DECODE_LAYERS + 1))
+
+    response = Response(
+        status=200,
+        headers=Headers([("Content-Encoding", encodings)]),
+        content=StreamWrapper(iter([b"data"])),
+    )
+
+    with pytest.raises(DecodingError, match="Too many Content-Encoding layers"):
+        list(response.iter_bytes())

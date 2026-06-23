@@ -43,10 +43,13 @@ from ._decoders import (
     SUPPORTED_DECODERS,
     ByteChunker,
     ContentDecoder,
+    DecodingError,
     IdentityDecoder,
     MultiDecoder,
     TextDecoder,
 )
+
+MAX_DECODE_LAYERS = 5
 
 
 class ClosableStream(Iterator[bytes]):
@@ -771,6 +774,8 @@ class Response:
             return self._decoder
 
         encodings = [enc.strip().lower() for enc in encoding_header.split(",")]
+        if len(encodings) > MAX_DECODE_LAYERS:
+            raise DecodingError(f"Too many Content-Encoding layers ({len(encodings)}), maximum is {MAX_DECODE_LAYERS}")
         decoders: list[ContentDecoder] = []
 
         for encoding in encodings:
