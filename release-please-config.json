@@ -2,7 +2,8 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "include-component-in-tag": false
+      "include-component-in-tag": false,
+      "versioning": "always-bump-minor"
     }
   },
   "include-v-in-tag": true,
