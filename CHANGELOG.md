@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/kap-sh/zapros/compare/v0.13.0...v0.14.0) (2026-06-23)
+
+
+### Bug Fixes
+
+* **security:** limit Content-Encoding layers to 5 ([7971fbc](https://github.com/kap-sh/zapros/commit/7971fbca9707eb01455ca2d73416ac091f96908b))
+* **security:** protect streaming responses from zip bombs ([9b59fa6](https://github.com/kap-sh/zapros/commit/9b59fa65857734599c34b0b3dff4c2b62293a68d))
+
 ## [0.13.0](https://github.com/kap-sh/zapros/compare/v0.12.0...v0.13.0) (2026-06-06)
 
 
