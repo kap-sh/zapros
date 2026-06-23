@@ -446,12 +446,9 @@ def test_response_zstd_not_installed():
 
 def test_response_brotli_if_installed():
     try:
-        import brotli
+        import brotlicffi as brotli  # type: ignore[import-not-found]
     except ImportError:
-        try:
-            import brotlicffi as brotli  # type: ignore[import-not-found, no-redef]
-        except ImportError:
-            pytest.skip("brotli not installed")
+        pytest.skip("brotlicffi not installed")
 
     original = b"Hello, World! This is a test message for brotli compression."
     compressed = brotli.compress(original)  # type: ignore[attr-defined]
@@ -529,3 +526,18 @@ def test_response_empty_body_with_encoding():
 
     chunks = list(response.iter_bytes())
     assert chunks == []
+
+
+def test_iter_bytes_bounds_decoded_output():
+    original = b"Z" * 1_000_000
+    compressed = gzip.compress(original)
+
+    response = Response(
+        status=200,
+        headers=Headers([("Content-Encoding", "gzip")]),
+        content=StreamWrapper(iter([compressed])),
+    )
+
+    pieces = list(response.iter_bytes(chunk_size=4096))
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096

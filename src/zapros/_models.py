@@ -588,18 +588,16 @@ class Response:
                 yield remaining
             return
 
-        decoder = self._get_content_decoder()
+        decoder = self._get_content_decoder(chunk_size)
         chunker = ByteChunker(chunk_size)
 
         async for raw_chunk in self._async_iter_source():
-            decoded_chunk = decoder.decode(raw_chunk)
-            if decoded_chunk:
-                for chunk in chunker.feed(decoded_chunk):
+            for decoded_piece in decoder.decode(raw_chunk):
+                for chunk in chunker.feed(decoded_piece):
                     yield chunk
 
-        final_decoded = decoder.flush()
-        if final_decoded:
-            for chunk in chunker.feed(final_decoded):
+        for decoded_piece in decoder.flush():
+            for chunk in chunker.feed(decoded_piece):
                 yield chunk
 
         remaining = chunker.flush()
@@ -622,18 +620,16 @@ class Response:
                 yield remaining
             return
 
-        decoder = self._get_content_decoder()
+        decoder = self._get_content_decoder(chunk_size)
         chunker = ByteChunker(chunk_size)
 
         for raw_chunk in self._iter_source():
-            decoded_chunk = decoder.decode(raw_chunk)
-            if decoded_chunk:
-                for chunk in chunker.feed(decoded_chunk):
+            for decoded_piece in decoder.decode(raw_chunk):
+                for chunk in chunker.feed(decoded_piece):
                     yield chunk
 
-        final_decoded = decoder.flush()
-        if final_decoded:
-            for chunk in chunker.feed(final_decoded):
+        for decoded_piece in decoder.flush():
+            for chunk in chunker.feed(decoded_piece):
                 yield chunk
 
         remaining = chunker.flush()
@@ -765,13 +761,13 @@ class Response:
         if "Content-Type" not in self.headers:
             self.headers["Content-Type"] = content_type
 
-    def _get_content_decoder(self) -> ContentDecoder:
+    def _get_content_decoder(self, chunk_size: int) -> ContentDecoder:
         if self._decoder is not None:
             return self._decoder
 
         encoding_header = self.headers.get("Content-Encoding")
         if not encoding_header:
-            self._decoder = IdentityDecoder()
+            self._decoder = IdentityDecoder(chunk_size)
             return self._decoder
 
         encodings = [enc.strip().lower() for enc in encoding_header.split(",")]
@@ -779,12 +775,12 @@ class Response:
 
         for encoding in encodings:
             if encoding in SUPPORTED_DECODERS:
-                decoders.append(SUPPORTED_DECODERS[encoding]())
+                decoders.append(SUPPORTED_DECODERS[encoding](chunk_size))
             elif encoding and encoding != "identity":
                 pass
 
         if not decoders:
-            self._decoder = IdentityDecoder()
+            self._decoder = IdentityDecoder(chunk_size)
         elif len(decoders) == 1:
             self._decoder = decoders[0]
         else:

@@ -16,10 +16,15 @@ from zapros._decoders import (
 
 
 def test_identity_decoder():
-    decoder = IdentityDecoder()
-    data = b"Hello, World!"
-    assert decoder.decode(data) == data
-    assert decoder.flush() == b""
+    decoder = IdentityDecoder(chunk_size=4)
+    assert list(decoder.decode(b"Hello, World!")) == [b"Hell", b"o, W", b"orld", b"!"]
+    assert list(decoder.flush()) == []
+
+
+def test_identity_decoder_empty():
+    decoder = IdentityDecoder(chunk_size=4)
+    assert list(decoder.decode(b"")) == []
+    assert list(decoder.flush()) == []
 
 
 def test_gzip_decoder():
@@ -27,8 +32,7 @@ def test_gzip_decoder():
     compressed = gzip.compress(original)
 
     decoder = GZipDecoder()
-    decoded = decoder.decode(compressed)
-    decoded += decoder.flush()
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
@@ -38,24 +42,29 @@ def test_gzip_decoder_streaming():
     compressed = gzip.compress(original)
 
     decoder = GZipDecoder()
-    chunk_size = 10
     result = b""
+    for i in range(0, len(compressed), 10):
+        result += b"".join(decoder.decode(compressed[i : i + 10]))
+    result += b"".join(decoder.flush())
 
-    for i in range(0, len(compressed), chunk_size):
-        chunk = compressed[i : i + chunk_size]
-        result += decoder.decode(chunk)
-
-    result += decoder.flush()
     assert result == original
+
+
+def test_gzip_decoder_bounds_output():
+    original = b"Z" * 1_000_000
+    compressed = gzip.compress(original)
+
+    decoder = GZipDecoder(chunk_size=4096)
+    pieces = list(decoder.decode(compressed)) + list(decoder.flush())
+
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096
 
 
 def test_gzip_decoder_invalid_data():
     decoder = GZipDecoder()
-    with pytest.raises(
-        DecodingError,
-        match="Failed to decode gzip data",
-    ):
-        decoder.decode(b"invalid gzip data")
+    with pytest.raises(DecodingError, match="Failed to decode gzip data"):
+        list(decoder.decode(b"invalid gzip data"))
 
 
 def test_deflate_decoder():
@@ -63,8 +72,7 @@ def test_deflate_decoder():
     compressed = zlib.compress(original)
 
     decoder = DeflateDecoder()
-    decoded = decoder.decode(compressed)
-    decoded += decoder.flush()
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
@@ -75,8 +83,7 @@ def test_deflate_decoder_raw():
     compressed = compressor.compress(original) + compressor.flush()
 
     decoder = DeflateDecoder()
-    decoded = decoder.decode(compressed)
-    decoded += decoder.flush()
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
@@ -86,35 +93,37 @@ def test_deflate_decoder_streaming():
     compressed = zlib.compress(original)
 
     decoder = DeflateDecoder()
-    chunk_size = 10
     result = b""
+    for i in range(0, len(compressed), 10):
+        result += b"".join(decoder.decode(compressed[i : i + 10]))
+    result += b"".join(decoder.flush())
 
-    for i in range(0, len(compressed), chunk_size):
-        chunk = compressed[i : i + chunk_size]
-        result += decoder.decode(chunk)
-
-    result += decoder.flush()
     assert result == original
+
+
+def test_deflate_decoder_bounds_output():
+    original = b"Z" * 1_000_000
+    compressed = zlib.compress(original)
+
+    decoder = DeflateDecoder(chunk_size=4096)
+    pieces = list(decoder.decode(compressed)) + list(decoder.flush())
+
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096
 
 
 def test_deflate_decoder_invalid_data():
     decoder = DeflateDecoder()
     decoder._first_attempt = False
-    with pytest.raises(
-        DecodingError,
-        match="Failed to decode deflate data",
-    ):
-        decoder.decode(b"invalid deflate data that is long enough")
+    with pytest.raises(DecodingError, match="Failed to decode deflate data"):
+        list(decoder.decode(b"invalid deflate data that is long enough"))
 
 
 def test_brotli_decoder():
     try:
-        import brotli
+        import brotlicffi as brotli  # type: ignore[import-not-found]
     except ImportError:
-        try:
-            import brotlicffi as brotli  # type: ignore[import-not-found, no-redef]
-        except ImportError:
-            pytest.skip("brotli not installed")
+        pytest.skip("brotlicffi not installed")
 
     from zapros._decoders import (
         BrotliDecoder,
@@ -124,20 +133,16 @@ def test_brotli_decoder():
     compressed = brotli.compress(original)  # type: ignore[attr-defined]
 
     decoder = BrotliDecoder()
-    decoded = decoder.decode(compressed)
-    decoded += decoder.flush()
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
 
 def test_brotli_decoder_streaming():
     try:
-        import brotli
+        import brotlicffi as brotli  # type: ignore[import-not-found]
     except ImportError:
-        try:
-            import brotlicffi as brotli  # type: ignore[import-not-found, no-redef]
-        except ImportError:
-            pytest.skip("brotli not installed")
+        pytest.skip("brotlicffi not installed")
 
     from zapros._decoders import (
         BrotliDecoder,
@@ -147,15 +152,32 @@ def test_brotli_decoder_streaming():
     compressed = brotli.compress(original)
 
     decoder = BrotliDecoder()
-    chunk_size = 10
     result = b""
+    for i in range(0, len(compressed), 10):
+        result += b"".join(decoder.decode(compressed[i : i + 10]))
+    result += b"".join(decoder.flush())
 
-    for i in range(0, len(compressed), chunk_size):
-        chunk = compressed[i : i + chunk_size]
-        result += decoder.decode(chunk)
-
-    result += decoder.flush()
     assert result == original
+
+
+def test_brotli_decoder_bounds_output():
+    try:
+        import brotlicffi as brotli  # type: ignore[import-not-found]
+    except ImportError:
+        pytest.skip("brotlicffi not installed")
+
+    from zapros._decoders import (
+        BrotliDecoder,
+    )
+
+    original = b"Z" * 1_000_000
+    compressed = brotli.compress(original)
+
+    decoder = BrotliDecoder(chunk_size=4096)
+    pieces = list(decoder.decode(compressed)) + list(decoder.flush())
+
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096
 
 
 def test_zstandard_decoder():
@@ -173,8 +195,7 @@ def test_zstandard_decoder():
     compressed = compressor.compress(original)
 
     decoder = ZStandardDecoder()
-    decoded = decoder.decode(compressed)
-    decoded += decoder.flush()
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
@@ -194,60 +215,66 @@ def test_zstandard_decoder_streaming():
     compressed = compressor.compress(original)
 
     decoder = ZStandardDecoder()
-    chunk_size = 10
     result = b""
+    for i in range(0, len(compressed), 10):
+        result += b"".join(decoder.decode(compressed[i : i + 10]))
+    result += b"".join(decoder.flush())
 
-    for i in range(0, len(compressed), chunk_size):
-        chunk = compressed[i : i + chunk_size]
-        result += decoder.decode(chunk)
-
-    result += decoder.flush()
     assert result == original
+
+
+def test_zstandard_decoder_bounds_output():
+    try:
+        import zstandard
+    except ImportError:
+        pytest.skip("zstandard not installed")
+
+    from zapros._decoders import (
+        ZStandardDecoder,
+    )
+
+    original = b"Z" * 1_000_000
+    compressed = zstandard.ZstdCompressor().compress(original)
+
+    decoder = ZStandardDecoder(chunk_size=4096)
+    pieces = list(decoder.decode(compressed)) + list(decoder.flush())
+
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096
 
 
 def test_multi_decoder():
     original = b"Hello, World! This is a test message for multi-layer compression."
+    compressed = zlib.compress(gzip.compress(original))
 
-    compressed_gzip = gzip.compress(original)
-    compressed_deflate = zlib.compress(compressed_gzip)
-
-    decoder = MultiDecoder(
-        [
-            GZipDecoder(),
-            DeflateDecoder(),
-        ]
-    )
-    decoded = decoder.decode(compressed_deflate)
-    decoded += decoder.flush()
+    decoder = MultiDecoder([GZipDecoder(), DeflateDecoder()])
+    decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
 
     assert decoded == original
 
 
 def test_multi_decoder_streaming():
     original = b"Hello, World! This is a test message for multi-layer compression."
+    compressed = zlib.compress(gzip.compress(original))
 
-    compressed_gzip = gzip.compress(original)
-    compressed_deflate = zlib.compress(compressed_gzip)
-
-    decoder = MultiDecoder(
-        [
-            GZipDecoder(),
-            DeflateDecoder(),
-        ]
-    )
-    chunk_size = 20
+    decoder = MultiDecoder([GZipDecoder(), DeflateDecoder()])
     result = b""
+    for i in range(0, len(compressed), 20):
+        result += b"".join(decoder.decode(compressed[i : i + 20]))
+    result += b"".join(decoder.flush())
 
-    for i in range(
-        0,
-        len(compressed_deflate),
-        chunk_size,
-    ):
-        chunk = compressed_deflate[i : i + chunk_size]
-        result += decoder.decode(chunk)
-
-    result += decoder.flush()
     assert result == original
+
+
+def test_multi_decoder_bounds_output():
+    original = b"Z" * 1_000_000
+    compressed = zlib.compress(gzip.compress(original))
+
+    decoder = MultiDecoder([GZipDecoder(chunk_size=4096), DeflateDecoder(chunk_size=4096)])
+    pieces = list(decoder.decode(compressed)) + list(decoder.flush())
+
+    assert b"".join(pieces) == original
+    assert max(len(p) for p in pieces) <= 4096
 
 
 def test_byte_chunker():
