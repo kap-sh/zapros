@@ -960,6 +960,145 @@ class Client:
         )
 
     @overload
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+        json: Any,
+    ) -> Response: ...
+
+    @overload
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+        form: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ],
+    ) -> Response: ...
+
+    @overload
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+        body: bytes | Stream,
+    ) -> Response: ...
+
+    @overload
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+        multipart: "Multipart",
+    ) -> Response: ...
+
+    @overload
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+    ) -> Response: ...
+
+    def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
+        json: Any | None = None,
+        form: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        body: bytes | Stream | None = None,
+        multipart: "Multipart | None" = None,
+    ) -> Response:
+        return self.request(  # type: ignore[call-overload]
+            "QUERY",
+            url,
+            headers=headers,
+            params=params,
+            auth=auth,
+            context=context,
+            handler=handler,
+            json=json,
+            form=form,
+            body=body,
+            multipart=multipart,
+        )
+
+    @overload
     def options(
         self,
         url: str | URL,

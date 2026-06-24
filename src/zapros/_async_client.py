@@ -961,6 +961,145 @@ class AsyncClient:
         )
 
     @overload
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+        json: Any,
+    ) -> Response: ...
+
+    @overload
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+        form: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ],
+    ) -> Response: ...
+
+    @overload
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+        body: bytes | AsyncStream,
+    ) -> Response: ...
+
+    @overload
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+        multipart: "Multipart",
+    ) -> Response: ...
+
+    @overload
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+    ) -> Response: ...
+
+    async def query(
+        self,
+        url: str | URL,
+        *,
+        headers: Mapping[str, str] | Headers | None = None,
+        params: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        auth: str | tuple[str, str] | None = None,
+        context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
+        json: Any | None = None,
+        form: Union[
+            str,
+            Iterable[Sequence[str]],
+            Mapping[str, Union[str, Sequence[str]]],
+            URLSearchParams,
+        ]
+        | None = None,
+        body: bytes | AsyncStream | None = None,
+        multipart: "Multipart | None" = None,
+    ) -> Response:
+        return await self.request(  # type: ignore[call-overload]
+            "QUERY",
+            url,
+            headers=headers,
+            params=params,
+            auth=auth,
+            context=context,
+            handler=handler,
+            json=json,
+            form=form,
+            body=body,
+            multipart=multipart,
+        )
+
+    @overload
     async def options(
         self,
         url: str | URL,
