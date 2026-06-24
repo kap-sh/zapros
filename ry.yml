@@ -243,6 +243,9 @@ targets:
   - input: src/zapros/_async_client.py
     output: src/zapros/_sync_client.py
 
+  - input: tests/test_async_client.py
+    output: tests/test_sync_client.py
+
   - input: src/zapros/_async_pool.py
     output: src/zapros/_sync_pool.py
     rules:

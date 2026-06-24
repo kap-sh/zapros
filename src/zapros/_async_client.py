@@ -42,6 +42,9 @@ if TYPE_CHECKING:
     from ._multipart import Multipart
 
 
+HandlerTransform = Callable[[AsyncBaseHandler], AsyncBaseHandler]
+
+
 class AsyncClient:
     @overload
     def __init__(
@@ -172,6 +175,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -191,6 +195,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -215,6 +220,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -234,6 +240,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -253,6 +260,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def request(
@@ -270,6 +278,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -281,6 +290,11 @@ class AsyncClient:
         body: bytes | AsyncStream | None = None,
         multipart: "Multipart | None" = None,
     ) -> Response:
+        if handler is None:
+            handler = self.handler
+        elif not isinstance(handler, AsyncBaseHandler):
+            handler = handler(self.handler)
+
         url_obj = self._merge_url(url, params)
 
         merged_headers = self._merge_headers(headers, auth=auth)
@@ -326,7 +340,7 @@ class AsyncClient:
             )
 
         try:
-            response = await self.handler.ahandle(request=request)
+            response = await handler.ahandle(request=request)
 
             try:
                 await response.aread()
@@ -352,6 +366,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response:
         return await self.request(
             "GET",
@@ -360,6 +375,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
         )
 
     @overload
@@ -377,6 +393,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -395,6 +412,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -418,6 +436,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -436,6 +455,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -454,6 +474,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def post(
@@ -470,6 +491,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -488,6 +510,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -509,6 +532,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -527,6 +551,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -550,6 +575,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -568,6 +594,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -586,6 +613,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def put(
@@ -602,6 +630,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -620,6 +649,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -641,6 +671,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -659,6 +690,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -682,6 +714,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -700,6 +733,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -718,6 +752,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def patch(
@@ -734,6 +769,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -752,6 +788,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -773,6 +810,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -791,6 +829,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -814,6 +853,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -832,6 +872,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -850,6 +891,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def delete(
@@ -866,6 +908,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -884,6 +927,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -904,6 +948,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response:
         return await self.request(
             "HEAD",
@@ -912,6 +957,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
         )
 
     @overload
@@ -929,6 +975,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -947,6 +994,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -970,6 +1018,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> Response: ...
 
@@ -988,6 +1037,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -1006,6 +1056,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     async def options(
@@ -1022,6 +1073,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1040,6 +1092,7 @@ class AsyncClient:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -1062,6 +1115,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> AbstractAsyncContextManager[Response]: ...
 
@@ -1081,6 +1135,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -1105,6 +1160,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         body: bytes | AsyncStream,
     ) -> AbstractAsyncContextManager[Response]: ...
 
@@ -1124,6 +1180,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> AbstractAsyncContextManager[Response]: ...
 
@@ -1143,6 +1200,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
     ) -> AbstractAsyncContextManager[Response]: ...
 
     @asynccontextmanager  # type: ignore
@@ -1161,6 +1219,7 @@ class AsyncClient:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: AsyncBaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1172,6 +1231,11 @@ class AsyncClient:
         body: bytes | AsyncStream | None = None,
         multipart: "Multipart | None" = None,
     ) -> AsyncIterable[Response]:  # type: ignore
+        if handler is None:
+            handler = self.handler
+        elif not isinstance(handler, AsyncBaseHandler):
+            handler = handler(self.handler)
+
         url_obj = self._merge_url(url, params)
         merged_headers = self._merge_headers(headers, auth=auth)
 
@@ -1215,7 +1279,7 @@ class AsyncClient:
                 context=context,
             )
 
-        response = await self.handler.ahandle(request=request)
+        response = await handler.ahandle(request=request)
 
         try:
             yield response

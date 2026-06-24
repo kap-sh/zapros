@@ -80,7 +80,7 @@ export default defineConfig({
           { text: "Redirects", link: "/redirects" },
           { text: "Retries", link: "/retries" },
           { text: "Caching", link: "/caching" },
-          { text: "Custom Handlers", link: "/handlers" },
+          { text: "Handlers & Middlewares", link: "/handlers" },
         ],
       },
       {

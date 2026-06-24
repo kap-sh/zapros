@@ -1,4 +1,4 @@
-# Custom Handlers
+# Handlers & Middlewares
 
 Handlers are the core extension point in Zapros. Every request passes through a handler chain before reaching the network. You can write custom transport handlers to change *how* requests are sent, or middleware handlers to intercept and transform requests and responses.
 
@@ -146,6 +146,55 @@ with Client(
 ```
 
 :::
+
+## Changing the Handler Per Request
+
+The `handler` passed to the client applies to every request. To use a different handler for a single request, pass `handler` to any request method. It accepts two forms:
+
+- **An explicit handler** — used directly for that request, bypassing the client's handler.
+- **A callable** `handler -> handler` — receives the client's handler and returns the handler to use, typically wrapping it in a middleware.
+
+::: code-group
+
+```python [Async]
+from zapros import AsyncClient
+
+
+async with AsyncClient() as client:
+    # wrap the client's handler in a middleware for this request only
+    response = await client.get(
+        "https://api.example.com/users",
+        handler=lambda handler: TimingMiddleware(handler),
+    )
+
+    # or replace it outright with an explicit handler
+    response = await client.get(
+        "https://api.example.com/users",
+        handler=TimingMiddleware(StdNetworkHandler()),
+    )
+```
+
+```python [Sync]
+from zapros import Client
+
+
+with Client() as client:
+    # wrap the client's handler in a middleware for this request only
+    response = client.get(
+        "https://api.example.com/users",
+        handler=lambda handler: TimingMiddleware(handler),
+    )
+
+    # or replace it outright with an explicit handler
+    response = client.get(
+        "https://api.example.com/users",
+        handler=TimingMiddleware(StdNetworkHandler()),
+    )
+```
+
+:::
+
+The client's own handler is never mutated — `handler` only affects the request it is passed to. This is useful for adding retries, tracing, or timing to specific requests without changing the client-wide handler chain.
 
 ## Request and Response Context
 

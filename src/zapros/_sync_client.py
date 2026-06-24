@@ -41,6 +41,9 @@ if TYPE_CHECKING:
     from ._multipart import Multipart
 
 
+HandlerTransform = Callable[[BaseHandler], BaseHandler]
+
+
 class Client:
     @overload
     def __init__(
@@ -171,6 +174,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -190,6 +194,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -214,6 +219,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -233,6 +239,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -252,6 +259,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def request(
@@ -269,6 +277,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -280,6 +289,11 @@ class Client:
         body: bytes | Stream | None = None,
         multipart: "Multipart | None" = None,
     ) -> Response:
+        if handler is None:
+            handler = self.handler
+        elif not isinstance(handler, BaseHandler):
+            handler = handler(self.handler)
+
         url_obj = self._merge_url(url, params)
 
         merged_headers = self._merge_headers(headers, auth=auth)
@@ -325,7 +339,7 @@ class Client:
             )
 
         try:
-            response = self.handler.handle(request=request)
+            response = handler.handle(request=request)
 
             try:
                 response.read()
@@ -351,6 +365,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response:
         return self.request(
             "GET",
@@ -359,6 +374,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
         )
 
     @overload
@@ -376,6 +392,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -394,6 +411,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -417,6 +435,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -435,6 +454,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -453,6 +473,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def post(
@@ -469,6 +490,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -487,6 +509,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -508,6 +531,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -526,6 +550,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -549,6 +574,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -567,6 +593,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -585,6 +612,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def put(
@@ -601,6 +629,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -619,6 +648,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -640,6 +670,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -658,6 +689,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -681,6 +713,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -699,6 +732,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -717,6 +751,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def patch(
@@ -733,6 +768,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -751,6 +787,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -772,6 +809,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -790,6 +828,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -813,6 +852,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -831,6 +871,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -849,6 +890,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def delete(
@@ -865,6 +907,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -883,6 +926,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -903,6 +947,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response:
         return self.request(
             "HEAD",
@@ -911,6 +956,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
         )
 
     @overload
@@ -928,6 +974,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -946,6 +993,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -969,6 +1017,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -987,6 +1036,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -1005,6 +1055,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> Response: ...
 
     def options(
@@ -1021,6 +1072,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1039,6 +1091,7 @@ class Client:
             params=params,
             auth=auth,
             context=context,
+            handler=handler,
             json=json,
             form=form,
             body=body,
@@ -1061,6 +1114,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any,
     ) -> AbstractContextManager[Response]: ...
 
@@ -1080,6 +1134,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -1104,6 +1159,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         body: bytes | Stream,
     ) -> AbstractContextManager[Response]: ...
 
@@ -1123,6 +1179,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         multipart: "Multipart",
     ) -> AbstractContextManager[Response]: ...
 
@@ -1142,6 +1199,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
     ) -> AbstractContextManager[Response]: ...
 
     @contextmanager  # type: ignore
@@ -1160,6 +1218,7 @@ class Client:
         | None = None,
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
+        handler: BaseHandler | HandlerTransform | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1171,6 +1230,11 @@ class Client:
         body: bytes | Stream | None = None,
         multipart: "Multipart | None" = None,
     ) -> Iterable[Response]:  # type: ignore
+        if handler is None:
+            handler = self.handler
+        elif not isinstance(handler, BaseHandler):
+            handler = handler(self.handler)
+
         url_obj = self._merge_url(url, params)
         merged_headers = self._merge_headers(headers, auth=auth)
 
@@ -1214,7 +1278,7 @@ class Client:
                 context=context,
             )
 
-        response = self.handler.handle(request=request)
+        response = handler.handle(request=request)
 
         try:
             yield response
