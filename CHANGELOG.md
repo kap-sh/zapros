@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0](https://github.com/kap-sh/zapros/compare/v0.14.0...v0.15.0) (2026-06-24)
+
+
+### Features
+
+* add support for QUERY method ([ad50afa](https://github.com/kap-sh/zapros/commit/ad50afa7e6f2d6870f69dafd08c1df9d85a024a8))
+* allow to set handler per-request ([b6919a6](https://github.com/kap-sh/zapros/commit/b6919a6d6b60934d9cdc4b6ddb95ae0e08d4a100))
+
 ## [0.14.0](https://github.com/kap-sh/zapros/compare/v0.13.0...v0.14.0) (2026-06-23)
 
 
