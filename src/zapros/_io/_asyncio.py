@@ -135,6 +135,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         self._closed = True
         try:
             self._writer.close()
+            await self._writer.wait_closed()
         except Exception:
             pass
 
