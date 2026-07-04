@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/kap-sh/zapros/compare/v0.15.0...v0.16.0) (2026-07-04)
+
+
+### Bug Fixes
+
+* **asyncio:** await transport teardown on stream close ([2c40db3](https://github.com/kap-sh/zapros/commit/2c40db36557e830fb79d6a30002f5cfb9832b26d))
+
 ## [0.15.0](https://github.com/kap-sh/zapros/compare/v0.14.0...v0.15.0) (2026-06-24)
 
 
