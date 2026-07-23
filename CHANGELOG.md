@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/kap-sh/zapros/compare/v0.16.0...v0.17.0) (2026-07-23)
+
+
+### Documentation
+
+* remove redundant doc files ([e4c4885](https://github.com/kap-sh/zapros/commit/e4c4885c5c1e176b302c31b5b16d3f40494ea7ad))
+
 ## [0.16.0](https://github.com/kap-sh/zapros/compare/v0.15.0...v0.16.0) (2026-07-04)
 
 
