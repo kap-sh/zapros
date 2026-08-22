@@ -15,9 +15,9 @@ from zapros._decoders import (
 )
 
 
-def test_identity_decoder():
+def test_identity_decoder_content_pass_untuched():
     decoder = IdentityDecoder(chunk_size=4)
-    assert list(decoder.decode(b"Hello, World!")) == [b"Hell", b"o, W", b"orld", b"!"]
+    assert list(decoder.decode(b"Hello, World!")) == [b"Hello, World!"]
     assert list(decoder.flush()) == []
 
 

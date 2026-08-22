@@ -46,8 +46,8 @@ class IdentityDecoder:
         self._chunk_size = chunk_size
 
     def decode(self, data: bytes) -> Iterator[bytes]:
-        for i in range(0, len(data), self._chunk_size):
-            yield data[i : i + self._chunk_size]
+        if data:
+            yield data
 
     def flush(self) -> Iterator[bytes]:
         yield from ()
@@ -231,11 +231,25 @@ class ByteChunker:
         self._buffer = bytearray()
 
     def feed(self, data: bytes) -> Iterator[bytes]:
-        self._buffer.extend(data)
-        while len(self._buffer) >= self._chunk_size:
-            chunk = bytes(self._buffer[: self._chunk_size])
-            del self._buffer[: self._chunk_size]
-            yield chunk
+        if not data:
+            return
+        size, data_length, view, position = self._chunk_size, len(data), memoryview(data), 0
+        try:
+            if self._buffer:
+                take = min(size - len(self._buffer), data_length)
+                self._buffer += view[:take]
+                position = take
+                if len(self._buffer) < size:
+                    return
+                yield bytes(self._buffer)
+                self._buffer.clear()
+            while data_length - position >= size:
+                yield bytes(view[position : position + size])
+                position += size
+            if position < data_length:
+                self._buffer += view[position:]
+        finally:
+            view.release()
 
     def flush(self) -> bytes:
         if self._buffer:
