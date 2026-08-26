@@ -102,6 +102,8 @@ exclude = [
     "tests/handlers/test_sync_caching.py",
     "src/zapros/websocket/_sync.py",
     "tests/websocket/test_sync.py",
+    "tests/handlers/test_sync_http1.py",
+    "tests/handlers/test_sync_http2.py",
 ]
 
 [tool.ruff.lint]

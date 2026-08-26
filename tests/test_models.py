@@ -386,6 +386,29 @@ class TestRequest:
         request = Request(url, "POST", body=body_gen())
         assert request.headers["Transfer-Encoding"] == "chunked"
 
+    def test_request_trailers_default_none(self):
+        url = URL("http://example.com/path")
+        request = Request(url, "POST", body=b"test")
+        assert request.trailers is None
+
+    def test_request_trailers_are_headers(self):
+        url = URL("http://example.com/path")
+        request = Request(url, "POST", body=b"test", trailers={"X-Checksum": "abc"})
+        assert isinstance(request.trailers, Headers)
+        assert request.trailers["x-checksum"] == "abc"
+
+    def test_request_trailers_keeps_headers_instance(self):
+        url = URL("http://example.com/path")
+        trailers = Headers()
+        request = Request(url, "POST", body=b"test", trailers=trailers)
+        assert request.trailers is trailers
+
+    def test_request_trailers_do_not_change_framing_headers(self):
+        url = URL("http://example.com/path")
+        request = Request(url, "POST", body=b"test", trailers={})
+        assert request.headers["Content-Length"] == "4"
+        assert "Transfer-Encoding" not in request.headers
+
     def test_request_no_body_parameter(self):
         url = URL("http://example.com/path")
         request = Request(url, "GET")

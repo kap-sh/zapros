@@ -18,7 +18,7 @@ from zapros._handlers._std._common import (
 )
 from zapros._handlers._std._conn import HttpConnection
 from zapros._io._base import BaseNetworkStream
-from zapros._models import ClosableStream, Request, Response, ResponseHandoffContext
+from zapros._models import ClosableStream, Headers, Request, Response, ResponseHandoffContext
 from zapros._utils import get_pool_key
 
 
@@ -194,6 +194,14 @@ class Http1Connection(HttpConnection):
         target = str(request.url) if use_full_url else f"{request.url.pathname}{request.url.search}"
 
         request_headers_list = request.headers.list()
+        if request.trailers is not None:
+            # HTTP/1.1 can only carry trailers in a chunked body.
+            request_headers_list = [(k, v) for k, v in request_headers_list if k.lower() != "content-length"]
+            if not any(k.lower() == "transfer-encoding" for k, _ in request_headers_list):
+                request_headers_list.append(("Transfer-Encoding", "chunked"))
+            # Announce the trailer fields known at this point; a streaming body may add more later.
+            if request.trailers and "trailer" not in request.headers:
+                request_headers_list.append(("Trailer", ", ".join(request.trailers)))
 
         try:
             self._send_request_headers(
@@ -210,6 +218,7 @@ class Http1Connection(HttpConnection):
 
         self._send_request_body(
             body=request.body,
+            trailers=request.trailers,
             write_timeout=write_timeout,
             deadline=deadline,
         )
@@ -286,6 +295,7 @@ class Http1Connection(HttpConnection):
         self,
         body: bytes | Iterator[bytes] | None,
         *,
+        trailers: Headers | None = None,
         write_timeout: float | None = None,
         deadline: float | None = None,
     ) -> None:
@@ -306,8 +316,21 @@ class Http1Connection(HttpConnection):
             pass
         else:
             raise TypeError(f"Unsupported body type: {body.__class__.__name__}")
+        # Read trailers only now: a streaming body may have populated them.
+        if trailers:
+            end_of_message = h11.EndOfMessage(
+                headers=[
+                    (
+                        k.encode("ascii"),
+                        v.encode("latin-1"),
+                    )
+                    for k, v in trailers.list()
+                ],
+            )
+        else:
+            end_of_message = h11.EndOfMessage()
         self.stream.write_all(
-            self.h11.send(h11.EndOfMessage()),
+            self.h11.send(end_of_message),
             timeout=min_with_optionals(write_timeout, remaining_timeout_or_raise(deadline)),
         )
 

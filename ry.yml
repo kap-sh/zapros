@@ -264,6 +264,22 @@ targets:
   - input: tests/handlers/test_async_proxy.py
     output: tests/handlers/test_sync_proxy.py
 
+  - input: tests/handlers/test_async_http1.py
+    output: tests/handlers/test_sync_http1.py
+    rules:
+      - match: '\bAsyncMockStream\b'
+        replace: 'MockStream'
+      - match: '\bAsyncIterator\b'
+        replace: 'Iterator'
+
+  - input: tests/handlers/test_async_http2.py
+    output: tests/handlers/test_sync_http2.py
+    rules:
+      - match: '\bAsyncMockStream\b'
+        replace: 'MockStream'
+      - match: '\bAsyncRecordingStream\b'
+        replace: 'RecordingStream'
+
   - input: tests/test_async_pool.py
     output: tests/test_sync_pool.py
     rules:

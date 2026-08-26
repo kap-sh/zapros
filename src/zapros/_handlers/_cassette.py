@@ -341,6 +341,7 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             method=request.method,
             url=request.url,
             headers=Headers(dict(request.headers)),
+            trailers=request.trailers,
             body=b"".join([chunk async for chunk in body]),  # type: ignore
         )
 
@@ -353,6 +354,7 @@ class CassetteMiddleware(AsyncBaseMiddleware, BaseMiddleware):
             method=request.method,
             url=request.url,
             headers=Headers(dict(request.headers)),
+            trailers=request.trailers,
             body=b"".join(body),  # type: ignore
         )
 

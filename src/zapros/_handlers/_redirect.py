@@ -133,6 +133,7 @@ class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
                 new_method,
                 headers=new_headers_dict,
                 body=original_request.body,
+                trailers=original_request.trailers,
                 context=original_request.context.copy(),
             )
         else:

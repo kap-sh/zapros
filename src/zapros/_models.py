@@ -192,6 +192,7 @@ class Request:
         "method",
         "headers",
         "body",
+        "trailers",
         "context",
     )
 
@@ -203,6 +204,7 @@ class Request:
         headers: Headers | Mapping[str, str] | None = None,
         *,
         json: Any | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -220,6 +222,7 @@ class Request:
             URLSearchParams,
         ]
         | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -231,6 +234,7 @@ class Request:
         headers: Headers | Mapping[str, str] | None = None,
         *,
         body: bytes | Stream | AsyncStream | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -242,6 +246,7 @@ class Request:
         headers: Headers | Mapping[str, str] | None = None,
         *,
         multipart: "Multipart | None" = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -253,6 +258,7 @@ class Request:
         headers: Headers | Mapping[str, str] | None = None,
         *,
         text: str | None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None: ...
 
@@ -273,12 +279,19 @@ class Request:
         body: bytes | Stream | AsyncStream | None = None,
         multipart: "Multipart | None" = None,
         text: str | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         context: RequestContext | None = None,
     ) -> None:
         self.url = url
         self.method = method
         self.headers: Headers = headers if isinstance(headers, Headers) else Headers(headers)
         self.context: RequestContext = context if context is not None else {}
+        # Trailers are read by the transport only after the body has been fully
+        # sent, so a streaming body may populate them while it is being consumed.
+        # Framing (chunked vs. Content-Length) is the transport's concern.
+        self.trailers: Headers | None = (
+            None if trailers is None else trailers if isinstance(trailers, Headers) else Headers(trailers)
+        )
 
         if "host" not in self.headers and url.hostname:
             self.headers.add(

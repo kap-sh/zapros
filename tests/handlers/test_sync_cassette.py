@@ -767,3 +767,45 @@ def test_empty_body_stored_as_null(
     data = json.loads((tmp_path / "test.json").read_text())
     assert len(data) == 1
     assert data[0]["response"]["body"] == ""
+
+
+def test_streaming_request_keeps_trailers(
+    tmp_path: Path,
+) -> None:
+    from zapros import Request
+
+    network_requests: list[Request] = []
+
+    def record(request: Request) -> Response:
+        network_requests.append(request)
+        return Response(status=200, text="ok")
+
+    router = MockRouter()
+    Mock.given(path("/upload")).callback(record).mount(router)
+    mock_handler = MockMiddleware(router=router)
+
+    handler = CassetteMiddleware(
+        mock_handler,
+        router=ModifierRouter(),
+        cassette_dir=str(tmp_path),
+        cassette_name="test",
+    )
+
+    def body():
+        yield b"ab"
+        yield b"cde"
+
+    with Client(handler=handler) as client:
+        response = client.post(
+            "http://example.com/upload",
+            body=body(),
+            trailers={"X-Checksum": "abc"},
+        )
+        response.read()
+
+    assert response.status == 200
+    assert len(network_requests) == 1
+    # The cassette materializes streaming bodies into a new Request; trailers must survive.
+    assert network_requests[0].body == b"abcde"
+    assert network_requests[0].trailers is not None
+    assert network_requests[0].trailers["x-checksum"] == "abc"

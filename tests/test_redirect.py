@@ -432,6 +432,38 @@ async def test_async_redirect_307_preserves_method():
     assert response.status == 200
 
 
+def test_redirect_307_preserves_trailers():
+    router = MockRouter()
+    Mock.given(path("/initial")).respond(
+        Response(
+            status=307,
+            headers={"Location": "/final"},
+        )
+    ).mount(router)
+    final_requests: list[Request] = []
+
+    def record_final(request: Request) -> Response:
+        final_requests.append(request)
+        return Response(status=200, text="OK")
+
+    Mock.given(path("/final")).callback(record_final).mount(router)
+
+    handler = MockMiddleware(router)
+    redirect_handler = RedirectMiddleware(handler)
+
+    request = Request(
+        URL("https://example.com/initial"),
+        "POST",
+        body=b"body",
+        trailers={"X-Checksum": "abc"},
+    )
+    response = redirect_handler.handle(request)
+
+    assert response.status == 200
+    assert len(final_requests) == 1
+    assert final_requests[0].trailers is request.trailers
+
+
 def test_redirect_non_redirect_status_passes_through():
     router = MockRouter()
     Mock.given(path("/")).respond(Response(status=200, text="OK")).mount(router)

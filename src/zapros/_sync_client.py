@@ -175,6 +175,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -195,6 +196,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -220,6 +222,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -240,6 +243,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -260,6 +264,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def request(
@@ -278,6 +283,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -304,6 +310,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 json=json,
             )
         elif form is not None:
@@ -312,6 +319,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 form=form,
             )
         elif multipart is not None:
@@ -320,6 +328,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 multipart=multipart,
             )
         elif body is not None:
@@ -328,6 +337,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 body=body,
             )
         else:
@@ -336,6 +346,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
             )
 
         try:
@@ -366,6 +377,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response:
         return self.request(
             "GET",
@@ -375,6 +387,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
         )
 
     @overload
@@ -393,6 +406,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -412,6 +426,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -436,6 +451,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -455,6 +471,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -474,6 +491,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def post(
@@ -491,6 +509,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -510,6 +529,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -532,6 +552,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -551,6 +572,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -575,6 +597,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -594,6 +617,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -613,6 +637,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def put(
@@ -630,6 +655,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -649,6 +675,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -671,6 +698,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -690,6 +718,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -714,6 +743,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -733,6 +763,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -752,6 +783,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def patch(
@@ -769,6 +801,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -788,6 +821,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -810,6 +844,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -829,6 +864,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -853,6 +889,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -872,6 +909,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -891,6 +929,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def delete(
@@ -908,6 +947,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -927,6 +967,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -948,6 +989,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response:
         return self.request(
             "HEAD",
@@ -957,6 +999,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
         )
 
     @overload
@@ -975,6 +1018,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -994,6 +1038,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -1018,6 +1063,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -1037,6 +1083,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -1056,6 +1103,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def query(
@@ -1073,6 +1121,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1092,6 +1141,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -1114,6 +1164,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> Response: ...
 
@@ -1133,6 +1184,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -1157,6 +1209,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> Response: ...
 
@@ -1176,6 +1229,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> Response: ...
 
@@ -1195,6 +1249,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> Response: ...
 
     def options(
@@ -1212,6 +1267,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1231,6 +1287,7 @@ class Client:
             auth=auth,
             context=context,
             handler=handler,
+            trailers=trailers,
             json=json,
             form=form,
             body=body,
@@ -1254,6 +1311,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any,
     ) -> AbstractContextManager[Response]: ...
 
@@ -1274,6 +1332,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         form: Union[
             str,
             Iterable[Sequence[str]],
@@ -1299,6 +1358,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         body: bytes | Stream,
     ) -> AbstractContextManager[Response]: ...
 
@@ -1319,6 +1379,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         multipart: "Multipart",
     ) -> AbstractContextManager[Response]: ...
 
@@ -1339,6 +1400,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
     ) -> AbstractContextManager[Response]: ...
 
     @contextmanager  # type: ignore
@@ -1358,6 +1420,7 @@ class Client:
         auth: str | tuple[str, str] | None = None,
         context: RequestContext | None = None,
         handler: BaseHandler | HandlerTransform | None = None,
+        trailers: Headers | Mapping[str, str] | None = None,
         json: Any | None = None,
         form: Union[
             str,
@@ -1383,6 +1446,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 json=json,
             )
         elif form is not None:
@@ -1391,6 +1455,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 form=form,
             )
         elif multipart is not None:
@@ -1399,6 +1464,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 multipart=multipart,
             )
         elif body is not None:
@@ -1407,6 +1473,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
                 body=body,
             )
         else:
@@ -1415,6 +1482,7 @@ class Client:
                 url=url_obj,
                 headers=merged_headers,
                 context=context,
+                trailers=trailers,
             )
 
         response = handler.handle(request=request)

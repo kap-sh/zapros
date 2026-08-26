@@ -64,7 +64,7 @@ from zapros._errors import ConnectionError
 from zapros._handlers._common import min_with_optionals
 from zapros._handlers._std._common import StreamLimiter, BrokenConnectionError, remaining_timeout_or_raise
 from zapros._io._base import BaseNetworkStream
-from zapros._models import ClosableStream, Request, Response
+from zapros._models import ClosableStream, Headers, Request, Response
 from zapros._typing import is_async_iterator
 from zapros._utils import get_host_header_value
 
@@ -153,6 +153,10 @@ def _build_h2_headers(request: Request) -> list[tuple[bytes, bytes]]:
             continue
         user.append((lk.encode("ascii"), v.encode("latin-1")))
 
+    # Announce the trailer fields known at this point; a streaming body may add more later.
+    if request.trailers and "trailer" not in request.headers:
+        user.append((b"trailer", ", ".join(request.trailers).encode("ascii")))
+
     return pseudo + user
 
 
@@ -234,7 +238,8 @@ class Http2Connection(HttpConnection):
 
         stream_id = self._allocate_stream_and_send_headers(
             request,
-            has_body=has_body,
+            # Trailers are sent in a final HEADERS frame, so the stream must stay open.
+            end_stream=not has_body and request.trailers is None,
             write_timeout=write_timeout,
             deadline=deadline,
         )
@@ -245,7 +250,15 @@ class Http2Connection(HttpConnection):
                 self._send_request_body(
                     request.body,
                     stream_id,
+                    trailers=request.trailers,
                     read_timeout=read_timeout,
+                    write_timeout=write_timeout,
+                    deadline=deadline,
+                )
+            elif request.trailers is not None:
+                self._end_stream(
+                    stream_id,
+                    request.trailers,
                     write_timeout=write_timeout,
                     deadline=deadline,
                 )
@@ -326,7 +339,7 @@ class Http2Connection(HttpConnection):
         self,
         request: Request,
         *,
-        has_body: bool,
+        end_stream: bool,
         write_timeout: float | None = None,
         deadline: float | None = None,
     ) -> int:
@@ -342,7 +355,7 @@ class Http2Connection(HttpConnection):
                     self._connection_terminated = True
                     raise ConnectionError("HTTP/2 connection has no available stream ids") from e
                 self.events[stream_id] = []
-                self.h2.send_headers(stream_id, headers, end_stream=not has_body)
+                self.h2.send_headers(stream_id, headers, end_stream=end_stream)
                 data = self.h2.data_to_send()
             if data:
                 with self._write_lock:
@@ -401,6 +414,7 @@ class Http2Connection(HttpConnection):
         body: bytes | Iterator[bytes],
         stream_id: int,
         *,
+        trailers: Headers | None = None,
         read_timeout: float | None = None,
         write_timeout: float | None = None,
         deadline: float | None = None,
@@ -432,8 +446,26 @@ class Http2Connection(HttpConnection):
                             timeout=min_with_optionals(write_timeout, remaining_timeout_or_raise(deadline)),
                         )
 
+        self._end_stream(stream_id, trailers, write_timeout=write_timeout, deadline=deadline)
+
+    def _end_stream(
+        self,
+        stream_id: int,
+        trailers: Headers | None,
+        *,
+        write_timeout: float | None = None,
+        deadline: float | None = None,
+    ) -> None:
+        # Read trailers only now: a streaming body may have populated them.
         with self.state_lock:
-            self.h2.end_stream(stream_id)
+            if trailers:
+                self.h2.send_headers(
+                    stream_id,
+                    [(k.lower().encode("ascii"), v.encode("latin-1")) for k, v in trailers.list()],
+                    end_stream=True,
+                )
+            else:
+                self.h2.end_stream(stream_id)
             data = self.h2.data_to_send()
         if data:
             with self._write_lock:
