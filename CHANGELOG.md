@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/kap-sh/zapros/compare/v0.16.0...v0.17.0) (2026-08-26)
+
+
+### Features
+
+* add support for request trailing headers ([#46](https://github.com/kap-sh/zapros/issues/46)) ([ce11928](https://github.com/kap-sh/zapros/commit/ce11928a03f49b3073469c8a5c654a5c8258023c))
+
+
+### Documentation
+
+* remove redundant doc files ([e4c4885](https://github.com/kap-sh/zapros/commit/e4c4885c5c1e176b302c31b5b16d3f40494ea7ad))
+* remove the newborn part from the readme ([6a73dc9](https://github.com/kap-sh/zapros/commit/6a73dc9788ae99b12fb30cbf5867145f36a240b2))
+
 ## [0.16.0](https://github.com/kap-sh/zapros/compare/v0.15.0...v0.16.0) (2026-07-04)
 
 
