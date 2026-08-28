@@ -1,0 +1,8 @@
+{
+  "name": "zapros",
+  "description": "Skills for using the Zapros Python HTTP client.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Kar Petrosyan"
+  }
+}

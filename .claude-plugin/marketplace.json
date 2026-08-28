@@ -1,0 +1,14 @@
+{
+  "name": "zapros",
+  "description": "Claude Code skills for the Zapros Python HTTP client.",
+  "owner": {
+    "name": "Kar Petrosyan"
+  },
+  "plugins": [
+    {
+      "name": "zapros",
+      "source": "./",
+      "description": "Skills for using the Zapros Python HTTP client."
+    }
+  ]
+}
