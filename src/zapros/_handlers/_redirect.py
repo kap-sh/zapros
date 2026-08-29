@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import cast
 
 import typing_extensions
-from pywhatwgurl import URL
 
 from zapros._handlers._common import (
     ensure_async_handler,
@@ -13,6 +12,7 @@ from zapros._handlers._sync_base import (
     BaseHandler,
     BaseMiddleware,
 )
+from zapros._url import URL
 
 from .._errors import TooManyRedirectsError
 from .._models import Headers, Request, Response

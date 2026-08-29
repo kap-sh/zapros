@@ -111,7 +111,7 @@ response = client.get(
 
 ## Using URL Objects
 
-Zapros uses the `URL` class from [pywhatwgurl](https://github.com/pywhatwgurl/pywhatwgurl). You can build URLs with query parameters:
+Zapros exposes a `URL` class backed by [ada-url](https://github.com/ada-url/ada). You can build URLs with query parameters:
 
 ```python
 from zapros import URL

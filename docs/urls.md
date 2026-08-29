@@ -1,6 +1,6 @@
 # URLs
 
-Zapros uses [pywhatwgurl](https://github.com/pywhatwgurl/pywhatwgurl)'s `URL` class, which is fully WHATWG URL Standard compatible.
+Zapros exposes a `URL` class backed by [ada-url](https://github.com/ada-url/ada), which is fully WHATWG URL Standard compatible.
 
 ## Basic Usage
 

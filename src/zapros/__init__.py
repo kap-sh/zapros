@@ -1,5 +1,3 @@
-from pywhatwgurl import URL as URL, URLSearchParams as URLSearchParams
-
 from zapros._handlers._cookies import (
     CookieHandler as CookieHandler,  # type: ignore[reportDeprecated]
     CookieMiddleware as CookieMiddleware,
@@ -16,6 +14,7 @@ from zapros._handlers._retries import (
 from zapros._io._asyncio import AsyncIOStream as AsyncIOStream, AsyncIOTransport as AsyncIOTransport
 from zapros._io._sync import SyncStream as SyncStream, SyncTransport as SyncTransport
 from zapros._io._trio import TrioStream as TrioStream, TrioTransport as TrioTransport
+from zapros._url import URL as URL, URLSearchParams as URLSearchParams
 
 from ._async_client import (
     AsyncClient as AsyncClient,

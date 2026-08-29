@@ -6,11 +6,10 @@ import threading
 from types import TracebackType
 from typing import Optional
 
-from pywhatwgurl import URL
-
 from zapros._errors import ConnectionError as _ConnError, TotalTimeoutError
 from zapros._handlers._common import remaining_timeout
 from zapros._headers import Connection
+from zapros._url import URL
 
 from ..._models import Headers, Request
 

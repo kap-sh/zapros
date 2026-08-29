@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pywhatwgurl import URL
+from zapros._url import URL
 
 if TYPE_CHECKING:
     from zapros._base_pool import PoolKey

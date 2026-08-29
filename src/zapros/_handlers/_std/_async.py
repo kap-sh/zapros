@@ -5,7 +5,6 @@ import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict, Union, cast, overload
 
 import h11
-from pywhatwgurl import URL
 
 from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._handlers._common import min_with_optionals, resolve_timeouts
@@ -16,6 +15,7 @@ from zapros._handlers._std._conn import AsyncHttpConnection
 from zapros._io._asyncio import AsyncIOTransport
 from zapros._io._base import AsyncBaseNetworkStream, AsyncBaseTransport
 from zapros._io._trio import TrioTransport
+from zapros._url import URL
 from zapros._utils import get_authority_value, get_pool_key, get_port_or_default
 
 if TYPE_CHECKING:

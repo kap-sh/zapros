@@ -112,7 +112,7 @@ Represents an HTTP request with automatic header generation:
 
 ```python
 from zapros import Request
-from pywhatwgurl import URL
+from zapros import URL
 
 url = URL("https://api.example.com/users")
 
@@ -362,7 +362,7 @@ You can also pair them explicitly when constructing a `Response` yourself:
 
 ```python
 from zapros import Request, Response
-from pywhatwgurl import URL
+from zapros import URL
 
 request = Request(URL("https://api.example.com/users"), "GET")
 response = Response(200, json={"ok": True}, request=request)

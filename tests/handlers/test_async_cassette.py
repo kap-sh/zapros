@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
-from pywhatwgurl import URL
 
 from zapros import (
+    URL,
     AsyncClient,
     CassetteMiddleware,
     CassetteMode,

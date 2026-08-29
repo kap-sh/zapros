@@ -1,12 +1,11 @@
 import os
 from typing import cast
 
-from pywhatwgurl import URL
-
 from zapros._handlers._async_base import AsyncBaseHandler, AsyncBaseMiddleware
 from zapros._handlers._common import ensure_async_handler, ensure_sync_handler
 from zapros._handlers._sync_base import BaseHandler, BaseMiddleware
 from zapros._models import Request, Response
+from zapros._url import URL
 
 
 class ProxyMiddleware(BaseMiddleware, AsyncBaseMiddleware):

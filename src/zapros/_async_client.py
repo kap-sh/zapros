@@ -16,16 +16,13 @@ from typing import (
     overload,
 )
 
-from pywhatwgurl import (
-    URL,
-    URLSearchParams,
-)
 from typing_extensions import Self
 
 from zapros._handlers._async_base import (
     AsyncBaseHandler,
     AsyncBaseMiddleware,
 )
+from zapros._url import URL, URLSearchParams, encode_search_params, iter_search_params
 
 from ._models import (
     AsyncClosableStream,
@@ -112,7 +109,7 @@ class AsyncClient:
         self.default_headers: Headers = (
             default_headers if isinstance(default_headers, Headers) else Headers(default_headers)
         )
-        self.default_params = URLSearchParams(default_params)
+        self.default_params = URLSearchParams(encode_search_params(default_params))
         self.base_url = base_url
         self.auth = auth
 
@@ -129,13 +126,15 @@ class AsyncClient:
     ) -> URL:
 
         url_obj = url if isinstance(url, URL) else URL(url, self.base_url)
-        url_obj.search = URLSearchParams(
-            {
-                **self.default_params,
-                **url_obj.search_params,
-                **(URLSearchParams(params)),
-            }
-        ).to_string()
+        existing = url_obj.search
+        if not (self.default_params or existing or params):
+            return url_obj
+        merged: dict[str, str] = {}
+        for source in (self.default_params, existing, params):
+            if source:
+                for key, value in iter_search_params(source):
+                    merged[key] = value
+        url_obj.search = encode_search_params(merged)
         return url_obj
 
     def _merge_headers(

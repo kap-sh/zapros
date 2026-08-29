@@ -18,7 +18,6 @@ from typing import (
 )
 
 import typing_extensions
-from pywhatwgurl import URL, URLSearchParams
 from typing_extensions import TypedDict, deprecated
 
 from zapros._errors import AsyncSyncMismatchError, ResponseNotRead, StatusCodeError, StreamExhausted
@@ -26,6 +25,7 @@ from zapros._io._base import AsyncBaseNetworkStream, BaseNetworkStream
 from zapros._multidict import (
     CIMultiDict,
 )
+from zapros._url import URL, URLSearchParams, encode_search_params
 from zapros._utils import get_host_header_value
 
 if TYPE_CHECKING:
@@ -326,7 +326,7 @@ class Request:
                     "application/json",
                 )
         elif form is not None:
-            request_body = URLSearchParams(form).to_string().encode("utf-8")
+            request_body = encode_search_params(form).encode("utf-8")
             if "Content-Type" not in self.headers:
                 self.headers.add(
                     "Content-Type",

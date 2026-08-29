@@ -6,9 +6,9 @@ from http import HTTPStatus
 from typing import AsyncIterator, Iterator, Literal
 
 import pytest
-from pywhatwgurl import URL
 
 from zapros import (
+    URL,
     AsyncClosableStream,
     AsyncSyncMismatchError,
     ClosableStream,

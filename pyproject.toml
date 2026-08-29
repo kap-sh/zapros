@@ -25,7 +25,8 @@ classifiers = [
 ]
 dependencies = [
     "h11>=0.16.0",
-    "pywhatwgurl>=0.1.0",
+    "ada-url>=4.0.0; sys_platform != 'emscripten'",
+    "pywhatwgurl>=0.1.0; sys_platform == 'emscripten'",
     "typing-extensions>=4.15.0",
 ]
 
@@ -68,7 +69,6 @@ dev = [
     "pytest-codspeed>=5.0.3",
     "ruff>=0.14.0",
     "pyright>=1.1.404",
-    "pywhatwgurl>=0.1.0",
     "hishel[async]>=1.1.9",
     "ry-cli==0.4.0",
     "trio>=0.33.0",

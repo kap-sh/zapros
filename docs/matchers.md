@@ -12,7 +12,7 @@ All matchers implement the `Matcher` protocol with a `match(request: Request) ->
 ## Path
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import path
 
@@ -29,7 +29,7 @@ You can also use regex-based matching:
 
 ```python
 import re
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import path
 
@@ -45,7 +45,7 @@ assert matcher.match(request) == False
 ## Method
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import method
 
@@ -63,7 +63,7 @@ Method matching is **case-insensitive**.
 ## Host
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import host
 
@@ -79,7 +79,7 @@ assert matcher.match(request) == False
 ## Headers
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import header
 
@@ -103,7 +103,7 @@ assert matcher.match(request) == False
 ## Query Parameters
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import query
 
@@ -125,7 +125,7 @@ assert matcher.match(request) == False
 ## JSON Body
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import json
 
@@ -155,7 +155,7 @@ Matchers can be combined using logical helpers.
 ### AND
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import and_, method, path
 
@@ -171,7 +171,7 @@ assert matcher.match(request) == False
 ### OR
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import or_, path
 
@@ -190,7 +190,7 @@ assert matcher.match(request) == False
 ### NOT
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import method, not_
 
@@ -208,7 +208,7 @@ assert matcher.match(request) == False
 Matchers can also be chained fluently:
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import path
 
@@ -231,7 +231,7 @@ assert matcher.match(request) == True
 Any class with a `match(self, request: Request) -> bool` method satisfies the `Matcher` protocol:
 
 ```python
-from pywhatwgurl import URL
+from zapros import URL
 from zapros import Request
 from zapros.matchers import Matcher
 

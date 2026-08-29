@@ -1,6 +1,4 @@
-from pywhatwgurl import URL
-
-from zapros import Request, Response
+from zapros import URL, Request, Response
 from zapros._handlers._mock import Mock as ZaprosMock, MockMiddleware, MockRouter
 from zapros._handlers._proxy import ProxyMiddleware
 

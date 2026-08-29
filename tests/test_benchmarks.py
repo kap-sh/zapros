@@ -1,6 +1,8 @@
+from collections.abc import Iterator
+
 import pytest
 
-from zapros import Response
+from zapros import Client, Response
 from zapros._constants import CHUNK_SIZE
 from zapros._decoders import ByteChunker
 
@@ -51,3 +53,29 @@ def test_bench_bytechunker_single_feed(single_feed_body: bytes) -> None:
 def test_bench_iter_bytes_identity_e2e(body_chunks: list[bytes], body: bytes) -> None:
     response = Response(200, content=iter(body_chunks))
     assert sum(len(c) for c in response.iter_bytes()) == len(body)
+
+
+@pytest.fixture(scope="session")
+def client() -> Iterator[Client]:
+    with Client() as instance:
+        yield instance
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize(
+    "url",
+    [
+        pytest.param("https://sqs.eu-west-1.amazonaws.com/", id="short"),
+        pytest.param(
+            "https://sqs.eu-west-1.amazonaws.com/000000000000/my-queue/some/deeper/path",
+            id="long-path",
+        ),
+        pytest.param(
+            "https://sqs.eu-west-1.amazonaws.com/q?Action=ReceiveMessage&Version=2012-11-05",
+            id="query",
+        ),
+        pytest.param("http://127.0.0.1:4566/000000000000/my-queue", id="ip-literal"),
+    ],
+)
+def test_bench_merge_url(client: Client, url: str) -> None:
+    client._merge_url(url)

@@ -6,8 +6,8 @@ import h2.events
 import hpack
 import hyperframe.frame
 import pytest
-from pywhatwgurl import URL
 
+from zapros import URL
 from zapros._errors import ConnectionError as ZaprosConnectionError
 from zapros._handlers._std._async_http2 import AsyncHttp2Connection
 from zapros._io._base import AsyncBaseNetworkStream

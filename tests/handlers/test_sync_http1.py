@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Iterator
 
-from pywhatwgurl import URL
-
+from zapros import URL
 from zapros._sync_pool import Http1ConnectionPool
 from zapros._handlers._std._sync_http1 import Http1Connection
 from zapros._io._base import BaseNetworkStream

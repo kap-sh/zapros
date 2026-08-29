@@ -12,9 +12,8 @@ from litestar.datastructures import (
     State,
 )
 from litestar.response import Stream
-from pywhatwgurl import URL
 
-from zapros import AsyncClient
+from zapros import URL, AsyncClient
 from zapros._compat import anysleep
 from zapros._errors import (
     AsgiLifespanShutdownTimeoutError,

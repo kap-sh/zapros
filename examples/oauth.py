@@ -21,7 +21,8 @@ from urllib.parse import parse_qs, urlparse
 
 from oauthlib.oauth2 import WebApplicationClient
 
-from zapros import AsyncBaseHandler, AsyncBaseMiddleware, AsyncClient, Request, Response, URLSearchParams
+from zapros import AsyncBaseHandler, AsyncBaseMiddleware, AsyncClient, Request, Response
+from zapros._url import encode_search_params
 
 
 @dataclass(slots=True)
@@ -132,7 +133,7 @@ class OAuthHandler(AsyncBaseMiddleware):
         resp = await self.async_next.ahandle(token_request)
         data = await resp.ajson()
 
-        self.client.parse_request_body_response(URLSearchParams(data).to_string())
+        self.client.parse_request_body_response(encode_search_params(data))
         return self._save_token(data)
 
     async def _refresh(self) -> TokenSet:
@@ -156,7 +157,7 @@ class OAuthHandler(AsyncBaseMiddleware):
         if "refresh_token" not in data:
             data["refresh_token"] = self._token.refresh_token
 
-        self.client.parse_request_body_response(URLSearchParams(data).to_string())
+        self.client.parse_request_body_response(encode_search_params(data))
         return self._save_token(data)
 
     def _save_token(self, data: dict) -> TokenSet:

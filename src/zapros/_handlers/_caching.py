@@ -43,13 +43,12 @@ else:
         HishelResponse = None
         HishelSyncBaseStorage = None
         SyncCacheProxy = None
-from pywhatwgurl import URL
-
 from zapros._models import (
     Request,
     Response,
     ResponseCachingContext,
 )
+from zapros._url import URL
 
 from ._async_base import (
     AsyncBaseHandler,

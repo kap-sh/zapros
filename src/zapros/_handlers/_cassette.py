@@ -13,7 +13,6 @@ from typing import (
 )
 
 import typing_extensions
-from pywhatwgurl import URL
 
 from zapros._errors import HeaderParseError, UnhandledRequestError
 from zapros._handlers._async_base import (
@@ -36,6 +35,7 @@ from zapros._models import (
     Request,
     Response,
 )
+from zapros._url import URL
 
 from ..matchers import Matcher
 
@@ -71,7 +71,9 @@ class CassetteMode(enum.Enum):
 
 def normalize_url(url: URL) -> str:
     copy = URL(url.href)
-    copy.search_params.sort()
+    params = copy.search_params
+    params.sort()
+    copy.search = str(params)
     return copy.href
 
 
