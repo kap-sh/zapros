@@ -39,7 +39,7 @@ class CIMultiDict(MutableMapping[str, _VT], Generic[_VT]):
 
     @staticmethod
     def _norm_key(key: str) -> str:
-        return key.casefold()
+        return key.lower()
 
     def _reindex(self) -> None:
         index: dict[str, list[int]] = {}

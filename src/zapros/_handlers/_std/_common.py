@@ -185,7 +185,7 @@ def remaining_timeout_or_raise(deadline: float | None) -> float | None:
 
 
 def connection_wants_close(headers: list[tuple[str, str]]) -> bool:
-    connection_values = [value for key, value in headers if key.casefold() == "connection"]
+    connection_values = [value for key, value in headers if key.lower() == "connection"]
 
     if not connection_values:
         return False
