@@ -5,6 +5,9 @@ from collections.abc import (
 )
 from typing import TYPE_CHECKING
 
+from .._errors import (
+    PyreqwestNotInstalledError,
+)
 from .._models import (
     ClosableStream,
     Request,
@@ -13,7 +16,7 @@ from .._models import (
 from ._sync_base import (
     BaseHandler,
 )
-from ._exc_map import map_connect_exceptions, map_read_exceptions
+from ._exc_map import map_connect_exceptions, map_pyreqwest_client_exceptions, map_read_exceptions
 
 if TYPE_CHECKING:
     import sys
@@ -70,22 +73,13 @@ class PyreqwestHandler(BaseHandler):
         client: SyncClientBuilder | None = None,
     ) -> None:
         if SyncClientBuilder is None:  # type: ignore[reportPossiblyUnboundVariable]
-            raise ImportError("pyreqwest is not installed. Install it with: pip install pyreqwest")
-        self._builder = client
-        self._client = None
-
-    def _get_client(self):
-        if self._client is not None:
-            return self._client
-        builder = SyncClientBuilder() if self._builder is None else self._builder
+            raise PyreqwestNotInstalledError
+        builder = SyncClientBuilder() if client is None else client
         builder = builder.gzip(False).deflate(False).brotli(False).zstd(False)
         self._client = builder.build()
-        return self._client
 
     def handle(self, request: Request) -> Response:
-        client = self._get_client()
-
-        req_builder = client.request(
+        req_builder = self._client.request(
             request.method,
             str(request.url),
         )
@@ -106,7 +100,7 @@ class PyreqwestHandler(BaseHandler):
 
         stream_request = req_builder.build_streamed()
 
-        with map_connect_exceptions():
+        with map_pyreqwest_client_exceptions(), map_connect_exceptions():
             pyreqwest_response = stream_request.__enter__()
 
         return Response(
@@ -122,6 +116,4 @@ class PyreqwestHandler(BaseHandler):
         )
 
     def close(self) -> None:
-        if self._client is not None:
-            self._client.close()
-            self._client = None
+        self._client.close()

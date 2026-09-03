@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import sys
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,8 @@ from .._errors import (
     ConnectionError,
     ConnectTimeoutError,
     DNSResolutionError,
+    HandlerClosedError,
+    PyreqwestNotInstalledError,
     ReadError,
     ReadTimeoutError,
     SSLError,
@@ -33,6 +36,15 @@ else:
     except ImportError:
         socket = None
         ssl = None
+
+
+if sys.version_info >= (3, 11):
+    try:
+        from pyreqwest.exceptions import ClientClosedError as PyreqwestClientClosedError
+    except ImportError:
+        PyreqwestClientClosedError = PyreqwestNotInstalledError
+else:
+    PyreqwestClientClosedError = PyreqwestNotInstalledError
 
 
 _CONNECT_TIMEOUT_ERRNOS = {60, 110}
@@ -212,6 +224,15 @@ def map_asyncio_read_exceptions() -> Iterator[None]:
         raise ReadTimeoutError("Read operation timed out") from e
     except OSError as e:
         raise ReadError(f"Read failed: {e}") from e
+
+
+@contextlib.contextmanager
+def map_pyreqwest_client_exceptions() -> Iterator[None]:
+    """Map pyreqwest client lifecycle exceptions to Zapros errors."""
+    try:
+        yield
+    except PyreqwestClientClosedError as error:
+        raise HandlerClosedError("Cannot send a request: the handler has been closed") from error
 
 
 def map_connect_exceptions() -> contextlib.AbstractContextManager[None]:

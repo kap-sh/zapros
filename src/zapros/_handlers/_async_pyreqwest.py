@@ -5,6 +5,9 @@ from collections.abc import (
 )
 from typing import TYPE_CHECKING
 
+from .._errors import (
+    PyreqwestNotInstalledError,
+)
 from .._models import (
     AsyncClosableStream,
     Request,
@@ -13,7 +16,7 @@ from .._models import (
 from ._async_base import (
     AsyncBaseHandler,
 )
-from ._exc_map import map_connect_exceptions, map_read_exceptions
+from ._exc_map import map_connect_exceptions, map_pyreqwest_client_exceptions, map_read_exceptions
 
 if TYPE_CHECKING:
     import sys
@@ -70,22 +73,13 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
         client: ClientBuilder | None = None,
     ) -> None:
         if ClientBuilder is None:  # type: ignore[reportPossiblyUnboundVariable]
-            raise ImportError("pyreqwest is not installed. Install it with: pip install pyreqwest")
-        self._builder = client
-        self._client = None
-
-    def _get_client(self):
-        if self._client is not None:
-            return self._client
-        builder = ClientBuilder() if self._builder is None else self._builder
+            raise PyreqwestNotInstalledError
+        builder = ClientBuilder() if client is None else client
         builder = builder.gzip(False).deflate(False).brotli(False).zstd(False)
         self._client = builder.build()
-        return self._client
 
     async def ahandle(self, request: Request) -> Response:
-        client = self._get_client()
-
-        req_builder = client.request(
+        req_builder = self._client.request(
             request.method,
             str(request.url),
         )
@@ -106,7 +100,7 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
 
         stream_request = req_builder.build_streamed()
 
-        with map_connect_exceptions():
+        with map_pyreqwest_client_exceptions(), map_connect_exceptions():
             pyreqwest_response = await stream_request.__aenter__()
 
         return Response(
@@ -122,6 +116,4 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
         )
 
     async def aclose(self) -> None:
-        if self._client is not None:
-            await self._client.close()
-            self._client = None
+        await self._client.close()

@@ -125,5 +125,6 @@ exclude = [
     "src/zapros/_handlers/_std/_sync.py",
     "tests/handlers/test_async_basic.py",
     "tests/handlers/test_sync_basic.py",
+    "tests/handlers/test_pyreqwest.py",
 ]
 typeCheckingMode = "standard"
