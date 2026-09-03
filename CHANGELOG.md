@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/kap-sh/zapros/compare/v0.17.0...v0.18.0) (2026-09-03)
+
+
+### Bug Fixes
+
+* build pyreqwest client eagerly to fix concurrent first-request race ([#53](https://github.com/kap-sh/zapros/issues/53)) ([8995617](https://github.com/kap-sh/zapros/commit/899561793f745d0ef28cec7e7970c26bd512e10e))
+* drop unnecessary Headers object creations inside connection_wants_close ([#48](https://github.com/kap-sh/zapros/issues/48)) ([86becc2](https://github.com/kap-sh/zapros/commit/86becc20e1e7ec879116b8c40ba1aefc4af0208d))
+
+
+### Chores
+
+* **ai:** add an agent skill + claude plugin ([e5dbcc2](https://github.com/kap-sh/zapros/commit/e5dbcc2af40cbeca5dddafe99420ecba8d8989ba))
+* replace casefold with lower for headers ([#52](https://github.com/kap-sh/zapros/issues/52)) ([a581c13](https://github.com/kap-sh/zapros/commit/a581c13465f9915258eb004c219b340eed083957))
+
 ## [0.17.0](https://github.com/kap-sh/zapros/compare/v0.16.0...v0.17.0) (2026-08-26)
 
 
