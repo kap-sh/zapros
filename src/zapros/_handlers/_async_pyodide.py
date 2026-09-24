@@ -134,7 +134,9 @@ class PyodideAsyncClosableStream(AsyncClosableStream):  # type: ignore[reportRed
         if AbortController is None:
             raise RuntimeError("Cannot use PyodideAsyncClosableStream outside of a Pyodide environment")
         self._js_response = js_response
-        self._reader = js_response.body.getReader() if js_response.body is not None else None
+        # Pyodide >= 0.28 converts JS null to the falsy `pyodide.ffi.jsnull` singleton
+        # instead of None, so a truthiness check covers both old and new versions.
+        self._reader = js_response.body.getReader() if js_response.body else None
         self._read_timeout = read_timeout
         self._total_deadline = total_deadline
         self._total_abort = total_abort

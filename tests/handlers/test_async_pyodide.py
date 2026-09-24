@@ -76,3 +76,20 @@ async def test_get_with_empty_body_does_not_send_body(fetch_calls: list[dict[str
 
     assert response.status == 200
     assert "body" not in fetch_calls[0]
+
+
+class FakeJsNull:
+    """Mimics ``pyodide.ffi.jsnull``: a falsy, non-None singleton that JS null becomes in Pyodide >= 0.28."""
+
+    def __bool__(self) -> bool:
+        return False
+
+
+@pytest.mark.anyio
+async def test_null_body_is_treated_as_empty_stream(fetch_calls: list[dict[str, Any]]) -> None:
+    class NullBodyResponse(FakeJsResponse):
+        body = FakeJsNull()
+
+    stream = pyodide_module.PyodideAsyncClosableStream(NullBodyResponse())
+
+    assert [chunk async for chunk in stream] == []
