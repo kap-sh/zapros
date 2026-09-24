@@ -94,6 +94,28 @@ async def _await_with_timeout(
     return await asyncio.wait_for(awaitable, timeout=timeout)
 
 
+def _fetch_headers(request: Request) -> list[list[str]]:
+    """
+    Request headers as ``[name, value]`` pairs suitable for ``fetch``.
+
+    fetch owns message framing: the body is buffered and sent with fetch's own
+    Content-Length, and undici (Node) rejects a caller-supplied Transfer-Encoding
+    outright. Streaming bodies get ``Transfer-Encoding: chunked`` from the Request
+    model for the socket handlers, so drop it here. Any other transfer coding
+    would mean the body bytes are transformed, which cannot be expressed to fetch.
+    """
+    headers: list[list[str]] = []
+    for k, v in request.headers.list():
+        if k.lower() == "transfer-encoding":
+            if v.strip().lower() == "chunked":
+                continue
+            raise NotImplementedError(
+                f"Transfer-Encoding {v!r} is not supported by AsyncPyodideHandler; fetch owns request framing"
+            )
+        headers.append([k, v])
+    return headers
+
+
 class JSTimeoutAbort:
     def __init__(self, timeout: float | None) -> None:
         self._controller = AbortController.new()  # type: ignore
@@ -318,7 +340,7 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
         fetch_options: dict[str, Any] = {
             "method": request.method,
             "headers": Object.fromEntries(  # type: ignore
-                to_js([[k, v] for k, v in request.headers.list()])  # type: ignore
+                to_js(_fetch_headers(request))  # type: ignore
             ),
             "signal": fetch_abort.signal,
         }

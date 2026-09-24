@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -93,3 +94,35 @@ async def test_null_body_is_treated_as_empty_stream(fetch_calls: list[dict[str, 
     stream = pyodide_module.PyodideAsyncClosableStream(NullBodyResponse())
 
     assert [chunk async for chunk in stream] == []
+
+
+@pytest.mark.anyio
+async def test_chunked_transfer_encoding_is_not_forwarded_to_fetch(fetch_calls: list[dict[str, Any]]) -> None:
+    async def body() -> AsyncIterator[bytes]:
+        yield b"data"
+
+    handler = pyodide_module.AsyncPyodideHandler()
+    request = Request(URL("https://example.com/"), "PUT", body=body())
+    assert request.headers["transfer-encoding"] == "chunked"
+
+    await handler.ahandle(request)
+
+    sent_headers = [k.lower() for k, _ in fetch_calls[0]["headers"]]
+    assert "transfer-encoding" not in sent_headers
+    assert fetch_calls[0]["body"] == b"data"
+
+
+@pytest.mark.anyio
+async def test_non_chunked_transfer_encoding_raises(fetch_calls: list[dict[str, Any]]) -> None:
+    handler = pyodide_module.AsyncPyodideHandler()
+    request = Request(
+        URL("https://example.com/"),
+        "PUT",
+        headers={"Transfer-Encoding": "gzip, chunked"},
+        body=b"data",
+    )
+
+    with pytest.raises(NotImplementedError, match="Transfer-Encoding"):
+        await handler.ahandle(request)
+
+    assert fetch_calls == []
