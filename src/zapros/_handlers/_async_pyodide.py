@@ -287,7 +287,10 @@ class AsyncPyodideHandler(AsyncBaseHandler):  # type: ignore[reportRedeclaration
                     memoryview,
                 ),
             ):
-                body_js = to_js(bytes(request.body))
+                # Browsers reject GET/HEAD requests with a body, even an empty one,
+                # so only pass a body to fetch when there is actual content.
+                if len(request.body) > 0:
+                    body_js = to_js(bytes(request.body))
             elif isinstance(request.body, AsyncIterable):
                 buffered = await self._buffer_async_body(
                     request.body,  # type: ignore
