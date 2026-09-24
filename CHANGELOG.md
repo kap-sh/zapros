@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.0](https://github.com/kap-sh/zapros/compare/v0.18.0...v0.19.0) (2026-09-24)
+
+
+### Bug Fixes
+
+* **pyodide:** do not forward Transfer-Encoding: chunked to fetch ([78b84be](https://github.com/kap-sh/zapros/commit/78b84be64ed34dd58446df5bf73eab05f779da2e))
+* **pyodide:** handle jsnull response body on Pyodide &gt;= 0.28 ([a0d4621](https://github.com/kap-sh/zapros/commit/a0d462179487adc1afe831d937f3bc8925e49c27))
+
 ## [0.18.0](https://github.com/kap-sh/zapros/compare/v0.17.0...v0.18.0) (2026-09-24)
 
 
