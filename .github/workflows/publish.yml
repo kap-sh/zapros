@@ -77,11 +77,8 @@ jobs:
         run: npm run docs:build
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: zapros
-          directory: docs/.vitepress/dist
-          gitHubDeployment: false
-          branch: main
+          command: pages deploy docs/.vitepress/dist --project-name=zapros --branch=main
