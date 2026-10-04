@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/kap-sh/zapros/compare/v0.19.0...v0.20.0) (2026-10-04)
+
+
+### Bug Fixes
+
+* close redirect responses when request construction fails ([#56](https://github.com/kap-sh/zapros/issues/56)) ([6ff02bb](https://github.com/kap-sh/zapros/commit/6ff02bb1ae86824cabcb04d04a1d3cc7144eedf5))
+
 ## [0.19.0](https://github.com/kap-sh/zapros/compare/v0.18.0...v0.19.0) (2026-09-24)
 
 
