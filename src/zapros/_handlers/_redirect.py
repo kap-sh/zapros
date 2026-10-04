@@ -159,13 +159,15 @@ class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
                 await response.aclose()
                 raise TooManyRedirectsError(f"Exceeded maximum number of redirects ({self._max_redirects})")
 
-            current_request = self._build_redirect_request(
-                current_request,
-                location,
-                response.status,
-            )
+            try:
+                current_request = self._build_redirect_request(
+                    current_request,
+                    location,
+                    response.status,
+                )
+            finally:
+                await response.aclose()
             redirect_count += 1
-            await response.aclose()
 
     def handle(self, request: Request) -> Response:  # unasync: generated
         handler = ensure_sync_handler(self.next)
@@ -187,13 +189,15 @@ class RedirectMiddleware(AsyncBaseMiddleware, BaseMiddleware):
                 response.close()
                 raise TooManyRedirectsError(f"Exceeded maximum number of redirects ({self._max_redirects})")
 
-            current_request = self._build_redirect_request(
-                current_request,
-                location,
-                response.status,
-            )
+            try:
+                current_request = self._build_redirect_request(
+                    current_request,
+                    location,
+                    response.status,
+                )
+            finally:
+                response.close()
             redirect_count += 1
-            response.close()
 
 
 @typing_extensions.deprecated(

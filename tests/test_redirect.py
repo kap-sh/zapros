@@ -11,11 +11,89 @@ from zapros._handlers._redirect import (
     RedirectMiddleware,
 )
 from zapros._models import (
+    AsyncClosableStream,
+    ClosableStream,
     Headers,
     Request,
     Response,
 )
 from zapros.matchers import host, path
+
+
+class RedirectResponseStream(ClosableStream):
+    def __init__(self) -> None:
+        self.close_count = 0
+
+    def __next__(self) -> bytes:
+        raise AssertionError("Redirect response body should not be read")
+
+    def close(self) -> None:
+        self.close_count += 1
+
+
+class AsyncRedirectResponseStream(AsyncClosableStream):
+    def __init__(self) -> None:
+        self.close_count = 0
+
+    async def __anext__(self) -> bytes:
+        raise AssertionError("Redirect response body should not be read")
+
+    async def aclose(self) -> None:
+        self.close_count += 1
+
+
+@pytest.mark.parametrize(
+    "status,method,location,error,message",
+    [
+        (301, "PUT", "/final", NotImplementedError, "non-replayable body"),
+        (302, "PUT", "/final", NotImplementedError, "non-replayable body"),
+        (307, "POST", "/final", NotImplementedError, "non-replayable body"),
+        (308, "POST", "/final", NotImplementedError, "non-replayable body"),
+        (302, "GET", "http://[", ValueError, "Invalid URL"),
+        (303, "GET", "http://[", ValueError, "Invalid URL"),
+    ],
+)
+class TestRedirectRequestError:
+    def test_sync(self, status, method, location, error, message):
+        stream = RedirectResponseStream()
+        router = MockRouter()
+        initial = (
+            Mock.given(path("/initial"))
+            .respond(Response(status=status, headers={"Location": location}, content=stream))
+            .mount(router)
+        )
+        final = Mock.given(path("/final")).respond(Response(status=200)).mount(router)
+        handler = RedirectMiddleware(MockMiddleware(router))
+        request = Request(URL("https://example.com/initial"), method, body=iter([b"upload"]))
+
+        with pytest.raises(error, match=message):
+            handler.handle(request)
+
+        assert stream.close_count == 1
+        initial.assert_called_once()
+        final.assert_not_called()
+
+    async def test_async(self, status, method, location, error, message):
+        async def upload():
+            yield b"upload"
+
+        stream = AsyncRedirectResponseStream()
+        router = MockRouter()
+        initial = (
+            Mock.given(path("/initial"))
+            .respond(Response(status=status, headers={"Location": location}, content=stream))
+            .mount(router)
+        )
+        final = Mock.given(path("/final")).respond(Response(status=200)).mount(router)
+        handler = RedirectMiddleware(MockMiddleware(router))
+        request = Request(URL("https://example.com/initial"), method, body=upload())
+
+        with pytest.raises(error, match=message):
+            await handler.ahandle(request)
+
+        assert stream.close_count == 1
+        initial.assert_called_once()
+        final.assert_not_called()
 
 
 def create_recording_handler():
