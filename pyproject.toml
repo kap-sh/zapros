@@ -66,7 +66,7 @@ dev = [
     "pytest>=9.0.2",
     "pytest-pyodide",
     "pytest-codspeed>=5.0.3",
-    "ruff>=0.14.0",
+    "ruff>=0.16.5",
     "pyright>=1.1.404",
     "pywhatwgurl>=0.1.0",
     "hishel[async]>=1.1.9",
@@ -108,10 +108,13 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
+select = ["E", "F", "W", "I", "G"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
+
+[tool.ruff.format]
+exclude = ["docs/**", "skills/**"]
 
 [tool.pyright]
 strict = ["src"]
