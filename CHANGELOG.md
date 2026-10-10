@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.21.0](https://github.com/kap-sh/zapros/compare/v0.20.0...v0.21.0) (2026-10-10)
+
+
+### Features
+
+* add support for Python 3.15.0 ([610e1e2](https://github.com/kap-sh/zapros/commit/610e1e2a7f87d735832469bf957615f82fac141a))
+
+
+### Chores
+
+* use uv's UV_PYTHON for ci ([90d7543](https://github.com/kap-sh/zapros/commit/90d75431d5e1d08d1a9e3a7a15da17006d45e357))
+
 ## [0.20.0](https://github.com/kap-sh/zapros/compare/v0.19.0...v0.20.0) (2026-10-04)
 
 
