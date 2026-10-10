@@ -24,7 +24,7 @@ from zapros import (
 
 pytestmark = pytest.mark.skipif(
     SyncClientBuilder is None,
-    reason="pyreqwest is not supported for python 3.10 and below",
+    reason="pyreqwest is not supported on this python version",
 )
 
 

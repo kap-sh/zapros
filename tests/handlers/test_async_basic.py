@@ -52,7 +52,7 @@ def anyio_backend(case):
 def handler(handler_kind):
     if handler_kind == "pyreqwest":
         if ClientBuilder is None:
-            pytest.skip("pyreqwest is not supported for python 3.10 and below")
+            pytest.skip("pyreqwest is not supported on this python version")
         return AsyncPyreqwestHandler(client=ClientBuilder())
     return AsyncStdNetworkHandler()
 

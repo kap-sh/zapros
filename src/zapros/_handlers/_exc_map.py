@@ -38,7 +38,7 @@ else:
         ssl = None
 
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11) and sys.version_info < (3, 15):
     try:
         from pyreqwest.exceptions import ClientClosedError as PyreqwestClientClosedError
     except ImportError:

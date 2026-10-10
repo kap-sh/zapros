@@ -5,7 +5,7 @@ Zapros can use **Rust's reqwest** library as the underlying HTTP transport layer
 This provides access to reqwest's battle-tested implementation, including connection pooling, TLS, HTTP/2 support, and efficient async I/O powered by Tokio.
 
 ::: info Python Version Requirement
-The Rust runtime is only supported on **Python 3.11 and above**.
+The Rust runtime is only supported on **Python 3.11 through 3.14**.
 :::
 
 ## Installation
