@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.21.0](https://github.com/kap-sh/zapros/compare/v0.20.0...v0.21.0) (2026-10-12)
+
+
+### Features
+
+* add support for Python 3.15.0 ([610e1e2](https://github.com/kap-sh/zapros/commit/610e1e2a7f87d735832469bf957615f82fac141a))
+* **http1:** support Expect: 100-continue ([fa17c45](https://github.com/kap-sh/zapros/commit/fa17c45b1decbdd63d2393a0967a4d75e7c0278b))
+
+
+### Bug Fixes
+
+* honor read timeout on start_tls streams ([06c08c7](https://github.com/kap-sh/zapros/commit/06c08c787c6e45054ffedf1f11faf212dd8d9c18))
+* map asyncio.TimeoutError to timeout errors on Python 3.10 ([978f910](https://github.com/kap-sh/zapros/commit/978f910b9acac52ab73182bf0de6acb96903d247))
+* **models:** treat chunk_size as up to, not exact ([ffe4d03](https://github.com/kap-sh/zapros/commit/ffe4d03d7a3abdc699822f9e1d238fc35e28e191))
+
+
+### Chores
+
+* use uv's UV_PYTHON for ci ([90d7543](https://github.com/kap-sh/zapros/commit/90d75431d5e1d08d1a9e3a7a15da17006d45e357))
+
 ## [0.20.0](https://github.com/kap-sh/zapros/compare/v0.19.0...v0.20.0) (2026-10-04)
 
 
