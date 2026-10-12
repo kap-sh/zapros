@@ -345,7 +345,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         *,
         connect_timeout: float | None = None,
     ) -> AsyncHttpConnection:
-        logger.debug(f"Establishing new connection for request {request.url.hostname}")
+        logger.debug("Establishing new connection for request %s", request.url.hostname)
         # Target server we ultimately want to talk to
         host = request.url.hostname
         port = get_port_or_default(request.url)
@@ -397,8 +397,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             alpn_protocols = ["http/1.1"]
 
         logger.debug(
-            f"Connecting to {connect_host}:{connect_port} with TLS={use_tls}, ALPN={alpn_protocols}, "
-            f"proxy={'SOCKS5' if is_socks5 else 'HTTP' if proxy_url else 'None'}"
+            "Connecting to %s:%s with TLS=%s, ALPN=%s, proxy=%s",
+            connect_host,
+            connect_port,
+            use_tls,
+            alpn_protocols,
+            "SOCKS5" if is_socks5 else "HTTP" if proxy_url else "None",
         )
 
         stream = await self.transport.aconnect(
@@ -474,22 +478,22 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         Returns a tuple of (connection, from_pool, is_http2).
         """
 
-        logger.debug(f"Trying to acquire connection for {request.url.hostname} from http2 pool")
+        logger.debug("Trying to acquire connection for %s from http2 pool", request.url.hostname)
         # Fast path: existing usable HTTP/2 connection
         http2_conn = cast(AsyncHttp2Connection | None, await self._http2_pool.acquire(key))
         if http2_conn is not None:
-            logger.debug(f"Acquired HTTP/2 connection for {request.url.hostname} from pool")
+            logger.debug("Acquired HTTP/2 connection for %s from pool", request.url.hostname)
             return http2_conn, True, True
 
         # Try HTTP/1 pool
-        logger.debug(f"Trying to acquire connection for {request.url.hostname} from http1 pool")
+        logger.debug("Trying to acquire connection for %s from http1 pool", request.url.hostname)
         conn = cast(AsyncHttpConnection | None, await self._http1_pool.acquire(key))
         if conn is not None:
-            logger.debug(f"Acquired HTTP/1 connection for {request.url.hostname} from pool")
+            logger.debug("Acquired HTTP/1 connection for %s from pool", request.url.hostname)
             return conn, True, False
 
         try:
-            logger.debug(f"No pooled connection available for {request.url.hostname}; establishing new connection")
+            logger.debug("No pooled connection available for %s; establishing new connection", request.url.hostname)
             conn = await self._new_conn(
                 request,
                 connect_timeout=connect_timeout,
@@ -498,7 +502,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             is_http2 = isinstance(conn, AsyncHttp2Connection)
 
             if is_http2:
-                logger.debug(f"Registering new HTTP/2 connection for {request.url.hostname} in pool")
+                logger.debug("Registering new HTTP/2 connection for %s in pool", request.url.hostname)
                 registered = cast(AsyncHttp2Connection, await self._http2_pool.register(key, conn))
                 await self._http1_pool.release_reservation(key)
                 if registered is not conn:
