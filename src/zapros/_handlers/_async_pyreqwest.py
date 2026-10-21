@@ -82,13 +82,7 @@ class AsyncPyreqwestHandler(AsyncBaseHandler):
         req_builder = self._client.request(
             request.method,
             str(request.url),
-        )
-
-        for (
-            key,
-            value,
-        ) in request.headers.items():
-            req_builder = req_builder.header(key, value)
+        ).headers(request.headers.list())
 
         if isinstance(request.body, bytes):
             req_builder = req_builder.body_bytes(request.body)
