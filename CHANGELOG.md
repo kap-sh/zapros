@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.22.0](https://github.com/kap-sh/zapros/compare/v0.21.0...v0.22.0) (2026-10-22)
+
+
+### Bug Fixes
+
+* **http1:** don't reuse idle connections closed by the server ([#62](https://github.com/kap-sh/zapros/issues/62)) ([c2c34f8](https://github.com/kap-sh/zapros/commit/c2c34f88f74d2a56350f791ab421961d202667e1))
+
+
+### Performance Improvements
+
+* **pyreqwest:** set request headers in a single bulk call ([#63](https://github.com/kap-sh/zapros/issues/63)) ([8892195](https://github.com/kap-sh/zapros/commit/8892195611604af930eac651c2b8813a050b4bd0))
+
 ## [0.21.0](https://github.com/kap-sh/zapros/compare/v0.20.0...v0.21.0) (2026-10-12)
 
 
