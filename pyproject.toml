@@ -106,6 +106,7 @@ exclude = [
     "tests/websocket/test_sync.py",
     "tests/handlers/test_sync_http1.py",
     "tests/handlers/test_sync_http2.py",
+    "tests/handlers/test_sync_std_pool.py",
 ]
 
 [tool.ruff.lint]

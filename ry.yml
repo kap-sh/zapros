@@ -280,6 +280,14 @@ targets:
       - match: '\bAsyncRecordingStream\b'
         replace: 'RecordingStream'
 
+  - input: tests/handlers/test_async_std_pool.py
+    output: tests/handlers/test_sync_std_pool.py
+    rules:
+      - match: '\bfrom zapros._compat import anysleep\b'
+        replace: 'from time import sleep'
+      - match: '\banysleep\b'
+        replace: 'sleep'
+
   - input: tests/test_async_pool.py
     output: tests/test_sync_pool.py
     rules:

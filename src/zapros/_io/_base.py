@@ -20,6 +20,14 @@ class BaseNetworkStream(Protocol):
     def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
         return None
 
+    def is_readable(self) -> bool:
+        """Return True if the peer sent anything we haven't read yet (data, EOF, or an error),
+        or the stream is already closed.
+
+        Used to detect idle connections that are unsafe to reuse. Return False if this can't be determined.
+        """
+        return False
+
 
 @runtime_checkable
 class AsyncBaseNetworkStream(Protocol):
@@ -37,6 +45,14 @@ class AsyncBaseNetworkStream(Protocol):
     async def close(self) -> None: ...
     def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
         return None
+
+    def is_readable(self) -> bool:
+        """Return True if the peer sent anything we haven't read yet (data, EOF, or an error),
+        or the stream is already closed.
+
+        Used to detect idle connections that are unsafe to reuse. Return False if this can't be determined.
+        """
+        return False
 
 
 class BaseTransport(Protocol):

@@ -165,6 +165,10 @@ class AsyncIOStream(AsyncBaseNetworkStream):
 
         return ssl_object.selected_alpn_protocol()
 
+    def is_readable(self) -> bool:
+        buffered = bool(self._reader._buffer)  # type: ignore[attr-defined]
+        return buffered or self._reader.at_eof() or self._writer.is_closing()
+
 
 class AsyncIOTransport(AsyncBaseTransport):
     def __init__(

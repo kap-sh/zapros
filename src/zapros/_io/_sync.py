@@ -12,13 +12,16 @@ from zapros._io._base import BaseNetworkStream, BaseTransport
 T = TypeVar("T")
 
 if TYPE_CHECKING:
+    import select
     import socket
     import ssl
 else:
     try:
+        import select
         import socket
         import ssl
     except ImportError:
+        select = None
         socket = None
         ssl = None
 
@@ -134,6 +137,19 @@ class SyncStream(BaseNetworkStream):
             return cast(Literal["http/1.1", "h2"], self.sock.selected_alpn_protocol())
 
         return None
+
+    def is_readable(self) -> bool:
+        sock = self._tls_state.sock if self._tls_state is not None else self.sock
+        if sock.fileno() < 0:
+            return True
+
+        if not hasattr(select, "poll"):
+            readable, _, _ = select.select([sock], [], [], 0)
+            return bool(readable)
+
+        poller = select.poll()
+        poller.register(sock, select.POLLIN)
+        return bool(poller.poll(0))
 
 
 class SyncTransport(BaseTransport):

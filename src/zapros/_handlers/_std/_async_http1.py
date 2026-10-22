@@ -179,7 +179,12 @@ class AsyncHttp1Connection(AsyncHttpConnection):
         return self._closed
 
     def can_handle_request(self) -> bool:
-        return not self.is_closed and self.h11.our_state is h11.IDLE and self.h11.their_state is h11.IDLE
+        return (
+            not self.is_closed
+            and self.h11.our_state is h11.IDLE
+            and self.h11.their_state is h11.IDLE
+            and not self.stream.is_readable()
+        )
 
     async def send_request(
         self,

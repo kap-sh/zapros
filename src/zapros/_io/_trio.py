@@ -100,6 +100,14 @@ class TrioStream(AsyncBaseNetworkStream):
         ssl_object = self._stream._ssl_object  # type: ignore[attr-defined]
         return ssl_object.selected_alpn_protocol()  # type: ignore[return-value]
 
+    def is_readable(self) -> bool:
+        stream: trio.abc.Stream = self._stream
+        while isinstance(stream, trio.SSLStream):
+            stream = cast("trio.abc.Stream", stream.transport_stream)
+        if isinstance(stream, trio.SocketStream):
+            return stream.socket.is_readable()
+        return False
+
 
 class TrioTransport(AsyncBaseTransport):
     def __init__(
