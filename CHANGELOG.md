@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.23.0](https://github.com/kap-sh/zapros/compare/v0.22.0...v0.23.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **std:** remove deprecated StdNetworkHandler arguments
+
+### Features
+
+* **h2:** add experimental flag `http2_bidirectional_experimental` ([64045c1](https://github.com/kap-sh/zapros/commit/64045c166db984e31bc823fb2dc59f0db88e60d2))
+* **std:** allow overriding http2_bidirectional_experimental per request ([83d2a48](https://github.com/kap-sh/zapros/commit/83d2a4827bd5314e664d9a0a1d941f5ff9a83f48))
+* **std:** support per-request handler overrides via context["handler_overrides"] ([59d9865](https://github.com/kap-sh/zapros/commit/59d98650c2467795bd9214a827bfecc5d9ed43a2))
+
+
+### Bug Fixes
+
+* accept bodies that are both sync and async iterators ([ef94cba](https://github.com/kap-sh/zapros/commit/ef94cba84386e4eba01ffe67ea66f8a6fe9bcafb))
+
+
+### Refactors
+
+* **std:** remove deprecated StdNetworkHandler arguments ([daae03c](https://github.com/kap-sh/zapros/commit/daae03cd8df5cec8d969f076f39f0ea362692879))
+
 ## [0.22.0](https://github.com/kap-sh/zapros/compare/v0.21.0...v0.22.0) (2026-10-22)
 
 
