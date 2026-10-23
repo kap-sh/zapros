@@ -1517,9 +1517,23 @@ class AsyncClient:
                 else None
             )
 
+    def _innermost_handler(self) -> AsyncBaseHandler:
+        handler = self.handler
+        while isinstance(handler, AsyncBaseMiddleware):
+            handler = handler.async_next
+        return handler
+
     async def __aenter__(
         self,
     ) -> "AsyncClient":
+        from zapros import (
+            AsyncStdNetworkHandler,
+        )
+
+        # The std handler owns background tasks (HTTP/2 connection workers) scoped to this block.  # unasync: strip
+        handler = self._innermost_handler()
+        if isinstance(handler, AsyncStdNetworkHandler):
+            await handler.__aenter__()
         return self
 
     async def __aexit__(
@@ -1528,4 +1542,11 @@ class AsyncClient:
         exc_val: Any,
         exc_tb: Any,
     ) -> None:
+        from zapros import (
+            AsyncStdNetworkHandler,
+        )
+
         await self.aclose()
+        handler = self._innermost_handler()
+        if isinstance(handler, AsyncStdNetworkHandler):
+            await handler.__aexit__(exc_type, exc_val, exc_tb)

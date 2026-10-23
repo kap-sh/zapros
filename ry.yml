@@ -222,19 +222,13 @@ targets:
 
   - input: src/zapros/_handlers/_std/_async.py
     output: src/zapros/_handlers/_std/_sync.py
+    rules:
+      # The sync HTTP/2 connection has no worker, so it takes no task group.
+      - match: ', self\._http2_task_group\)'
+        replace: ')'
 
   - input: src/zapros/_handlers/_std/_async_http1.py
     output: src/zapros/_handlers/_std/_sync_http1.py
-
-  - input: src/zapros/_handlers/_std/_async_http2.py
-    output: src/zapros/_handlers/_std/_sync_http2.py
-    rules:
-      - match: '\bfrom zapros\._compat import AnyLock\b'
-        replace: 'from threading import Lock'
-      - match: '\bAnyLock\b'
-        replace: 'Lock'
-      - match: '\bAsyncHttp2Connection\b'
-        replace: 'Http2Connection'
 
 
   - input: src/zapros/_async_client.py
@@ -268,14 +262,6 @@ targets:
         replace: 'MockStream'
       - match: '\bAsyncIterator\b'
         replace: 'Iterator'
-
-  - input: tests/handlers/test_async_http2.py
-    output: tests/handlers/test_sync_http2.py
-    rules:
-      - match: '\bAsyncMockStream\b'
-        replace: 'MockStream'
-      - match: '\bAsyncRecordingStream\b'
-        replace: 'RecordingStream'
 
   - input: tests/handlers/test_async_std_pool.py
     output: tests/handlers/test_sync_std_pool.py

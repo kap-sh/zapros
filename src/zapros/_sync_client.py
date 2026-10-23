@@ -1516,9 +1516,22 @@ class Client:
                 else None
             )
 
+    def _innermost_handler(self) -> BaseHandler:
+        handler = self.handler
+        while isinstance(handler, BaseMiddleware):
+            handler = handler.next
+        return handler
+
     def __enter__(
         self,
     ) -> "Client":
+        from zapros import (
+            StdNetworkHandler,
+        )
+
+        handler = self._innermost_handler()
+        if isinstance(handler, StdNetworkHandler):
+            handler.__enter__()
         return self
 
     def __exit__(
@@ -1527,4 +1540,11 @@ class Client:
         exc_val: Any,
         exc_tb: Any,
     ) -> None:
+        from zapros import (
+            StdNetworkHandler,
+        )
+
         self.close()
+        handler = self._innermost_handler()
+        if isinstance(handler, StdNetworkHandler):
+            handler.__exit__(exc_type, exc_val, exc_tb)

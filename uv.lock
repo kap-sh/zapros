@@ -2049,6 +2049,7 @@ caching = [
     { name = "hishel" },
 ]
 http2 = [
+    { name = "anyio" },
     { name = "h2" },
 ]
 pyreqwest = [
@@ -2087,6 +2088,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", marker = "extra == 'http2'", specifier = ">=4.5.0" },
     { name = "brotlicffi", marker = "extra == 'brotli'", specifier = ">=1.2.0" },
     { name = "h11", specifier = ">=0.16.0" },
     { name = "h2", marker = "extra == 'http2'", specifier = ">=4.3.0" },
