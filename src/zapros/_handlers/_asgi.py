@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import AbstractAsyncContextManager
-from typing import TYPE_CHECKING, Any, AsyncIterator, Iterator, Literal, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, Literal, Optional, cast
 from urllib.parse import unquote
 
 from typing_extensions import Self
@@ -101,7 +101,7 @@ class AsgiStream(AsyncClosableStream):
                     request_complete = True
                     return {"type": "http.request", "more_body": False}
                 else:
-                    assert not isinstance(request_body, Iterator)
+                    assert isinstance(request_body, AsyncIterator)
 
                     try:
                         chunk = await request_body.__anext__()
@@ -694,7 +694,7 @@ class AsgiHandler(AsyncBaseHandler):
                 trio_nursery=self._trio_nursery,
             )
 
-        assert not isinstance(request.body, Iterator)
+        assert request.body is None or isinstance(request.body, (bytes, AsyncIterator))
         response = await AsgiStream._create_response_with_stream(  # type: ignore[reportPrivateUsage]
             app=self.app,
             scope=self._build_scope(request),

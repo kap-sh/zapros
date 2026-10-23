@@ -186,9 +186,6 @@ packages:
       - match: '\bAsyncMockServer\b'
         replace: 'MockServer'
 
-      - match: '\bis_sync_iterator\b'
-        replace: is_async_iterator
-
       - match: '\bachunked_stream\b'
         replace: 'chunked_stream'
 

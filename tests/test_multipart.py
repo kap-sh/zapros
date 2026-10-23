@@ -4,6 +4,7 @@ from typing import Iterator as TIterator
 import pytest
 from inline_snapshot import snapshot
 
+from tests.dual_stream import DualStream
 from zapros._multipart import (
     Multipart,
     MultipartStream,
@@ -327,6 +328,34 @@ async def test_async_multipart_stream_aclose():
 
     stream = MultipartStream(parts, "boundary")
     await stream.aclose()
+
+
+def test_multipart_stream_dual_iterator_part():
+    parts = [("field1", Part.stream(DualStream(b"value1")))]
+
+    stream = MultipartStream(parts, "b")
+    result = b"".join(stream)
+    stream.close()
+
+    assert result == snapshot(
+        b'--b\r\nContent-Disposition: form-data; name="field1"\r\n'
+        b"Content-Type: application/octet-stream\r\n\r\nvalue1\r\n--b--\r\n"
+    )
+
+
+async def test_async_multipart_stream_dual_iterator_part():
+    parts = [("field1", Part.async_stream(DualStream(b"value1")))]
+
+    stream = MultipartStream(parts, "b")
+    result = b""
+    async for chunk in stream:
+        result += chunk
+    await stream.aclose()
+
+    assert result == snapshot(
+        b'--b\r\nContent-Disposition: form-data; name="field1"\r\n'
+        b"Content-Type: application/octet-stream\r\n\r\nvalue1\r\n--b--\r\n"
+    )
 
 
 def test_multipart_default_boundary():

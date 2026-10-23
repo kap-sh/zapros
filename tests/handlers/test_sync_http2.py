@@ -8,6 +8,7 @@ import hyperframe.frame
 import pytest
 from pywhatwgurl import URL
 
+from tests.dual_stream import DualStream
 from zapros._errors import ConnectionError as ZaprosConnectionError
 from zapros._handlers._std._sync_http2 import Http2Connection
 from zapros._io._base import BaseNetworkStream
@@ -65,6 +66,16 @@ def test_http2_post_with_body_completes() -> None:
     conn = Http2Connection(stream)
 
     response = conn.send_request(Request(URL("https://example.com/"), "POST", body=b'{"data":"upload"}'))
+
+    assert response.status == 200
+    assert response.read() == b"Hello, world!"
+
+
+def test_http2_post_with_dual_iterator_body_completes() -> None:
+    stream = MockStream(_ok_response_frames())
+    conn = Http2Connection(stream)
+
+    response = conn.send_request(Request(URL("https://example.com/"), "POST", body=DualStream(b"upload")))
 
     assert response.status == 200
     assert response.read() == b"Hello, world!"

@@ -14,6 +14,7 @@ from litestar.datastructures import (
 from litestar.response import Stream
 from pywhatwgurl import URL
 
+from tests.dual_stream import DualStream
 from zapros import AsyncClient
 from zapros._compat import anysleep
 from zapros._errors import (
@@ -174,6 +175,21 @@ async def test_post_json(litestar_app):
                     }
                 }
             )
+
+
+async def test_post_dual_iterator_body(litestar_app):
+    async with AsgiHandler(
+        litestar_app,
+        enable_lifespan=False,
+    ) as handler:
+        async with AsyncClient(handler=handler) as client:
+            response = await client.post(
+                "http://testserver/echo",
+                body=DualStream(b'{"test": "data"}'),
+                headers={"Content-Type": "application/json"},
+            )
+            assert response.status == snapshot(201)
+            assert response.json == snapshot({"echoed": {"test": "data"}})
 
 
 async def test_query_params(

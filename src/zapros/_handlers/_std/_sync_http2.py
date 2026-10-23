@@ -65,7 +65,6 @@ from zapros._handlers._common import min_with_optionals
 from zapros._handlers._std._common import StreamLimiter, BrokenConnectionError, remaining_timeout_or_raise
 from zapros._io._base import BaseNetworkStream
 from zapros._models import ClosableStream, Headers, Request, Response
-from zapros._typing import is_async_iterator
 from zapros._utils import get_host_header_value
 
 from ._conn import HttpConnection
@@ -246,7 +245,7 @@ class Http2Connection(HttpConnection):
 
         try:
             if has_body:
-                assert not is_async_iterator(request.body) and request.body is not None
+                assert isinstance(request.body, (bytes, Iterator))
                 self._send_request_body(
                     request.body,
                     stream_id,

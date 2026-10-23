@@ -149,10 +149,7 @@ class Part:
     def close(self) -> None:
         if isinstance(self.content, ClosableStream):
             self.content.close()
-        elif isinstance(
-            self.content,
-            ABCAsyncIterator,
-        ):
+        elif not isinstance(self.content, (bytes, ABCIterator)):
             raise RuntimeError("Part content is an AsyncStream, use aclose() to close it")
 
     async def aclose(self) -> None:
@@ -161,7 +158,7 @@ class Part:
             AsyncClosableStream,
         ):
             await self.content.aclose()
-        elif isinstance(self.content, ABCIterator):
+        elif not isinstance(self.content, (bytes, ABCAsyncIterator)):
             raise RuntimeError("Part content is a Stream, use close() to close it")
 
 
@@ -212,9 +209,9 @@ class MultipartStream(ClosableStream, AsyncClosableStream):
                 part.content_type,
             )
 
-            assert not isinstance(
+            assert isinstance(
                 part.content,
-                ABCAsyncIterator,
+                (bytes, ABCIterator),
             ), "Part content must be a Stream or bytes"
 
             if isinstance(part.content, bytes):
@@ -238,9 +235,9 @@ class MultipartStream(ClosableStream, AsyncClosableStream):
                 part.content_type,
             )
 
-            assert not isinstance(
+            assert isinstance(
                 part.content,
-                ABCIterator,
+                (bytes, ABCAsyncIterator),
             ), "Part content must be an AsyncStream or bytes"
 
             if isinstance(part.content, bytes):
