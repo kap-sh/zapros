@@ -30,7 +30,7 @@ from zapros._utils import get_host_header_value
 
 if TYPE_CHECKING:
     from zapros._handlers._asgi import AsgiWebSocketStream
-    from zapros._handlers._std._common import StdNetworkHandlerConfig
+    from zapros._handlers._std._common import AsyncStdNetworkHandlerConfig
 
     from ._multipart import Multipart
 
@@ -100,7 +100,7 @@ class HandlerOverrides(TypedDict, total=False):
     Per-request overrides of handler configuration, keyed by the kind of handler that reads them.
     """
 
-    network: "StdNetworkHandlerConfig"
+    network: "AsyncStdNetworkHandlerConfig"
 
 
 class RequestContext(TypedDict, total=False, extra_items=Any):

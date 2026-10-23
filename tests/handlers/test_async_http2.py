@@ -387,4 +387,5 @@ def test_get_effective_config_merges_partial_overrides_with_handler_defaults() -
         "write_timeout": 2.0,
         "http1": True,
         "http2": True,
+        "http2_bidirectional_experimental": False,  # unasync: strip
     }

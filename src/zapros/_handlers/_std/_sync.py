@@ -12,8 +12,8 @@ from zapros._handlers._common import min_with_optionals, resolve_timeouts
 from zapros._handlers._std._sync_http1 import Http1Connection
 from zapros._handlers._std._sync_http2 import Http2Connection
 from zapros._handlers._std._common import (
-    BrokenConnectionError,
     StdNetworkHandlerConfig,
+    BrokenConnectionError,
     proxy_basic_auth_header,
     remaining_timeout_or_raise,
 )
@@ -418,7 +418,11 @@ class StdNetworkHandler(BaseHandler):
 
         # No proxy: stream is already talking to the origin
         if proxy_url is None:
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+            )
 
         # SOCKS5: negotiate then optionally wrap in TLS for the origin
         if is_socks5:
@@ -433,29 +437,47 @@ class StdNetworkHandler(BaseHandler):
             if is_secure:
                 server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
                 stream.start_tls(server_hostname=server_hostname)
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+            )
 
         # HTTP(S) proxy to plaintext origin: forward proxy, nothing more to do
         if not is_secure:
             logger.debug("Using HTTP proxy in forward mode (no CONNECT)")
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+            )
 
         # HTTP(S) proxy to TLS origin: issue CONNECT, then start TLS to the origin
         logger.debug("Using HTTP proxy in tunnel mode (with CONNECT)")
         _send_connect_request(stream, request, host, port, connect_timeout)
         server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
         stream.start_tls(server_hostname=server_hostname)
-        return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+        return self._create_conn_from_stream(
+            stream,
+            http1=http1,
+            http2=http2,
+        )
 
     def _create_conn_from_stream(
-        self, stream: BaseNetworkStream, *, http1: bool, http2: bool
+        self,
+        stream: BaseNetworkStream,
+        *,
+        http1: bool,
+        http2: bool,
     ) -> HttpConnection:
         selected_alpn = stream.selected_alpn_protocol()
 
         if selected_alpn == "h2":
             if not http2:
                 raise ConnectionError("Server selected HTTP/2 via ALPN, but HTTP/2 support is disabled in the client")
-            return self._new_http2_conn(stream)
+            return self._new_http2_conn(
+                stream,
+            )
         elif selected_alpn == "http/1.1":
             if not http1:
                 raise ConnectionError(
@@ -466,11 +488,16 @@ class StdNetworkHandler(BaseHandler):
             if http1:
                 return Http1Connection(stream, pool=self._http1_pool)
             elif http2:
-                return self._new_http2_conn(stream)
+                return self._new_http2_conn(
+                    stream,
+                )
             else:
                 raise ValueError("At least one of http1 or http2 support must be enabled in the client")
 
-    def _new_http2_conn(self, stream: BaseNetworkStream) -> HttpConnection:
+    def _new_http2_conn(
+        self,
+        stream: BaseNetworkStream,
+    ) -> HttpConnection:
         return Http2Connection(stream)
 
     def _acquire_conn_for_request(
@@ -480,6 +507,7 @@ class StdNetworkHandler(BaseHandler):
         *,
         http1: bool,
         http2: bool,
+        http2_pool: Http2ConnectionPool,
         connect_timeout: float | None = None,
     ) -> tuple[HttpConnection, bool, bool]:
         """
@@ -490,7 +518,7 @@ class StdNetworkHandler(BaseHandler):
         if http2:
             logger.debug(f"Trying to acquire connection for {request.url.hostname} from http2 pool")
             # Fast path: existing usable HTTP/2 connection
-            http2_conn = cast(Http2Connection | None, self._http2_pool.acquire(key))
+            http2_conn = cast(Http2Connection | None, http2_pool.acquire(key))
             if http2_conn is not None:
                 logger.debug(f"Acquired HTTP/2 connection for {request.url.hostname} from pool")
                 return http2_conn, True, True
@@ -519,7 +547,7 @@ class StdNetworkHandler(BaseHandler):
 
             if is_http2:
                 logger.debug(f"Registering new HTTP/2 connection for {request.url.hostname} in pool")
-                registered = cast(Http2Connection, self._http2_pool.register(key, conn))
+                registered = cast(Http2Connection, http2_pool.register(key, conn))
                 self._http1_pool.release_reservation(key)
                 if registered is not conn:
                     return registered, True, True
@@ -561,6 +589,7 @@ class StdNetworkHandler(BaseHandler):
             raise ImportError(_HTTP2_NOT_INSTALLED)
         if not http1 and not http2:
             raise ValueError("At least one of http1 or http2 support must be enabled in the client")
+        http2_pool = self._http2_pool
 
         total_timeout = config.get("total_timeout")
         connect_timeout = config.get("connect_timeout")
@@ -575,6 +604,7 @@ class StdNetworkHandler(BaseHandler):
             key,
             http1=http1,
             http2=http2,
+            http2_pool=http2_pool,
             connect_timeout=min_with_optionals(connect_timeout, remaining_timeout_or_raise(deadline)),
         )
 
@@ -599,7 +629,7 @@ class StdNetworkHandler(BaseHandler):
 
                 if is_http2:
                     # discard evicts (if still installed) and closes the conn.
-                    self._http2_pool.discard(key, cast(Http2Connection, conn))
+                    http2_pool.discard(key, cast(Http2Connection, conn))
                 else:
                     conn.close()
 
@@ -615,7 +645,7 @@ class StdNetworkHandler(BaseHandler):
                 if is_http2:
                     conn = cast(
                         Http2Connection,
-                        self._http2_pool.register(key, cast(Http2Connection, conn)),
+                        http2_pool.register(key, cast(Http2Connection, conn)),
                     )
 
                     if not old_is_http2:
@@ -643,7 +673,7 @@ class StdNetworkHandler(BaseHandler):
             if not is_http2:
                 self._http1_pool.release(key, conn, reuse=False)
             else:
-                self._http2_pool.discard(key, cast(Http2Connection, conn))
+                http2_pool.discard(key, cast(Http2Connection, conn))
             raise
 
     def close(self) -> None:

@@ -100,8 +100,18 @@ async with AsyncClient(
     response = await client.post("https://api.example.com/upload", body=stream_body())
 ```
 
+It can also be turned on or off for a single request; such requests use separate connections from the others:
+
+```python
+response = await client.post(
+    "https://api.example.com/upload",
+    body=stream_body(),
+    context={"handler_overrides": {"network": {"http2_bidirectional_experimental": True}}},
+)
+```
+
 ::: warning
-Each connection runs background tasks until it is closed, so close the client when done (`async with` or `await client.aclose()`), from any task. The option is async only.
+Each connection runs background tasks until it is closed, so close the client when done (`async with` or `await client.aclose()`), from any task. The option is async only; the sync handler ignores it.
 :::
 
 ### HTTP/1 Configuration

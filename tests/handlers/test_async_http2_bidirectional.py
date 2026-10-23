@@ -23,13 +23,14 @@ from zapros._errors import (
     TotalTimeoutError,
     WriteTimeoutError,
 )
+from zapros._handlers._std._async_http2 import AsyncHttp2Connection
 from zapros._handlers._std._async_http2_bidirectional import (
     _SEND_BATCH,
     _STREAM_RECEIVE_WINDOW,
     AsyncBidirectionalHttp2Connection,
 )
 from zapros._io._base import AsyncBaseNetworkStream
-from zapros._models import Headers, Request
+from zapros._models import Headers, Request, RequestContext
 from zapros._utils import get_pool_key
 
 
@@ -684,9 +685,11 @@ def _bidirectional_handler(stream: AsyncBaseNetworkStream) -> AsyncStdNetworkHan
     )
 
 
+_KEY, _ = get_pool_key(Request(URL("https://example.com/"), "GET"))
+
+
 async def _pooled_connection(handler: AsyncStdNetworkHandler) -> object:
-    key, _ = get_pool_key(Request(URL("https://example.com/"), "GET"))
-    return await handler._http2_pool.acquire(key)
+    return await handler._http2_bidirectional_pool.acquire(_KEY)
 
 
 async def test_bidirectional_handler_works_without_async_context_manager() -> None:
@@ -717,3 +720,54 @@ async def test_client_can_be_entered_and_exited_in_different_tasks() -> None:
             tg.start_soon(client.__aexit__, None, None, None)
 
     assert stream.closed
+
+
+def _override(bidirectional: bool) -> RequestContext:
+    return {"handler_overrides": {"network": {"http2_bidirectional_experimental": bidirectional}}}
+
+
+async def test_request_override_enables_bidirectional_on_default_handler() -> None:
+    stream = AsyncMockStream(_ok_response_frames())
+    handler = AsyncStdNetworkHandler(http1=False, http2=True, transport=AsyncMockTransport(lambda: stream))
+
+    with anyio.fail_after(5):
+        try:
+            response = await handler.ahandle(Request(URL("https://example.com/"), "GET", context=_override(True)))
+            assert await response.aread() == b"Hello, world!"
+            assert isinstance(await _pooled_connection(handler), AsyncBidirectionalHttp2Connection)
+            assert await handler._http2_pool.acquire(_KEY) is None
+        finally:
+            await handler.aclose()
+
+
+async def test_request_override_disables_bidirectional_on_bidirectional_handler() -> None:
+    stream = AsyncMockStream(_ok_response_frames())
+    handler = _bidirectional_handler(stream)
+
+    with anyio.fail_after(5):
+        try:
+            response = await handler.ahandle(Request(URL("https://example.com/"), "GET", context=_override(False)))
+            assert await response.aread() == b"Hello, world!"
+            assert isinstance(await handler._http2_pool.acquire(_KEY), AsyncHttp2Connection)
+            assert await _pooled_connection(handler) is None
+        finally:
+            await handler.aclose()
+
+
+async def test_requests_with_different_modes_get_separate_connections() -> None:
+    streams = iter([AsyncMockStream(_ok_response_frames()), AsyncMockStream(_ok_response_frames())])
+    transport = AsyncMockTransport(lambda: next(streams))
+    handler = AsyncStdNetworkHandler(http1=False, http2=True, transport=transport)
+
+    with anyio.fail_after(5):
+        try:
+            for bidirectional in (False, True):
+                response = await handler.ahandle(
+                    Request(URL("https://example.com/"), "GET", context=_override(bidirectional))
+                )
+                assert await response.aread() == b"Hello, world!"
+            assert len(transport.alpn_offers) == 2
+            assert isinstance(await handler._http2_pool.acquire(_KEY), AsyncHttp2Connection)
+            assert isinstance(await _pooled_connection(handler), AsyncBidirectionalHttp2Connection)
+        finally:
+            await handler.aclose()

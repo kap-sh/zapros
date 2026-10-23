@@ -81,6 +81,9 @@ packages:
       - match: '\bAsyncStdNetworkHandler\b'
         replace: 'StdNetworkHandler'
 
+      - match: '\bAsyncStdNetworkHandlerConfig\b'
+        replace: 'StdNetworkHandlerConfig'
+
       - match: '\bAsyncHttp1Connection\b'
         replace: 'Http1Connection'
 

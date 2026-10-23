@@ -13,8 +13,8 @@ from zapros._handlers._std._async_http1 import AsyncHttp1Connection
 from zapros._handlers._std._async_http2 import AsyncHttp2Connection
 from zapros._handlers._std._async_http2_bidirectional import AsyncBidirectionalHttp2Connection  # unasync: strip
 from zapros._handlers._std._common import (
+    AsyncStdNetworkHandlerConfig,
     BrokenConnectionError,
-    StdNetworkHandlerConfig,
     proxy_basic_auth_header,
     remaining_timeout_or_raise,
 )
@@ -316,13 +316,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         self._transport = transport
 
         # Total timeout means: start of ahandle() until response headers received.
-        self._config: StdNetworkHandlerConfig = {
+        self._config: AsyncStdNetworkHandlerConfig = {
             "total_timeout": total_timeout,
             "connect_timeout": connect_timeout,
             "read_timeout": read_timeout,
             "write_timeout": write_timeout,
             "http1": http1 is not False,
             "http2": http2,
+            "http2_bidirectional_experimental": http2_bidirectional_experimental,  # unasync: strip
         }
 
         if http2 and h2 is None:
@@ -345,7 +346,8 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         # Full-duplex HTTP/2 connections run on anyio.  # unasync: strip
         if http2_bidirectional_experimental and anyio is None:  # unasync: strip
             raise ImportError(_HTTP2_NOT_INSTALLED)  # unasync: strip
-        self._http2_bidirectional = http2_bidirectional_experimental  # unasync: strip
+        # They get their own pool, so each request can pick either kind of connection.  # unasync: strip
+        self._http2_bidirectional_pool = AsyncHttp2ConnectionPool()  # unasync: strip
 
     @property
     def transport(self) -> AsyncBaseTransport:
@@ -366,6 +368,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         *,
         http1: bool,
         http2: bool,
+        bidirectional: bool,  # unasync: strip
         connect_timeout: float | None = None,
     ) -> AsyncHttpConnection:
         logger.debug(f"Establishing new connection for request {request.url.hostname}")
@@ -435,7 +438,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
         # No proxy: stream is already talking to the origin
         if proxy_url is None:
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+                bidirectional=bidirectional,  # unasync: strip
+            )
 
         # SOCKS5: negotiate then optionally wrap in TLS for the origin
         if is_socks5:
@@ -450,29 +458,52 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if is_secure:
                 server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
                 await stream.start_tls(server_hostname=server_hostname)
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+                bidirectional=bidirectional,  # unasync: strip
+            )
 
         # HTTP(S) proxy to plaintext origin: forward proxy, nothing more to do
         if not is_secure:
             logger.debug("Using HTTP proxy in forward mode (no CONNECT)")
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(
+                stream,
+                http1=http1,
+                http2=http2,
+                bidirectional=bidirectional,  # unasync: strip
+            )
 
         # HTTP(S) proxy to TLS origin: issue CONNECT, then start TLS to the origin
         logger.debug("Using HTTP proxy in tunnel mode (with CONNECT)")
         await _send_connect_request(stream, request, host, port, connect_timeout)
         server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
         await stream.start_tls(server_hostname=server_hostname)
-        return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+        return self._create_conn_from_stream(
+            stream,
+            http1=http1,
+            http2=http2,
+            bidirectional=bidirectional,  # unasync: strip
+        )
 
     def _create_conn_from_stream(
-        self, stream: AsyncBaseNetworkStream, *, http1: bool, http2: bool
+        self,
+        stream: AsyncBaseNetworkStream,
+        *,
+        http1: bool,
+        http2: bool,
+        bidirectional: bool,  # unasync: strip
     ) -> AsyncHttpConnection:
         selected_alpn = stream.selected_alpn_protocol()
 
         if selected_alpn == "h2":
             if not http2:
                 raise ConnectionError("Server selected HTTP/2 via ALPN, but HTTP/2 support is disabled in the client")
-            return self._new_http2_conn(stream)
+            return self._new_http2_conn(
+                stream,
+                bidirectional=bidirectional,  # unasync: strip
+            )
         elif selected_alpn == "http/1.1":
             if not http1:
                 raise ConnectionError(
@@ -483,12 +514,19 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if http1:
                 return AsyncHttp1Connection(stream, pool=self._http1_pool)
             elif http2:
-                return self._new_http2_conn(stream)
+                return self._new_http2_conn(
+                    stream,
+                    bidirectional=bidirectional,  # unasync: strip
+                )
             else:
                 raise ValueError("At least one of http1 or http2 support must be enabled in the client")
 
-    def _new_http2_conn(self, stream: AsyncBaseNetworkStream) -> AsyncHttpConnection:
-        if self._http2_bidirectional:  # unasync: strip
+    def _new_http2_conn(
+        self,
+        stream: AsyncBaseNetworkStream,
+        bidirectional: bool,  # unasync: strip
+    ) -> AsyncHttpConnection:
+        if bidirectional:  # unasync: strip
             return AsyncBidirectionalHttp2Connection(stream)  # unasync: strip
         return AsyncHttp2Connection(stream)
 
@@ -499,6 +537,8 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         *,
         http1: bool,
         http2: bool,
+        http2_pool: AsyncHttp2ConnectionPool,
+        bidirectional: bool,  # unasync: strip
         connect_timeout: float | None = None,
     ) -> tuple[AsyncHttpConnection, bool, bool]:
         """
@@ -509,7 +549,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         if http2:
             logger.debug(f"Trying to acquire connection for {request.url.hostname} from http2 pool")
             # Fast path: existing usable HTTP/2 connection
-            http2_conn = cast(AsyncHttp2Connection | None, await self._http2_pool.acquire(key))
+            http2_conn = cast(AsyncHttp2Connection | None, await http2_pool.acquire(key))
             if http2_conn is not None:
                 logger.debug(f"Acquired HTTP/2 connection for {request.url.hostname} from pool")
                 return http2_conn, True, True
@@ -531,6 +571,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 request,
                 http1=http1,
                 http2=http2,
+                bidirectional=bidirectional,  # unasync: strip
                 connect_timeout=connect_timeout,
             )
 
@@ -538,7 +579,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
             if is_http2:
                 logger.debug(f"Registering new HTTP/2 connection for {request.url.hostname} in pool")
-                registered = cast(AsyncHttp2Connection, await self._http2_pool.register(key, conn))
+                registered = cast(AsyncHttp2Connection, await http2_pool.register(key, conn))
                 await self._http1_pool.release_reservation(key)
                 if registered is not conn:
                     return registered, True, True
@@ -549,7 +590,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             await self._http1_pool.release_reservation(key)
             raise
 
-    def get_effective_config(self, request: Request) -> StdNetworkHandlerConfig:
+    def get_effective_config(self, request: Request) -> AsyncStdNetworkHandlerConfig:
         """
         Return the handler's config with the request's `context["handler_overrides"]["network"]` applied.
 
@@ -580,6 +621,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             raise ImportError(_HTTP2_NOT_INSTALLED)
         if not http1 and not http2:
             raise ValueError("At least one of http1 or http2 support must be enabled in the client")
+        http2_pool = self._http2_pool
+        bidirectional = config.get("http2_bidirectional_experimental", False)  # unasync: strip
+        if bidirectional and anyio is None:  # unasync: strip
+            raise ImportError(_HTTP2_NOT_INSTALLED)  # unasync: strip
+        if bidirectional:  # unasync: strip
+            http2_pool = self._http2_bidirectional_pool  # unasync: strip
 
         total_timeout = config.get("total_timeout")
         connect_timeout = config.get("connect_timeout")
@@ -594,6 +641,8 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             key,
             http1=http1,
             http2=http2,
+            http2_pool=http2_pool,
+            bidirectional=bidirectional,  # unasync: strip
             connect_timeout=min_with_optionals(connect_timeout, remaining_timeout_or_raise(deadline)),
         )
 
@@ -618,7 +667,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
                 if is_http2:
                     # discard evicts (if still installed) and closes the conn.
-                    await self._http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
+                    await http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
                 else:
                     await conn.aclose()
 
@@ -626,6 +675,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                     request,
                     http1=http1,
                     http2=http2,
+                    bidirectional=bidirectional,  # unasync: strip
                     connect_timeout=min_with_optionals(connect_timeout, remaining_timeout_or_raise(deadline)),
                 )
 
@@ -634,7 +684,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 if is_http2:
                     conn = cast(
                         AsyncHttp2Connection,
-                        await self._http2_pool.register(key, cast(AsyncHttp2Connection, conn)),
+                        await http2_pool.register(key, cast(AsyncHttp2Connection, conn)),
                     )
 
                     if not old_is_http2:
@@ -665,9 +715,10 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 # Other requests may share a healthy full-duplex connection; drop only a dead one.  # unasync: strip
                 if isinstance(conn, AsyncBidirectionalHttp2Connection) and conn.can_handle_request():  # unasync: strip
                     raise  # unasync: strip
-                await self._http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
+                await http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
             raise
 
     async def aclose(self) -> None:
         await self._http1_pool.close_all()
         await self._http2_pool.close_all()
+        await self._http2_bidirectional_pool.close_all()  # unasync: strip

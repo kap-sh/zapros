@@ -29,6 +29,14 @@ class StdNetworkHandlerConfig(TypedDict, total=False):
     http2: bool
 
 
+class AsyncStdNetworkHandlerConfig(StdNetworkHandlerConfig, total=False):
+    """
+    `StdNetworkHandlerConfig` plus settings only the async handler supports; the sync handler ignores them.
+    """
+
+    http2_bidirectional_experimental: bool
+
+
 class BrokenConnectionError(ConnectionError):
     """
     Raised when a connection from the pool which was expected to be alive is
