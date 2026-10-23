@@ -28,7 +28,7 @@ class FakeConn(AsyncPoolConnection):
         self._closed = True
 
 
-@pytest.mark.asyncio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
 async def test_pool_stress() -> None:
     MAX_PER_HOST = 4
     HOSTS: list[tuple[str, str, int]] = [
