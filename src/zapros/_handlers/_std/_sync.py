@@ -31,6 +31,7 @@ else:
     except ImportError:
         h2 = None
 
+
 if TYPE_CHECKING:
     import ssl
 
@@ -448,13 +449,13 @@ class StdNetworkHandler(BaseHandler):
 
     def _create_conn_from_stream(
         self, stream: BaseNetworkStream, *, http1: bool, http2: bool
-    ) -> Http1Connection | Http2Connection:
+    ) -> HttpConnection:
         selected_alpn = stream.selected_alpn_protocol()
 
         if selected_alpn == "h2":
             if not http2:
                 raise ConnectionError("Server selected HTTP/2 via ALPN, but HTTP/2 support is disabled in the client")
-            return Http2Connection(stream)
+            return self._new_http2_conn(stream)
         elif selected_alpn == "http/1.1":
             if not http1:
                 raise ConnectionError(
@@ -465,9 +466,12 @@ class StdNetworkHandler(BaseHandler):
             if http1:
                 return Http1Connection(stream, pool=self._http1_pool)
             elif http2:
-                return Http2Connection(stream)
+                return self._new_http2_conn(stream)
             else:
                 raise ValueError("At least one of http1 or http2 support must be enabled in the client")
+
+    def _new_http2_conn(self, stream: BaseNetworkStream) -> HttpConnection:
+        return Http2Connection(stream)
 
     def _acquire_conn_for_request(
         self,
@@ -511,7 +515,7 @@ class StdNetworkHandler(BaseHandler):
                 connect_timeout=connect_timeout,
             )
 
-            is_http2 = isinstance(conn, Http2Connection)
+            is_http2 = not isinstance(conn, Http1Connection)
 
             if is_http2:
                 logger.debug(f"Registering new HTTP/2 connection for {request.url.hostname} in pool")
@@ -607,7 +611,7 @@ class StdNetworkHandler(BaseHandler):
                 )
 
                 old_is_http2 = is_http2
-                is_http2 = isinstance(conn, Http2Connection)
+                is_http2 = not isinstance(conn, Http1Connection)
                 if is_http2:
                     conn = cast(
                         Http2Connection,

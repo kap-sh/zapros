@@ -11,6 +11,7 @@ from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
 from zapros._handlers._common import min_with_optionals, resolve_timeouts
 from zapros._handlers._std._async_http1 import AsyncHttp1Connection
 from zapros._handlers._std._async_http2 import AsyncHttp2Connection
+from zapros._handlers._std._async_http2_bidirectional import AsyncBidirectionalHttp2Connection  # unasync: strip
 from zapros._handlers._std._common import (
     BrokenConnectionError,
     StdNetworkHandlerConfig,
@@ -30,6 +31,14 @@ else:
         import h2
     except ImportError:
         h2 = None
+
+if TYPE_CHECKING:  # unasync: strip
+    import anyio  # unasync: strip
+else:  # unasync: strip
+    try:  # unasync: strip
+        import anyio  # unasync: strip
+    except ImportError:  # unasync: strip
+        anyio = None  # unasync: strip
 
 if TYPE_CHECKING:
     import ssl
@@ -256,6 +265,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         write_timeout: float | None = None,
         http1: bool | Http1Config = True,
         http2: bool = False,
+        http2_bidirectional_experimental: bool = False,  # unasync: strip
     ) -> None: ...
     @overload
     @deprecated(
@@ -277,6 +287,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         max_idle_seconds: float = 30.0,
         http1: bool | Http1Config = True,
         http2: bool = False,
+        http2_bidirectional_experimental: bool = False,  # unasync: strip
     ) -> None: ...
     def __init__(
         self,
@@ -292,6 +303,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         max_idle_seconds: float = 30.0,
         http1: bool | Http1Config = True,
         http2: bool = False,
+        http2_bidirectional_experimental: bool = False,  # unasync: strip
     ) -> None:
         if ssl_context is not None:
             warnings.warn(
@@ -330,6 +342,10 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             )
 
         self._http2_pool = AsyncHttp2ConnectionPool()
+        # Full-duplex HTTP/2 connections run on anyio.  # unasync: strip
+        if http2_bidirectional_experimental and anyio is None:  # unasync: strip
+            raise ImportError(_HTTP2_NOT_INSTALLED)  # unasync: strip
+        self._http2_bidirectional = http2_bidirectional_experimental  # unasync: strip
 
     @property
     def transport(self) -> AsyncBaseTransport:
@@ -450,13 +466,13 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
     def _create_conn_from_stream(
         self, stream: AsyncBaseNetworkStream, *, http1: bool, http2: bool
-    ) -> AsyncHttp1Connection | AsyncHttp2Connection:
+    ) -> AsyncHttpConnection:
         selected_alpn = stream.selected_alpn_protocol()
 
         if selected_alpn == "h2":
             if not http2:
                 raise ConnectionError("Server selected HTTP/2 via ALPN, but HTTP/2 support is disabled in the client")
-            return AsyncHttp2Connection(stream)
+            return self._new_http2_conn(stream)
         elif selected_alpn == "http/1.1":
             if not http1:
                 raise ConnectionError(
@@ -467,9 +483,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if http1:
                 return AsyncHttp1Connection(stream, pool=self._http1_pool)
             elif http2:
-                return AsyncHttp2Connection(stream)
+                return self._new_http2_conn(stream)
             else:
                 raise ValueError("At least one of http1 or http2 support must be enabled in the client")
+
+    def _new_http2_conn(self, stream: AsyncBaseNetworkStream) -> AsyncHttpConnection:
+        if self._http2_bidirectional:  # unasync: strip
+            return AsyncBidirectionalHttp2Connection(stream)  # unasync: strip
+        return AsyncHttp2Connection(stream)
 
     async def _acquire_conn_for_request(
         self,
@@ -513,7 +534,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 connect_timeout=connect_timeout,
             )
 
-            is_http2 = isinstance(conn, AsyncHttp2Connection)
+            is_http2 = not isinstance(conn, AsyncHttp1Connection)
 
             if is_http2:
                 logger.debug(f"Registering new HTTP/2 connection for {request.url.hostname} in pool")
@@ -609,7 +630,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 )
 
                 old_is_http2 = is_http2
-                is_http2 = isinstance(conn, AsyncHttp2Connection)
+                is_http2 = not isinstance(conn, AsyncHttp1Connection)
                 if is_http2:
                     conn = cast(
                         AsyncHttp2Connection,
@@ -641,6 +662,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if not is_http2:
                 await self._http1_pool.release(key, conn, reuse=False)
             else:
+                # Other requests may share a healthy full-duplex connection; drop only a dead one.  # unasync: strip
+                if isinstance(conn, AsyncBidirectionalHttp2Connection) and conn.can_handle_request():  # unasync: strip
+                    raise  # unasync: strip
                 await self._http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
             raise
 

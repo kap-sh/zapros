@@ -88,6 +88,22 @@ with Client(
 
 :::
 
+### Full-duplex HTTP/2 (experimental)
+
+By default, an HTTP/2 request body is sent in full before the response is read. With `http2_bidirectional_experimental=True`, `AsyncStdNetworkHandler` sends the body in the background instead, so the response is returned as soon as its headers arrive, even while a streaming request body is still being sent.
+
+```python
+from zapros import AsyncClient, AsyncStdNetworkHandler
+async with AsyncClient(
+    handler=AsyncStdNetworkHandler(http2=True, http2_bidirectional_experimental=True)
+) as client:
+    response = await client.post("https://api.example.com/upload", body=stream_body())
+```
+
+::: warning
+Each connection runs background tasks until it is closed, so close the client when done (`async with` or `await client.aclose()`), from any task. The option is async only.
+:::
+
 ### HTTP/1 Configuration
 
 Alongside boolean, `http1` can also accept a dictionary of HTTP/1-specific configuration options:
