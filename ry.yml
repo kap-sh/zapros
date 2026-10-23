@@ -276,6 +276,14 @@ targets:
         replace: 'MockStream'
       - match: '\bAsyncRecordingStream\b'
         replace: 'RecordingStream'
+      - match: '\bAsyncHttp1OnceStream\b'
+        replace: 'Http1OnceStream'
+      - match: '\bAsyncH2Stream\b'
+        replace: 'H2Stream'
+      - match: '\bAsyncMockTransport\b'
+        replace: 'MockTransport'
+      - match: '_std\._async\.h2'
+        replace: '_std._sync.h2'
 
   - input: tests/handlers/test_async_std_pool.py
     output: tests/handlers/test_sync_std_pool.py

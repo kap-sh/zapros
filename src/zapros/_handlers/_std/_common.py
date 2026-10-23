@@ -4,7 +4,7 @@ import asyncio
 import base64
 import threading
 from types import TracebackType
-from typing import Optional
+from typing import Optional, TypedDict
 
 from pywhatwgurl import URL
 
@@ -13,6 +13,20 @@ from zapros._handlers._common import remaining_timeout
 from zapros._headers import Connection
 
 from ..._models import Request
+
+
+class StdNetworkHandlerConfig(TypedDict, total=False):
+    """
+    Network handler settings that a request can override via `context["handler_overrides"]["network"]`.
+    Timeouts set there take priority over `context["timeouts"]`.
+    """
+
+    total_timeout: float | None
+    connect_timeout: float | None
+    read_timeout: float | None
+    write_timeout: float | None
+    http1: bool
+    http2: bool
 
 
 class BrokenConnectionError(ConnectionError):
