@@ -15,6 +15,12 @@ scripts/lint
 scripts/test
 ```
 
+Run the tests inside [Pyodide](https://pyodide.org) (needs Node). Tests that cannot run there are marked with `@pytest.mark.no_pyodide`:
+
+```bash
+scripts/test-pyodide
+```
+
 ## Release Process
 
 Zapros uses [release-please](https://github.com/googleapis/release-please) for automated releases.

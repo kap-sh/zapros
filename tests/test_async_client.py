@@ -8,12 +8,16 @@ class BrokenHandler(AsyncBaseHandler):
         raise RuntimeError("Error from BrokenHandler")
 
 
+# the sync Client() has no default handler on Pyodide
+@pytest.mark.no_pyodide
 async def test_handler_transform():
     async with AsyncClient() as client:
         with pytest.raises(RuntimeError, match="Error from BrokenHandler"):
             await client.get("https://example.com", handler=lambda _: BrokenHandler())
 
 
+# the sync Client() has no default handler on Pyodide
+@pytest.mark.no_pyodide
 async def test_handler_explicit():
     async with AsyncClient() as client:
         with pytest.raises(RuntimeError, match="Error from BrokenHandler"):

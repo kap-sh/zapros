@@ -10,6 +10,9 @@ from zapros._models import (
 from zapros.matchers import method, path
 from zapros.mock import mock_http
 
+# mock_http() only patches the std handlers, not AsyncPyodideHandler
+pytestmark = pytest.mark.no_pyodide
+
 
 async def test_verification_on_exit():
     with pytest.raises(

@@ -19,6 +19,9 @@ from zapros._handlers._mock import (
 )
 from zapros._models import Response
 
+# the async sqlite storage needs worker threads
+pytestmark = pytest.mark.no_pyodide
+
 
 def test_cache_miss_then_hit():
     router = MockRouter()

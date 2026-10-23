@@ -4,6 +4,9 @@ from inline_snapshot import snapshot
 from tests.websocket.ws_server import WebSocketTestServer
 from zapros.websocket import BinaryMessage, CloseMessage, ConnectionClosed, TextMessage, aconnect_ws
 
+# websockets need real sockets
+pytestmark = pytest.mark.no_pyodide
+
 
 async def test_text_echo(ws_server: WebSocketTestServer):
     async with aconnect_ws(f"{ws_server.url}/ws/echo-text") as ws:

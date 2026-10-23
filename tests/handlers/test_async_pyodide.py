@@ -1,9 +1,13 @@
+import gzip
+import sys
 from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
 from pywhatwgurl import URL
 
+from tests.mock_server import MockServer
+from zapros import AsyncClient
 from zapros._handlers import _async_pyodide as pyodide_module
 from zapros._models import Request
 
@@ -126,3 +130,167 @@ async def test_non_chunked_transfer_encoding_raises(fetch_calls: list[dict[str, 
         await handler.ahandle(request)
 
     assert fetch_calls == []
+
+
+# The tests below send real requests through the JS fetch API to the mock server,
+# so they only run inside Pyodide (scripts/test-pyodide).
+needs_fetch = pytest.mark.skipif(sys.platform != "emscripten", reason="needs Pyodide's fetch")
+
+
+@needs_fetch
+async def test_basic(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.get(f"{mock_server.url}/echo")
+        assert response.status == 201
+        assert "GET /echo HTTP/1.1" in response.text
+
+
+@needs_fetch
+async def test_json_body(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.post(
+            f"{mock_server.url}/echo",
+            json={"key": "value", "num": 42},
+        )
+        assert response.status == 201
+        assert "POST /echo HTTP/1.1" in response.text
+        assert "content-type: application/json" in response.text
+        assert '{"key":"value","num":42}' in response.text
+
+
+@needs_fetch
+async def test_json_nested(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.post(
+            f"{mock_server.url}/echo",
+            json={"user": {"name": "alice", "age": 30}, "tags": ["a", "b"]},
+        )
+        assert response.status == 201
+        assert '{"user":{"name":"alice","age":30},"tags":["a","b"]}' in response.text
+
+
+@needs_fetch
+async def test_form_body(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.post(
+            f"{mock_server.url}/echo",
+            form={"username": "alice", "password": "secret"},
+        )
+        assert response.status == 201
+        assert "content-type: application/x-www-form-urlencoded" in response.text
+        assert "username=alice&password=secret" in response.text
+
+
+@needs_fetch
+async def test_form_url_encoding(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.post(
+            f"{mock_server.url}/echo",
+            form={"message": "hello world"},
+        )
+        assert response.status == 201
+        assert "message=hello+world" in response.text
+
+
+@needs_fetch
+async def test_bytes_body(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.post(
+            f"{mock_server.url}/echo",
+            body=b"raw binary data",
+        )
+        assert response.status == 201
+        assert "raw binary data" in response.text
+
+
+@needs_fetch
+async def test_query_params(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.get(
+            f"{mock_server.url}/echo",
+            params={"q": "hello", "page": "1"},
+        )
+        assert response.status == 201
+        assert "GET /echo HTTP/1.1" in response.text
+
+
+@needs_fetch
+async def test_custom_headers(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.get(
+            f"{mock_server.url}/echo",
+            headers={
+                "X-Custom-Header": "my-value",
+                "Authorization": "Bearer token123",
+            },
+        )
+        assert response.status == 201
+        assert "x-custom-header: my-value" in response.text
+        assert "authorization: Bearer token123" in response.text
+
+
+@needs_fetch
+async def test_put_method(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.put(
+            f"{mock_server.url}/echo",
+            json={"name": "updated"},
+        )
+        assert response.status == 201
+        assert "PUT /echo HTTP/1.1" in response.text
+        assert '{"name":"updated"}' in response.text
+
+
+@needs_fetch
+async def test_delete_method(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        response = await client.request("DELETE", f"{mock_server.url}/echo")
+        assert response.status == 201
+        assert "DELETE /echo HTTP/1.1" in response.text
+
+
+@needs_fetch
+async def test_stream_context_manager(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        async with client.stream("GET", f"{mock_server.url}/echo") as response:
+            assert response.status == 201
+            await response.aread()
+            assert "GET /echo HTTP/1.1" in response.text
+
+
+@needs_fetch
+async def test_stream_iter_bytes(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        async with client.stream("GET", f"{mock_server.url}/echo") as response:
+            chunks = []
+            async for chunk in response.async_iter_bytes():
+                chunks.append(chunk)
+            assert response.status == 201
+            assert b"GET /echo HTTP/1.1" in b"".join(chunks)
+
+
+@needs_fetch
+async def test_stream_json_body(mock_server: MockServer) -> None:
+    async with AsyncClient() as client:
+        async with client.stream(
+            "POST",
+            f"{mock_server.url}/echo",
+            json={"stream": True},
+        ) as response:
+            await response.aread()
+            assert response.status == 201
+            assert '{"stream":true}' in response.text
+
+
+@needs_fetch
+@pytest.mark.xfail(reason="fetch auto-decodes gzip, raw bytes aren't exposed")
+async def test_gzip_raw_bytes_unchanged(mock_server: MockServer) -> None:
+    original = "hello from the server"
+
+    async with AsyncClient() as client:
+        async with client.stream("GET", f"{mock_server.url}/gzip", params={"data": original}) as response:
+            chunks = []
+            async for chunk in response.async_iter_raw():
+                chunks.append(chunk)
+
+    assert b"".join(chunks) == gzip.compress(original.encode())

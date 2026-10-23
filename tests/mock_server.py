@@ -1,4 +1,5 @@
 import gzip
+import os
 import subprocess
 import sys
 import time
@@ -92,6 +93,11 @@ class MockServer:
 
     def start(self) -> None:
         if self.process is not None:
+            return
+
+        if sys.platform == "emscripten":
+            # Pyodide cannot spawn processes; scripts/test-pyodide runs the server on the host.
+            self.port = int(os.environ["ZAPROS_MOCK_SERVER_PORT"])
             return
 
         self.port = _find_free_port(self.host)

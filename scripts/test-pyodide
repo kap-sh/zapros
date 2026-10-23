@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Run the test suite inside Pyodide (CPython compiled to WebAssembly, executed
+# by Node). `.pyodide-venv/bin/python` *is* Pyodide, so everything below the
+# install step runs with sys.platform == "emscripten". Tests that cannot run
+# there carry the `no_pyodide` marker (see tests/conftest.py).
+#
+# uv does not support the Emscripten platform: never `uv run`/`uv pip` inside
+# .pyodide-venv, only its own pip and python.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# 1. create the Pyodide venv once; the host Python must match Pyodide's
+[ -d .pyodide-venv ] || uvx --python 3.14 --from pyodide-build pyodide venv .pyodide-venv
+
+# 2. export the locked deps. zapros itself is imported from src/ (pytest's
+#    pythonpath), so the project is not installed. The pruned packages are
+#    host-only tools or native packages without a Pyodide build. markupsafe is
+#    unpinned because Pyodide ships its own build of it, which is older than
+#    the locked version.
+uv export --all-extras --all-groups --no-hashes --no-emit-project --python 3.14 \
+    --prune pytest-codspeed --prune ruff --prune pyright --prune ry-cli \
+    --prune trio --prune uvicorn --prune pyreqwest --prune brotlicffi \
+    | sed 's/^markupsafe==.*/markupsafe/' \
+    > .pyodide-reqs.txt
+
+# 3. install with the Pyodide venv's own pip
+.pyodide-venv/bin/pip install -q -r .pyodide-reqs.txt
+
+# 4. Pyodide cannot spawn processes, so the mock server runs on the host
+port=$(uv run python -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+uv run python -m uvicorn tests.mock_server:app --host 127.0.0.1 --port "$port" --log-level warning &
+server=$!
+trap 'kill $server' EXIT
+until curl -s -o /dev/null "http://127.0.0.1:$port/"; do sleep 0.1; done
+
+# 5. run the tests inside Pyodide
+ZAPROS_MOCK_SERVER_PORT=$port .pyodide-venv/bin/python -m pytest tests "$@"

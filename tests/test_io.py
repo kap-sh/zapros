@@ -40,6 +40,7 @@ def test_sync_start_tls_stream_read_honours_timeout() -> None:
         stream.read(1024, timeout=0.01)
 
 
+@pytest.mark.no_pyodide  # socket.socketpair() crashes Pyodide
 def test_asyncio_start_tls_stream_read_honours_timeout() -> None:
     async def main() -> None:
         sock, peer = socket.socketpair()

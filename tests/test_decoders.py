@@ -310,6 +310,8 @@ def test_supported_decoders_registry():
     assert SUPPORTED_DECODERS["deflate"] == DeflateDecoder
 
 
+# "br" stays registered without brotlicffi, which only Pyodide lacks
+@pytest.mark.no_pyodide
 def test_brotli_in_registry():
     has_brotli = importlib.util.find_spec("brotli") is not None
     has_brotlicffi = importlib.util.find_spec("brotlicffi") is not None

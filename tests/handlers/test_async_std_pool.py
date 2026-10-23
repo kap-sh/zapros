@@ -7,6 +7,9 @@ import pytest
 from zapros import AsyncClient, AsyncStdNetworkHandler
 from zapros._compat import anysleep
 
+# a real socket server on a thread
+pytestmark = pytest.mark.no_pyodide
+
 
 class IdleClosingServer:
     def __init__(self, idle_timeout: float, half_close: bool = False) -> None:

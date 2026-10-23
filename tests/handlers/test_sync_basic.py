@@ -24,6 +24,9 @@ from zapros import (
     Part,
 )
 
+# real sockets (std handler) or a native extension (pyreqwest); tests/handlers/test_async_pyodide.py covers fetch
+pytestmark = pytest.mark.no_pyodide
+
 CASES = [
     pytest.param(("stdnetwork", "asyncio"), id="stdnetwork-asyncio"),
     pytest.param(("stdnetwork", ("asyncio", {"use_uvloop": True})), id="stdnetwork-asyncio-uvloop"),

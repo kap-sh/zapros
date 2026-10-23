@@ -411,6 +411,8 @@ def test_response_iter_bytes_custom_chunk_size():
     assert result == original
 
 
+# "br" stays registered without brotlicffi, which only Pyodide lacks
+@pytest.mark.no_pyodide
 def test_response_brotli_not_installed():
     has_brotli = importlib.util.find_spec("brotli") is not None
     has_brotlicffi = importlib.util.find_spec("brotlicffi") is not None

@@ -66,7 +66,6 @@ dev = [
     "inline-snapshot>=0.28.0",
     "litestar[standard]>=2.0.0",
     "pytest>=9.0.2",
-    "pytest-pyodide",
     "pytest-codspeed>=5.0.3",
     "ruff>=0.14.0",
     "pyright>=1.1.404",
@@ -84,6 +83,9 @@ dev = [
 pythonpath = ["src"]
 anyio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "no_pyodide: skipped under Pyodide (scripts/test-pyodide), e.g. needs sockets, threads or subprocesses",
+]
 
 [tool.ruff]
 line-length = 120

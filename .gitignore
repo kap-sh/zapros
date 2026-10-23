@@ -254,3 +254,7 @@ Desktop.ini
 !/tests/
 
 cassettes/
+
+# Pyodide test run (scripts/test-pyodide)
+.pyodide-venv/
+.pyodide-reqs.txt
