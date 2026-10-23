@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import time
-import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict, Union, cast, overload
+from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 import h11
 from pywhatwgurl import URL
 
-from zapros._constants import DEFAULT_READ_SIZE, default_ssl_context
+from zapros._constants import DEFAULT_READ_SIZE
 from zapros._handlers._common import min_with_optionals, resolve_timeouts
 from zapros._handlers._std._async_http1 import AsyncHttp1Connection
 from zapros._handlers._std._async_http2 import AsyncHttp2Connection
@@ -40,9 +39,6 @@ else:  # unasync: strip
     except ImportError:  # unasync: strip
         anyio = None  # unasync: strip
 
-if TYPE_CHECKING:
-    import ssl
-
 
 if TYPE_CHECKING:
     from socksio import ProtocolError, socks5
@@ -62,8 +58,6 @@ else:
         trio = None
 
 from logging import getLogger
-
-from typing_extensions import deprecated
 
 from ..._async_pool import AsyncHttp1ConnectionPool, AsyncHttp2ConnectionPool
 from ..._base_pool import PoolKey
@@ -253,66 +247,18 @@ class Http1Config(TypedDict, total=False):
 
 
 class AsyncStdNetworkHandler(AsyncBaseHandler):
-    @overload
     def __init__(
         self,
         *,
         transport: AsyncBaseTransport | None = None,
-        ssl_context: Union[None, "ssl.SSLContext"] = None,
         total_timeout: float | None = None,
         connect_timeout: float | None = None,
         read_timeout: float | None = None,
         write_timeout: float | None = None,
-        http1: bool | Http1Config = True,
-        http2: bool = False,
-        http2_bidirectional_experimental: bool = False,  # unasync: strip
-    ) -> None: ...
-    @overload
-    @deprecated(
-        "max_connections_per_host, max_idle_connections_per_host, and max_idle_seconds"
-        " should be set through the http1 config dict instead,"
-        "e.g. AsyncStdNetworkHandler(http1={'max_connections_per_host': 20})"
-    )
-    def __init__(
-        self,
-        *,
-        transport: AsyncBaseTransport | None = None,
-        ssl_context: Union[None, "ssl.SSLContext"] = None,
-        total_timeout: float | None = None,
-        connect_timeout: float | None = None,
-        read_timeout: float | None = None,
-        write_timeout: float | None = None,
-        max_connections_per_host: int = 10,
-        max_idle_connections_per_host: int | None = None,
-        max_idle_seconds: float = 30.0,
-        http1: bool | Http1Config = True,
-        http2: bool = False,
-        http2_bidirectional_experimental: bool = False,  # unasync: strip
-    ) -> None: ...
-    def __init__(
-        self,
-        *,
-        transport: AsyncBaseTransport | None = None,
-        ssl_context: Union[None, "ssl.SSLContext"] = None,
-        total_timeout: float | None = None,
-        connect_timeout: float | None = None,
-        read_timeout: float | None = None,
-        write_timeout: float | None = None,
-        max_connections_per_host: int = 10,
-        max_idle_connections_per_host: int | None = None,
-        max_idle_seconds: float = 30.0,
         http1: bool | Http1Config = True,
         http2: bool = False,
         http2_bidirectional_experimental: bool = False,  # unasync: strip
     ) -> None:
-        if ssl_context is not None:
-            warnings.warn(
-                "The ssl_context argument is deprecated; set it through the transport argument instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        self.ssl_context = ssl_context or default_ssl_context()
-
         self._transport = transport
 
         # Total timeout means: start of ahandle() until response headers received.
@@ -329,18 +275,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         if http2 and h2 is None:
             raise ImportError(_HTTP2_NOT_INSTALLED)
 
-        if not isinstance(http1, bool):
-            self._http1_pool = AsyncHttp1ConnectionPool(
-                max_connections_per_host=http1.get("max_connections_per_host"),
-                max_idle_per_host=http1.get("max_idle_connections_per_host"),
-                max_idle_seconds=http1.get("max_idle_seconds", 30.0),
-            )
-        else:
-            self._http1_pool = AsyncHttp1ConnectionPool(
-                max_connections_per_host=max_connections_per_host,
-                max_idle_per_host=max_idle_connections_per_host,
-                max_idle_seconds=max_idle_seconds,
-            )
+        http1_config: Http1Config = {} if isinstance(http1, bool) else http1
+        self._http1_pool = AsyncHttp1ConnectionPool(
+            max_connections_per_host=http1_config.get("max_connections_per_host"),
+            max_idle_per_host=http1_config.get("max_idle_connections_per_host"),
+            max_idle_seconds=http1_config.get("max_idle_seconds"),
+        )
 
         self._http2_pool = AsyncHttp2ConnectionPool()
         # Full-duplex HTTP/2 connections run on anyio.  # unasync: strip
@@ -355,9 +295,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             return self._transport
 
         default_transport = (
-            AsyncIOTransport(ssl_context=self.ssl_context)
+            AsyncIOTransport()
             if not (trio and trio.lowlevel.in_trio_run())  # unasync: strip
-            else TrioTransport(ssl_context=self.ssl_context)  # unasync: strip
+            else TrioTransport()  # unasync: strip
         )
         self._transport = default_transport
         return self._transport
