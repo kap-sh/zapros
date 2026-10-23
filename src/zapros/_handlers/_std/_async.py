@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, Union, cast, overload
+from typing import TYPE_CHECKING, Literal, TypedDict, Union, cast, overload
 
 import h11
 from pywhatwgurl import URL
@@ -19,19 +19,15 @@ from zapros._io._trio import TrioTransport
 from zapros._utils import get_authority_value, get_pool_key, get_port_or_default
 
 if TYPE_CHECKING:
-    import anyio  # unasync: strip
     import h2
 else:
     try:
-        import anyio  # unasync: strip
         import h2
     except ImportError:
         h2 = None
 
 if TYPE_CHECKING:
     import ssl
-
-    from anyio.abc import TaskGroup  # unasync: strip
 
 
 if TYPE_CHECKING:
@@ -53,7 +49,7 @@ else:
 
 from logging import getLogger
 
-from typing_extensions import Self, deprecated
+from typing_extensions import deprecated
 
 from ..._async_pool import AsyncHttp1ConnectionPool, AsyncHttp2ConnectionPool
 from ..._base_pool import PoolKey
@@ -63,18 +59,10 @@ from ..._errors import (
 from ..._models import (
     Request,
     Response,
-    StdNetworkHandlerConfig,
 )
 from .._async_base import AsyncBaseHandler
 
 logger = getLogger(__name__)
-
-_HTTP2_NOT_INSTALLED = 'HTTP/2 support requires the "http2" extra; install with `pip install "zapros[http2]"`'
-
-
-def is_http2_installed() -> bool:
-    # The async handler imports h2 together with anyio, so there this covers the whole `http2` extra.
-    return h2 is not None
 
 
 async def _send_connect_request(
@@ -309,17 +297,19 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         self._transport = transport
 
         # Total timeout means: start of ahandle() until response headers received.
-        self._config: StdNetworkHandlerConfig = {
-            "total_timeout": total_timeout,
-            "connect_timeout": connect_timeout,
-            "read_timeout": read_timeout,
-            "write_timeout": write_timeout,
-            "http1": http1 is not False,
-            "http2": http2,
-        }
+        self.total_timeout = total_timeout
 
-        if http2 and not is_http2_installed():
-            raise ImportError(_HTTP2_NOT_INSTALLED)
+        # http
+        self._http1 = http1
+        self._http2 = http2
+
+        if self._http2 and h2 is None:
+            raise ImportError('HTTP/2 support requires the "h2" library; install with `pip install "zapros[http2]"`')
+
+        # Per-phase timeouts remain independently configurable.
+        self.connect_timeout = connect_timeout if connect_timeout is not None else None
+        self.read_timeout = read_timeout if read_timeout is not None else None
+        self.write_timeout = write_timeout if write_timeout is not None else None
 
         if not isinstance(http1, bool):
             self._http1_pool = AsyncHttp1ConnectionPool(
@@ -335,9 +325,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             )
 
         self._http2_pool = AsyncHttp2ConnectionPool()
-        # Hosts the HTTP/2 connection workers; opened by `async with`.  # unasync: strip
-        self._http2_task_group: TaskGroup | None = None  # unasync: strip
-        self._http2_fallback_warned = False  # unasync: strip
 
     @property
     def transport(self) -> AsyncBaseTransport:
@@ -356,8 +343,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         self,
         request: Request,
         *,
-        http1: bool,
-        http2: bool,
         connect_timeout: float | None = None,
     ) -> AsyncHttpConnection:
         logger.debug(f"Establishing new connection for request {request.url.hostname}")
@@ -391,12 +376,12 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         upgrade = request.headers.get("upgrade")
         is_websocket_request = upgrade is not None and upgrade.lower() == "websocket"
 
-        if forward_or_tunnel and not http1:
+        if forward_or_tunnel and not self._http1:
             raise ValueError(
                 "Using an HTTP proxy requires HTTP/1.1 support in the client;"
                 "enable HTTP/1.1 support or switch to a SOCKS5 proxy."
             )
-        if is_websocket_request and not http1:
+        if is_websocket_request and not self._http1:
             raise ValueError("WebSocket requests require HTTP/1.1; enable HTTP/1.1 support in the client.")
 
         # ALPN advertises which HTTP versions we're willing to speak. Set it
@@ -404,9 +389,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         # the handshake instead of silently falling back at the HTTP layer.
         if forward_or_tunnel or is_websocket_request:
             alpn_protocols = ["http/1.1"]
-        elif http1 and http2:
+        elif self._http1 and self._http2:
             alpn_protocols = ["h2", "http/1.1"]  # h2 preferred
-        elif http2:
+        elif self._http2:
             alpn_protocols = ["h2"]
         else:
             alpn_protocols = ["http/1.1"]
@@ -427,7 +412,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
         # No proxy: stream is already talking to the origin
         if proxy_url is None:
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(stream)
 
         # SOCKS5: negotiate then optionally wrap in TLS for the origin
         if is_socks5:
@@ -442,54 +427,46 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if is_secure:
                 server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
                 await stream.start_tls(server_hostname=server_hostname)
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(stream)
 
         # HTTP(S) proxy to plaintext origin: forward proxy, nothing more to do
         if not is_secure:
             logger.debug("Using HTTP proxy in forward mode (no CONNECT)")
-            return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+            return self._create_conn_from_stream(stream)
 
         # HTTP(S) proxy to TLS origin: issue CONNECT, then start TLS to the origin
         logger.debug("Using HTTP proxy in tunnel mode (with CONNECT)")
         await _send_connect_request(stream, request, host, port, connect_timeout)
         server_hostname = (proxy_context.get("server_hostname") if proxy_context else None) or host
         await stream.start_tls(server_hostname=server_hostname)
-        return self._create_conn_from_stream(stream, http1=http1, http2=http2)
+        return self._create_conn_from_stream(stream)
 
-    def _create_conn_from_stream(
-        self, stream: AsyncBaseNetworkStream, *, http1: bool, http2: bool
-    ) -> AsyncHttp1Connection | AsyncHttp2Connection:
+    def _create_conn_from_stream(self, stream: AsyncBaseNetworkStream) -> AsyncHttp1Connection | AsyncHttp2Connection:
         selected_alpn = stream.selected_alpn_protocol()
 
         if selected_alpn == "h2":
-            if not http2:
+            if not self._http2:
                 raise ConnectionError("Server selected HTTP/2 via ALPN, but HTTP/2 support is disabled in the client")
-            return self._new_http2_conn(stream)
+            return AsyncHttp2Connection(stream)
         elif selected_alpn == "http/1.1":
-            if not http1:
+            if not self._http1:
                 raise ConnectionError(
                     "Server selected HTTP/1.1 via ALPN, but HTTP/1.1 support is disabled in the client"
                 )
             return AsyncHttp1Connection(stream, pool=self._http1_pool)
         else:
-            if http1:
+            if self._http1:
                 return AsyncHttp1Connection(stream, pool=self._http1_pool)
-            elif http2:
-                return self._new_http2_conn(stream)
+            elif self._http2:
+                return AsyncHttp2Connection(stream)
             else:
                 raise ValueError("At least one of http1 or http2 support must be enabled in the client")
-
-    def _new_http2_conn(self, stream: AsyncBaseNetworkStream) -> AsyncHttp2Connection:
-        assert self._http2_task_group is not None  # unasync: strip
-        return AsyncHttp2Connection(stream, self._http2_task_group)
 
     async def _acquire_conn_for_request(
         self,
         request: Request,
         key: PoolKey,
         *,
-        http1: bool,
-        http2: bool,
         connect_timeout: float | None = None,
     ) -> tuple[AsyncHttpConnection, bool, bool]:
         """
@@ -497,31 +474,24 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         Returns a tuple of (connection, from_pool, is_http2).
         """
 
-        if http2:
-            logger.debug(f"Trying to acquire connection for {request.url.hostname} from http2 pool")
-            # Fast path: existing usable HTTP/2 connection
-            http2_conn = cast(AsyncHttp2Connection | None, await self._http2_pool.acquire(key))
-            if http2_conn is not None:
-                logger.debug(f"Acquired HTTP/2 connection for {request.url.hostname} from pool")
-                return http2_conn, True, True
+        logger.debug(f"Trying to acquire connection for {request.url.hostname} from http2 pool")
+        # Fast path: existing usable HTTP/2 connection
+        http2_conn = cast(AsyncHttp2Connection | None, await self._http2_pool.acquire(key))
+        if http2_conn is not None:
+            logger.debug(f"Acquired HTTP/2 connection for {request.url.hostname} from pool")
+            return http2_conn, True, True
 
-        if http1:
-            # Try HTTP/1 pool
-            logger.debug(f"Trying to acquire connection for {request.url.hostname} from http1 pool")
-            conn = cast(AsyncHttpConnection | None, await self._http1_pool.acquire(key))
-            if conn is not None:
-                logger.debug(f"Acquired HTTP/1 connection for {request.url.hostname} from pool")
-                return conn, True, False
-        else:
-            # Take the slot a new connection needs without reusing an idle HTTP/1 one.
-            await self._http1_pool.acquire_reservation(key)
+        # Try HTTP/1 pool
+        logger.debug(f"Trying to acquire connection for {request.url.hostname} from http1 pool")
+        conn = cast(AsyncHttpConnection | None, await self._http1_pool.acquire(key))
+        if conn is not None:
+            logger.debug(f"Acquired HTTP/1 connection for {request.url.hostname} from pool")
+            return conn, True, False
 
         try:
             logger.debug(f"No pooled connection available for {request.url.hostname}; establishing new connection")
             conn = await self._new_conn(
                 request,
-                http1=http1,
-                http2=http2,
                 connect_timeout=connect_timeout,
             )
 
@@ -540,58 +510,14 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             await self._http1_pool.release_reservation(key)
             raise
 
-    def get_effective_config(self, request: Request) -> StdNetworkHandlerConfig:
-        """
-        Return the handler's config with the request's `context["network_handler"]["overrides"]` applied.
-
-        Settings the request doesn't override keep the handler's values. Timeouts not overridden
-        come from `context["timeouts"]` when set there.
-        """
+    async def ahandle(self, request: Request) -> Response:
         total_timeout, connect_timeout, read_timeout, write_timeout = resolve_timeouts(
             request,
-            total_timeout=self._config.get("total_timeout"),
-            connect_timeout=self._config.get("connect_timeout"),
-            read_timeout=self._config.get("read_timeout"),
-            write_timeout=self._config.get("write_timeout"),
+            total_timeout=self.total_timeout,
+            connect_timeout=self.connect_timeout,
+            read_timeout=self.read_timeout,
+            write_timeout=self.write_timeout,
         )
-        return {
-            **self._config,
-            "total_timeout": total_timeout,
-            "connect_timeout": connect_timeout,
-            "read_timeout": read_timeout,
-            "write_timeout": write_timeout,
-            **request.context.get("network_handler", {}).get("overrides", {}),
-        }
-
-    async def ahandle(self, request: Request) -> Response:
-        config = self.get_effective_config(request)
-        http1 = config.get("http1", True)
-        http2 = config.get("http2", False)
-        if http2 and not is_http2_installed():
-            raise ImportError(_HTTP2_NOT_INSTALLED)
-
-        # An HTTP/2-only request has nothing to fall back to.  # unasync: strip
-        if http2 and not http1 and self._http2_task_group is None:  # unasync: strip
-            raise RuntimeError(  # unasync: strip
-                "HTTP/2 requires the client to be used as an async context manager: "  # unasync: strip
-                "`async with AsyncClient(handler=AsyncStdNetworkHandler(http2=True)) as client: ...`"  # unasync: strip
-            )  # unasync: strip
-        if http2 and self._http2_task_group is None and not self._http2_fallback_warned:  # unasync: strip
-            self._http2_fallback_warned = True  # unasync: strip
-            logger.warning(  # unasync: strip
-                "HTTP/2 is disabled because the client is not used as an async context manager "  # unasync: strip
-                "(`async with AsyncClient(...) as client:`); falling back to HTTP/1.1"  # unasync: strip
-            )  # unasync: strip
-
-        # Without the task group from `async with`, HTTP/2 is off and requests use HTTP/1.1.  # unasync: strip
-        http2 = http2 and self._http2_task_group is not None  # unasync: strip
-        if not http1 and not http2:
-            raise ValueError("At least one of http1 or http2 support must be enabled in the client")
-
-        total_timeout = config.get("total_timeout")
-        connect_timeout = config.get("connect_timeout")
-        read_timeout = config.get("read_timeout")
-        write_timeout = config.get("write_timeout")
         deadline = None if total_timeout is None else (time.monotonic() + total_timeout)
 
         key, use_full_url = get_pool_key(request)
@@ -599,8 +525,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
         conn, from_pool, is_http2 = await self._acquire_conn_for_request(
             request,
             key,
-            http1=http1,
-            http2=http2,
             connect_timeout=min_with_optionals(connect_timeout, remaining_timeout_or_raise(deadline)),
         )
 
@@ -631,8 +555,6 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
 
                 conn = await self._new_conn(
                     request,
-                    http1=http1,
-                    http2=http2,
                     connect_timeout=min_with_optionals(connect_timeout, remaining_timeout_or_raise(deadline)),
                 )
 
@@ -641,7 +563,7 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
                 if is_http2:
                     conn = cast(
                         AsyncHttp2Connection,
-                        await self._http2_pool.register(key, conn),
+                        await self._http2_pool.register(key, cast(AsyncHttp2Connection, conn)),
                     )
 
                     if not old_is_http2:
@@ -669,27 +591,9 @@ class AsyncStdNetworkHandler(AsyncBaseHandler):
             if not is_http2:
                 await self._http1_pool.release(key, conn, reuse=False)
             else:
-                # Other requests may be sharing a healthy HTTP/2 connection; drop only a dead one.  # unasync: strip
-                if conn.can_handle_request():  # unasync: strip
-                    raise  # unasync: strip
                 await self._http2_pool.discard(key, cast(AsyncHttp2Connection, conn))
             raise
 
     async def aclose(self) -> None:
         await self._http1_pool.close_all()
         await self._http2_pool.close_all()
-
-    async def __aenter__(self) -> Self:
-        # Opened whenever HTTP/2 is installed, so a request can enable it over the handler default.  # unasync: strip
-        if is_http2_installed():  # unasync: strip
-            self._http2_task_group = anyio.create_task_group()  # unasync: strip
-            await self._http2_task_group.__aenter__()  # unasync: strip
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await self.aclose()
-        if self._http2_task_group is not None:  # unasync: strip
-            task_group, self._http2_task_group = self._http2_task_group, None  # unasync: strip
-            # Request body pumps still running at this point are abandoned.  # unasync: strip
-            task_group.cancel_scope.cancel()  # unasync: strip
-            await task_group.__aexit__(exc_type, exc_val, exc_tb)  # unasync: strip

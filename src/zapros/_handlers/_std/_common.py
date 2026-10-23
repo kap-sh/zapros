@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import threading
 from types import TracebackType
@@ -105,6 +106,75 @@ class StreamLimiter:
         exc_tb: Optional[TracebackType],
     ) -> None:
         self.release()
+
+
+class AsyncStreamLimiter:
+    """
+    Async limiter for concurrent HTTP/2 streams.
+
+    Same semantics as StreamLimiter, but built on asyncio primitives.
+    Uses only Condition.wait() (no wait_for) so the pattern translates
+    directly to trio.Condition, anyio.Condition, etc.
+    """
+
+    def __init__(self, limit: int):
+        if limit < 0:
+            raise ValueError("limit must be non-negative")
+        self._cond = asyncio.Condition()
+        self._limit = limit
+        self._active = 0
+        self._failed = False
+
+    async def acquire(self) -> None:
+        async with self._cond:
+            while not self._failed and self._active >= self._limit:
+                await self._cond.wait()
+            if self._failed:
+                raise _ConnError("HTTP/2 connection terminated")
+            self._active += 1
+
+    async def release(self) -> None:
+        async with self._cond:
+            if self._active <= 0:
+                raise RuntimeError("release() called without matching acquire()")
+            self._active -= 1
+            self._cond.notify()
+
+    async def update_limit(self, new_limit: int) -> None:
+        if new_limit < 0:
+            raise ValueError("limit must be non-negative")
+        async with self._cond:
+            self._limit = new_limit
+            self._cond.notify_all()
+
+    async def fail_all(self) -> None:
+        """Wake all waiters with ConnectionError and reject future acquires.
+
+        Idempotent. Does not change `_active`; outstanding permits still need
+        to be released by their holders.
+        """
+        async with self._cond:
+            self._failed = True
+            self._cond.notify_all()
+
+    @property
+    def active(self) -> int:
+        return self._active
+
+    @property
+    def limit(self) -> int:
+        return self._limit
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        await self.release()
 
 
 def remaining_timeout_or_raise(deadline: float | None) -> float | None:

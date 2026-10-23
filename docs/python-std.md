@@ -64,12 +64,6 @@ async with Client(
 
 :::
 
-::: warning Async HTTP/2 needs `async with`
-With `http2=True`, `AsyncClient` only uses HTTP/2 inside an `async with` block: each HTTP/2 connection runs a background task that lives inside that block. Outside it, the client falls back to HTTP/1.1 and logs a warning, or raises a `RuntimeError` if HTTP/1.1 is disabled (`http1=False`).
-
-This also makes async HTTP/2 streams full-duplex: the response is returned as soon as its headers arrive, even if a streaming request body is still being sent.
-:::
-
 ### HTTP/2 Prior knowledge
 
 ::: code-group

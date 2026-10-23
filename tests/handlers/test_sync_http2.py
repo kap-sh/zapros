@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import h2.config
 import h2.connection
 import h2.events
@@ -11,7 +9,6 @@ import pytest
 from pywhatwgurl import URL
 
 from tests.dual_stream import DualStream
-from zapros import StdNetworkHandler
 from zapros._errors import ConnectionError as ZaprosConnectionError
 from zapros._handlers._std._sync_http2 import Http2Connection
 from zapros._io._base import BaseNetworkStream
@@ -211,44 +208,3 @@ def test_http2_empty_trailers_end_stream_without_trailer_frame() -> None:
     assert any(isinstance(e, h2.events.StreamEnded) for e in events)
     data = b"".join(e.data for e in events if isinstance(e, h2.events.DataReceived))
     assert data == b"hello"
-
-
-class H2MockStream(MockStream):
-    def selected_alpn_protocol(self) -> Literal["http/1.1", "h2"] | None:
-        return "h2"
-
-
-class H2MockTransport:
-    """Serves every connection as HTTP/2 and records the ALPN protocols offered."""
-
-    def __init__(self) -> None:
-        self.alpn_offers: list[list[Literal["http/1.1", "h2"]] | None] = []
-
-    def connect(
-        self,
-        host: str,
-        port: int,
-        server_hostname: str | None = None,
-        tls: bool = False,
-        *,
-        alpn_protocols: list[Literal["http/1.1", "h2"]] | None = None,
-        timeout: float | None = None,
-    ) -> BaseNetworkStream:
-        self.alpn_offers.append(alpn_protocols)
-        return H2MockStream(_ok_response_frames())
-
-
-def test_request_override_enables_http2_on_http1_only_handler() -> None:
-    transport = H2MockTransport()
-    handler = StdNetworkHandler(transport=transport)
-
-    response = handler.handle(
-        Request(
-            URL("https://example.com/"),
-            "GET",
-            context={"network_handler": {"overrides": {"http2": True}}},
-        )
-    )
-    assert response.context.get("network", {}).get("http_protocol") == "HTTP/2"
-    assert response.read() == b"Hello, world!"
-    assert transport.alpn_offers == [["h2", "http/1.1"]]

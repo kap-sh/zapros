@@ -94,29 +94,10 @@ class NetworkContext(TypedDict, total=False):
     proxy: ProxyContext
 
 
-class StdNetworkHandlerConfig(TypedDict, total=False):
-    total_timeout: float | None
-    connect_timeout: float | None
-    read_timeout: float | None
-    write_timeout: float | None
-    http1: bool
-    http2: bool
-
-
-class NetworkHandlerContext(TypedDict, total=False):
-    """
-    Per-request overrides of the network handler's configuration.
-    Timeouts set here take priority over `context["timeouts"]`.
-    """
-
-    overrides: StdNetworkHandlerConfig
-
-
 class RequestContext(TypedDict, total=False, extra_items=Any):
     timeouts: TimeoutsContext
     caching: CachingContext
     network: NetworkContext
-    network_handler: NetworkHandlerContext
 
 
 class ResponseCachingContext(TypedDict, total=False):
