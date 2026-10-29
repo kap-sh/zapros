@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/kap-sh/zapros/compare/v0.24.0...v0.25.0) (2026-10-29)
+
+
+### Performance Improvements
+
+* **io:** enable TCP_NODELAY on sync connections ([afeb02b](https://github.com/kap-sh/zapros/commit/afeb02b9e334b453ac7757640ee11a86cb28e44b))
+
 ## [0.24.0](https://github.com/kap-sh/zapros/compare/v0.23.0...v0.24.0) (2026-10-29)
 
 
