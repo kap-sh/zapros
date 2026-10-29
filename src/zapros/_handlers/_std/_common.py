@@ -224,14 +224,14 @@ def expects_continue(headers: list[tuple[str, str]]) -> bool:
     )
 
 
-def response_has_no_body(method: str, status: int) -> bool:
+def response_has_no_body(method: str, status: int, headers: list[tuple[str, str]]) -> bool:
     if method.upper() == "HEAD":
         return True
     if 100 <= status < 200:
         return True
     if status in (204, 304):
         return True
-    return False
+    return any(k.lower() == "content-length" and v.strip() == "0" for k, v in headers)
 
 
 def proxy_basic_auth_header(request: Request) -> tuple[str, str] | None:

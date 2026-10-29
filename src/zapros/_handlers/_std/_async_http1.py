@@ -48,7 +48,7 @@ class AsyncHttp1ResponseStream(AsyncClosableStream):
     failed read never leaves a half-read response in the pool.
 
     The ``no_body_response`` flag handles responses that are semantically
-    bodyless (e.g. ``HEAD`` requests, ``204``/``304`` status codes) but where
+    bodyless (e.g. ``HEAD`` requests, ``204``/``304`` status codes, ``Content-Length: 0``) but where
     h11 still needs to see ``EndOfMessage`` to advance its state machine. When
     set, ``aclose()`` will drain any pending end-of-message event so the
     connection can be reused without the caller having to iterate.
@@ -284,7 +284,7 @@ class AsyncHttp1Connection(AsyncHttpConnection):
                 pool=self._pool,
                 key=key,
                 read_timeout=read_timeout,
-                no_body_response=response_has_no_body(request.method, status),
+                no_body_response=response_has_no_body(request.method, status, resp_headers),
                 must_close=connection_wants_close(request_headers_list) or connection_wants_close(resp_headers),
             ),
             context={

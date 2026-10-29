@@ -284,3 +284,24 @@ async def test_http1_expect_continue_sends_body_after_other_informational_respon
     assert response.status == 200
     await response.aread()
     assert stream.written.endswith(b"\r\n\r\nhello")
+
+
+async def test_http1_unread_empty_content_length_response_is_reused() -> None:
+    stream = AsyncMockStream([_OK_RESPONSE])
+    conn = AsyncHttp1Connection(stream, pool=AsyncHttp1ConnectionPool())
+
+    response = await conn.send_request(Request(URL("http://example.com/"), "GET"))
+    await response.aclose()
+
+    assert not conn.is_closed
+    assert conn.can_handle_request()
+
+
+async def test_http1_unread_non_empty_response_is_not_reused() -> None:
+    stream = AsyncMockStream([b"HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\n", b"ok"])
+    conn = AsyncHttp1Connection(stream, pool=AsyncHttp1ConnectionPool())
+
+    response = await conn.send_request(Request(URL("http://example.com/"), "GET"))
+    await response.aclose()
+
+    assert conn.is_closed
