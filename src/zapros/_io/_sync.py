@@ -179,6 +179,8 @@ class SyncTransport(BaseTransport):
             sock = socket.create_connection((host, port), timeout=timeout)
 
         try:
+            # Disable Nagle's algorithm, as asyncio and trio do by default.
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             if tls:
                 sock = self.ssl_context.wrap_socket(
                     sock,

@@ -7,7 +7,7 @@ import pytest
 
 from zapros._errors import ReadTimeoutError
 from zapros._io._asyncio import AsyncIOStream, _AsyncTLSState
-from zapros._io._sync import SyncStream, _SyncTLSState
+from zapros._io._sync import SyncStream, SyncTransport, _SyncTLSState
 
 
 class _WantReadSSLObject:
@@ -57,3 +57,13 @@ def test_asyncio_start_tls_stream_read_honours_timeout() -> None:
             writer.close()
 
     asyncio.run(main())
+
+
+@pytest.mark.no_pyodide  # needs a real listening socket
+def test_sync_connect_enables_tcp_nodelay() -> None:
+    with socket.create_server(("127.0.0.1", 0)) as server:
+        stream = cast(SyncStream, SyncTransport().connect("127.0.0.1", server.getsockname()[1]))
+        try:
+            assert stream.sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        finally:
+            stream.close()
