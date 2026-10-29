@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/kap-sh/zapros/compare/v0.23.0...v0.24.0) (2026-10-29)
+
+
+### Bug Fixes
+
+* **std:** reuse connection when closing an unread empty-body response ([772bb54](https://github.com/kap-sh/zapros/commit/772bb54f133be179dc527104e87fbf53136e1543))
+
 ## [0.23.0](https://github.com/kap-sh/zapros/compare/v0.22.0...v0.23.0) (2026-10-23)
 
 
