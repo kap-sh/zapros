@@ -314,10 +314,12 @@ targets:
   - input: tests/handlers/test_async_caching.py
     output: tests/handlers/test_sync_caching.py
     rules:
+      - match: '\banysqlite\.connect\(":memory:"\)'
+        replace: 'sqlite3.connect(":memory:", check_same_thread=False)'
       - match: '\banysqlite\b'
         replace: 'sqlite3'
       - match: '\bAsyncSqliteStorage\b'
-        replace: 'SyncSqliteStorage'
+        replace: 'SqliteStorage'
 
   - tag: cassetteMiddleware
     rules:
@@ -332,14 +334,20 @@ targets:
   - tag: cacheMiddleware
     rules:
       # TODO: adopt ry in Hishel and import it's rules here instead of duplicating them
-      - match: '_get_async_cache_proxy'
-        replace: '_get_sync_cache_proxy'
-      - match: '\bAsyncCacheProxy\b'
-        replace: 'SyncCacheProxy'
-      - match: '\b_async_send_request\b'
-        replace: '_sync_send_request'
+      - match: '\b_get_async_storage\b'
+        replace: '_get_sync_storage'
+      - match: '\b_async_send\b'
+        replace: '_sync_send'
+      - match: '\b_async_to_hishel\b'
+        replace: '_sync_to_hishel'
+      - match: '\b_ahandle_with_rfc\b'
+        replace: '_handle_with_rfc'
+      - match: '\b_ahandle_without_rfc\b'
+        replace: '_handle_without_rfc'
       - match: '\bHishelAsyncBaseStorage\b'
-        replace: 'HishelSyncBaseStorage'
+        replace: 'HishelBaseStorage'
+      - match: '\bAsyncSqliteStorage\b'
+        replace: 'SqliteStorage'
 
   - tag: TestBaseUrl
     rules:

@@ -47,7 +47,7 @@ pyreqwest = [
     "pyreqwest; python_version >= '3.11' and python_version < '3.15'",
 ]
 caching = [
-    "hishel>=1.1.9",
+    "hishel>=2,<3",
 ]
 socks = [
     "socksio>=1.0.0",
@@ -70,7 +70,7 @@ dev = [
     "ruff>=0.14.0",
     "pyright>=1.1.404",
     "pywhatwgurl>=0.1.0",
-    "hishel[async]>=1.1.9",
+    "hishel[async]>=2,<3",
     "ry-cli==0.4.0",
     "trio>=0.33.0",
     "sniffio>=1.3.1",

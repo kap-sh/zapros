@@ -1,6 +1,6 @@
 # Caching
 
-Caching in Zapros is implemented as a [handler](/handlers) powered by [Hishel](https://hishel.com) — wrapping another handler to automatically cache HTTP responses according to RFC 9111 standards.
+Caching in Zapros is implemented as a [handler](/handlers) powered by [Hishel](https://hishel.com) — wrapping another handler to automatically cache HTTP responses.
 
 ## Installation
 
@@ -40,7 +40,7 @@ client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 ## Basic usage
 
-By default, `CacheMiddleware` uses RFC 9111 compliant caching, respecting standard HTTP cache headers:
+By default, `CacheMiddleware` caches successful `GET` and `HEAD` responses (except `206`) by method and URL. It ignores HTTP caching headers, so a stored response is served until the storage expires it:
 
 ::: code-group
 
@@ -82,18 +82,13 @@ with client:
 
 :::
 
-## Caching policies
+## RFC 9111 mode
 
-Customize caching behavior with different policies. See [Hishel policies documentation](https://hishel.com/policies.html) for more details.
-
-### SpecificationPolicy (default)
-
-Strict RFC 9111 compliant caching:
+Pass `rfc=True` to follow [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html) instead. The server's `Cache-Control`, `Vary`, `ETag` and related headers then decide what is stored, how long it stays fresh, and when it is revalidated:
 
 ::: code-group
 
 ```python [Async]
-from hishel import SpecificationPolicy
 from zapros import (
     AsyncClient,
     CacheMiddleware,
@@ -103,13 +98,12 @@ from zapros import (
 client = AsyncClient(
     handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
-        policy=SpecificationPolicy(),
+        rfc=True,
     )
 )
 ```
 
 ```python [Sync]
-from hishel import SpecificationPolicy
 from zapros import (
     Client,
     CacheMiddleware,
@@ -119,21 +113,19 @@ from zapros import (
 client = Client(
     handler=CacheMiddleware(
         StdNetworkHandler(),
-        policy=SpecificationPolicy(),
+        rfc=True,
     )
 )
 ```
 
 :::
 
-### FilterPolicy
-
-Cache anything that passes custom filters:
+To configure RFC 9111 mode, pass Hishel's `CacheOptions` instead of `True`. For example, `shared=False` makes it a private cache, which can store responses to requests with an `Authorization` header. See [Hishel's documentation](https://hishel.com/httpx.html) for all options:
 
 ::: code-group
 
 ```python [Async]
-from hishel import FilterPolicy
+from hishel import CacheOptions
 from zapros import (
     AsyncClient,
     CacheMiddleware,
@@ -143,18 +135,13 @@ from zapros import (
 client = AsyncClient(
     handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
-        policy=FilterPolicy(),
+        rfc=CacheOptions(shared=False),
     )
 )
-
-async with client:
-    response = await client.get(
-        "https://api.example.com/data",
-    )
 ```
 
 ```python [Sync]
-from hishel import FilterPolicy
+from hishel import CacheOptions
 from zapros import (
     Client,
     CacheMiddleware,
@@ -164,69 +151,66 @@ from zapros import (
 client = Client(
     handler=CacheMiddleware(
         StdNetworkHandler(),
-        policy=FilterPolicy(),
+        rfc=CacheOptions(shared=False),
     )
 )
-
-with client:
-    response = client.get(
-        "https://api.example.com/data",
-    )
 ```
 
 :::
 
-You can pass both request and response filters to `FilterPolicy` to control what gets cached:
-
-::: code-group
-
-```python [Async]
-from hishel import FilterPolicy
-from zapros import (
-    AsyncClient,
-    CacheMiddleware,
-    AsyncStdNetworkHandler,
-)
-
-policy = FilterPolicy(
-    request_filter=lambda req: req.method == "GET",
-    response_filter=lambda resp: resp.status == 200,
-)
-
-client = AsyncClient(
-    handler=CacheMiddleware(
-        AsyncStdNetworkHandler(),
-        policy=policy,
-    )
-)
-```
-
-```python [Sync]
-from hishel import FilterPolicy
-from zapros import (
-    Client,
-    CacheMiddleware,
-    StdNetworkHandler,
-)
-
-policy = FilterPolicy(
-    request_filter=lambda req: req.method == "GET",
-    response_filter=lambda resp: resp.status == 200,
-)
-
-client = Client(
-    handler=CacheMiddleware(
-        StdNetworkHandler(),
-        policy=policy,
-    )
-)
-```
-
+::: warning
+In the default mode the cache is shared across users, whatever their `Authorization` or `Cookie` headers. If responses differ per user, use RFC 9111 mode or a separate storage per user.
 :::
 
 ## Custom storage
 
-By default, responses are cached in an SQLite database (`hishel_cache.db`). You can customize the storage backend to use different databases or in-memory storage. See [Hishel storage documentation](https://hishel.com/storages.html) for more options.
+By default, responses are cached in an SQLite database (`.cache/hishel/hishel_cache_v2.db`). Closing the client also closes the middleware's storage, including one you passed in. You can customize the storage backend to use different databases or in-memory storage. See [Hishel storage documentation](https://hishel.com/storages.html) for more options, including Redis.
+
+### Expiry
+
+Storages accept `default_ttl` (seconds after the response is stored) and `default_tti` (seconds without being used). Whichever comes first expires the entry:
+
+::: code-group
+
+```python [Async]
+from hishel import AsyncSqliteStorage
+from zapros import (
+    AsyncClient,
+    CacheMiddleware,
+    AsyncStdNetworkHandler,
+)
+
+client = AsyncClient(
+    handler=CacheMiddleware(
+        AsyncStdNetworkHandler(),
+        storage=AsyncSqliteStorage(
+            default_ttl=86400,
+            default_tti=3600,
+        ),
+    )
+)
+```
+
+```python [Sync]
+from hishel import SqliteStorage
+from zapros import (
+    Client,
+    CacheMiddleware,
+    StdNetworkHandler,
+)
+
+client = Client(
+    handler=CacheMiddleware(
+        StdNetworkHandler(),
+        storage=SqliteStorage(
+            default_ttl=86400,
+            default_tti=3600,
+        ),
+    )
+)
+```
+
+:::
 
 ### In-memory storage
 
@@ -247,7 +231,7 @@ client = AsyncClient(
     handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         storage=AsyncSqliteStorage(
-            connection=anysqlite.connect(":memory:")
+            connection=await anysqlite.connect(":memory:")
         ),
     )
 )
@@ -255,7 +239,7 @@ client = AsyncClient(
 
 ```python [Sync]
 import sqlite3
-from hishel import SyncSqliteStorage
+from hishel import SqliteStorage
 from zapros import (
     Client,
     CacheMiddleware,
@@ -265,8 +249,10 @@ from zapros import (
 client = Client(
     handler=CacheMiddleware(
         StdNetworkHandler(),
-        storage=SyncSqliteStorage(
-            connection=sqlite3.connect(":memory:")
+        storage=SqliteStorage(
+            connection=sqlite3.connect(
+                ":memory:", check_same_thread=False
+            )
         ),
     )
 )
@@ -281,7 +267,6 @@ Specify a custom database file location:
 ::: code-group
 
 ```python [Async]
-import anysqlite
 from hishel import AsyncSqliteStorage
 from zapros import (
     AsyncClient,
@@ -293,15 +278,14 @@ client = AsyncClient(
     handler=CacheMiddleware(
         AsyncStdNetworkHandler(),
         storage=AsyncSqliteStorage(
-            connection=sqlite3.connect("my_cache.db")
+            database_path="my_cache.db"
         ),
     )
 )
 ```
 
 ```python [Sync]
-import sqlite3
-from hishel import SyncSqliteStorage
+from hishel import SqliteStorage
 from zapros import (
     Client,
     CacheMiddleware,
@@ -311,8 +295,8 @@ from zapros import (
 client = Client(
     handler=CacheMiddleware(
         StdNetworkHandler(),
-        storage=SyncSqliteStorage(
-            connection=sqlite3.connect("my_cache.db")
+        storage=SqliteStorage(
+            database_path="my_cache.db"
         ),
     )
 )
@@ -326,7 +310,7 @@ Control caching behavior on a per-request basis using the `context` parameter.
 
 ### TTL (Time to Live)
 
-Set a maximum lifetime for cached responses:
+Expire this response a number of seconds after it is stored:
 
 ::: code-group
 
@@ -374,9 +358,9 @@ with client:
 
 :::
 
-### Refresh TTL on access
+### TTI (Time to Idle)
 
-Extend the cache lifetime each time a cached response is accessed:
+Expire this response after a number of seconds without being used, so each use keeps it alive:
 
 ::: code-group
 
@@ -396,7 +380,7 @@ async with client:
         "https://api.example.com/data",
         context={
             "caching": {
-                "refresh_ttl_on_access": True,
+                "tti": 300.0,
             }
         },
     )
@@ -416,7 +400,7 @@ with client:
         "https://api.example.com/data",
         context={
             "caching": {
-                "refresh_ttl_on_access": True,
+                "tti": 300.0,
             }
         },
     )
@@ -424,9 +408,61 @@ with client:
 
 :::
 
-### Body key
+### Cache key
 
-Use a custom key for caching responses with request bodies:
+Replace the default key (method and URL) with your own. Requests with the same key share an entry, so here both URLs are answered by one cached response. A custom key alone does not make `POST` and other unsafe methods cacheable, see [Forcing the cache](#forcing-the-cache):
+
+::: code-group
+
+```python [Async]
+from zapros import (
+    AsyncClient,
+    CacheMiddleware,
+    AsyncStdNetworkHandler,
+)
+
+client = AsyncClient(
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
+)
+
+async with client:
+    response = await client.get(
+        "https://api.example.com/data?session=abc",
+        context={
+            "caching": {
+                "key": "data",
+            }
+        },
+    )
+```
+
+```python [Sync]
+from zapros import (
+    Client,
+    CacheMiddleware,
+    StdNetworkHandler,
+)
+
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
+
+with client:
+    response = client.get(
+        "https://api.example.com/data?session=abc",
+        context={
+            "caching": {
+                "key": "data",
+            }
+        },
+    )
+```
+
+:::
+
+### Forcing the cache
+
+`POST` and other unsafe methods are never cached by default, because serving them from cache means the request never reaches the server. For requests that only read data, such as GraphQL queries or search endpoints, set `force` to cache the response anyway.
+
+The default key doesn't include the request body, so `force` on a method other than `GET` or `HEAD` requires a `key`, and raises `ValueError` without one. Choose a key that changes whenever the body does. A forced request ignores `rfc` and caches by method and key, storing only successful responses:
 
 ::: code-group
 
@@ -443,11 +479,12 @@ client = AsyncClient(
 
 async with client:
     response = await client.post(
-        "https://api.example.com/data",
-        json={"query": "search"},
+        "https://api.example.com/graphql",
+        json={"query": "{ user(id: 1) { name } }"},
         context={
             "caching": {
-                "body_key": "custom_key",
+                "force": True,
+                "key": "user-1-name",
             }
         },
     )
@@ -464,11 +501,70 @@ client = Client(handler=CacheMiddleware(StdNetworkHandler()))
 
 with client:
     response = client.post(
-        "https://api.example.com/data",
-        json={"query": "search"},
+        "https://api.example.com/graphql",
+        json={"query": "{ user(id: 1) { name } }"},
         context={
             "caching": {
-                "body_key": "custom_key",
+                "force": True,
+                "key": "user-1-name",
+            }
+        },
+    )
+```
+
+:::
+
+### Mode and storage
+
+The `rfc` and `storage` arguments of `CacheMiddleware` can also be overridden for a single request:
+
+::: code-group
+
+```python [Async]
+from hishel import AsyncSqliteStorage
+from zapros import (
+    AsyncClient,
+    CacheMiddleware,
+    AsyncStdNetworkHandler,
+)
+
+client = AsyncClient(
+    handler=CacheMiddleware(AsyncStdNetworkHandler())
+)
+reports_storage = AsyncSqliteStorage(
+    database_path="reports.db"
+)
+
+async with client:
+    response = await client.get(
+        "https://api.example.com/reports",
+        context={
+            "caching": {
+                "rfc": True,
+                "storage": reports_storage,
+            }
+        },
+    )
+```
+
+```python [Sync]
+from hishel import SqliteStorage
+from zapros import (
+    Client,
+    CacheMiddleware,
+    StdNetworkHandler,
+)
+
+client = Client(handler=CacheMiddleware(StdNetworkHandler()))
+reports_storage = SqliteStorage(database_path="reports.db")
+
+with client:
+    response = client.get(
+        "https://api.example.com/reports",
+        context={
+            "caching": {
+                "rfc": True,
+                "storage": reports_storage,
             }
         },
     )
@@ -529,9 +625,8 @@ with client:
 ### Available context fields
 
 - **`from_cache`** - Whether the response was served from cache
-- **`cached`** - The cached response that was used to serve the request, if available
-- **`revalidated`** - Whether the cached response was revalidated with the origin server (see [RFC 9111 validation](https://www.rfc-editor.org/rfc/rfc9111.html#name-validation))
-- **`created_at`** - Timestamp of when the cache entry was created
+- **`revalidated`** - Whether the cached response was revalidated with the origin server (RFC 9111 mode only, see [RFC 9111 validation](https://www.rfc-editor.org/rfc/rfc9111.html#name-validation))
+- **`stored`** - Whether the response was stored in the cache. It is saved once its body has been fully read
 
 ::: code-group
 
@@ -555,11 +650,7 @@ async with client:
     if caching:
         print(f"From cache: {caching.get('from_cache')}")
         print(f"Revalidated: {caching.get('revalidated')}")
-        print(f"Created at: {caching.get('created_at')}")
-        if caching.get("cached"):
-            print(
-                f"Cached response: {caching.get('cached')}"
-            )
+        print(f"Stored: {caching.get('stored')}")
 ```
 
 ```python [Sync]
@@ -580,11 +671,7 @@ with client:
     if caching:
         print(f"From cache: {caching.get('from_cache')}")
         print(f"Revalidated: {caching.get('revalidated')}")
-        print(f"Created at: {caching.get('created_at')}")
-        if caching.get("cached"):
-            print(
-                f"Cached response: {caching.get('cached')}"
-            )
+        print(f"Stored: {caching.get('stored')}")
 ```
 
 :::

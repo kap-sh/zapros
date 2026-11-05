@@ -29,6 +29,8 @@ from zapros._multidict import (
 from zapros._utils import get_host_header_value
 
 if TYPE_CHECKING:
+    from hishel import AsyncBaseStorage, BaseStorage, CacheOptions
+
     from zapros._handlers._asgi import AsgiWebSocketStream
     from zapros._handlers._std._common import AsyncStdNetworkHandlerConfig
 
@@ -67,23 +69,39 @@ class TimeoutsContext(TypedDict, total=False):
 
 class CachingContext(TypedDict, total=False):
     """
-    When set, indicates that the response to this request should be cached with the specified TTL (in seconds).
+    When set, the cached response expires this many seconds after it is stored.
     """
 
     ttl: float
 
     """
-    Indicates that the cache entry should be refreshed on access,
-    meaning that the TTL will be reset to the original value whenever the cache entry is accessed.
+    When set, the cached response expires after this many seconds without being used.
     """
-    refresh_ttl_on_access: bool
+    tti: float
 
     """
-    When set, indicates that the cache key should include the request body,
-    note that zapros will read the body to include it in the cache key,
-    so this should only be used with replayable request bodies.
+    When set, replaces the cache key that is otherwise derived from the method and URL.
+    It is used for both lookup and storage.
     """
-    body_key: str
+    key: str
+
+    """
+    When set, overrides the middleware's storage for this request.
+    """
+    storage: "AsyncBaseStorage | BaseStorage"
+
+    """
+    When set, overrides the middleware's ``rfc`` setting for this request.
+    """
+    rfc: "bool | CacheOptions"
+
+    """
+    When set, caches the response whatever the request method, including unsafe
+    methods such as POST, and ignores ``rfc`` for this request. Only successful
+    responses are stored. For methods other than GET and HEAD, ``key`` must be set,
+    because the default key doesn't include the request body.
+    """
+    force: bool
 
 
 class ProxyContext(TypedDict, total=False):
@@ -114,7 +132,6 @@ class ResponseCachingContext(TypedDict, total=False):
     from_cache: bool
     revalidated: bool
     stored: bool
-    created_at: float
 
 
 class ResponseHandoffContext(TypedDict, total=False):
