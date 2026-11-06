@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.26.0](https://github.com/kap-sh/zapros/compare/v0.25.0...v0.26.0) (2026-11-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **caching:** migrate CacheMiddleware to hishel v2
+
+### Features
+
+* **caching:** migrate CacheMiddleware to hishel v2 ([b29fc2a](https://github.com/kap-sh/zapros/commit/b29fc2a0091f874e45e426b5b3b98eb2f851911c))
+
 ## [0.25.0](https://github.com/kap-sh/zapros/compare/v0.24.0...v0.25.0) (2026-10-29)
 
 
