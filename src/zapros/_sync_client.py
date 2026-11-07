@@ -128,13 +128,17 @@ class Client:
     ) -> URL:
 
         url_obj = url if isinstance(url, URL) else URL(url, self.base_url)
-        url_obj.search = URLSearchParams(
-            {
-                **self.default_params,
-                **url_obj.search_params,
-                **(URLSearchParams(params)),
-            }
-        ).to_string()
+        # A later source replaces a name of an earlier one, as before. Within one source a
+        # name may repeat (`?tag=a&tag=b`), and every value is kept: merging through a dict
+        # kept only the first.
+        merged = URLSearchParams(self.default_params.to_string())
+        for source in (url_obj.search_params, URLSearchParams(params)):
+            pairs = list(source.items())
+            for name in dict.fromkeys(name for name, _ in pairs):
+                merged.delete(name)
+            for name, value in pairs:
+                merged.append(name, value)
+        url_obj.search = merged.to_string()
         return url_obj
 
     def _merge_headers(
