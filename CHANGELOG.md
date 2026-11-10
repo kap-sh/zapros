@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.27.0](https://github.com/kap-sh/zapros/compare/v0.26.0...v0.27.0) (2026-11-07)
+
+
+### Bug Fixes
+
+* keep repeated query parameter names when merging the URL ([#60](https://github.com/kap-sh/zapros/issues/60)) ([1bfd20b](https://github.com/kap-sh/zapros/commit/1bfd20badbdd311d2843088e5eed011ff4b253ac))
+
+
+### Chores
+
+* bump codspeed versoin ([66f1438](https://github.com/kap-sh/zapros/commit/66f1438f97af83da26a602eea5674d41325bd719))
+
 ## [0.26.0](https://github.com/kap-sh/zapros/compare/v0.25.0...v0.26.0) (2026-11-05)
 
 
