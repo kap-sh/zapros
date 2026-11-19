@@ -9,8 +9,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# 1. create the Pyodide venv once; the host Python must match Pyodide's
-[ -d .pyodide-venv ] || uvx --python 3.14 --from pyodide-build pyodide venv .pyodide-venv
+# 1. create the Pyodide venv once; the host Python must match Pyodide's.
+#    Pyodide is pinned: on 314.0.8 every async test fails inside anyio's
+#    test runner ("The future belongs to a different loop").
+if [ ! -d .pyodide-venv ]; then
+    uvx --python 3.14 --from pyodide-build pyodide xbuildenv install 314.0.7
+    uvx --python 3.14 --from pyodide-build pyodide venv .pyodide-venv
+fi
 
 # 2. export the locked deps. zapros itself is imported from src/ (pytest's
 #    pythonpath), so the project is not installed. The pruned packages are
