@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.28.0](https://github.com/kap-sh/zapros/compare/v0.27.0...v0.28.0) (2026-11-19)
+
+
+### Bug Fixes
+
+* **security:** decompress zstd responses lazily ([f1adaeb](https://github.com/kap-sh/zapros/commit/f1adaebc35c528b629f23772b01d4fe57404546b))
+* **tests:** pin pyodide version ([69bf045](https://github.com/kap-sh/zapros/commit/69bf045db22ea6b98c249e4450772b5ca965ef74))
+
 ## [0.27.0](https://github.com/kap-sh/zapros/compare/v0.26.0...v0.27.0) (2026-11-07)
 
 
