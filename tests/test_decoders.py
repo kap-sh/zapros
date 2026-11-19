@@ -1,9 +1,12 @@
 import gzip
 import importlib.util
+import sys
+import tracemalloc
 import zlib
 
 import pytest
 
+from zapros import _decoders
 from zapros._decoders import (
     SUPPORTED_DECODERS,
     DecodingError,
@@ -13,6 +16,8 @@ from zapros._decoders import (
     MultiDecoder,
     iter_chunks,
 )
+
+ZSTD_MODULE = "compression.zstd" if sys.version_info >= (3, 14) else "backports.zstd"
 
 
 def test_identity_decoder_content_pass_untuched():
@@ -181,18 +186,14 @@ def test_brotli_decoder_bounds_output():
 
 
 def test_zstandard_decoder():
-    try:
-        import zstandard
-    except ImportError:
-        pytest.skip("zstandard not installed")
+    zstd = pytest.importorskip(ZSTD_MODULE)
 
     from zapros._decoders import (
         ZStandardDecoder,
     )
 
     original = b"Hello, World! This is a test message for zstd compression."
-    compressor = zstandard.ZstdCompressor()
-    compressed = compressor.compress(original)
+    compressed = zstd.compress(original)
 
     decoder = ZStandardDecoder()
     decoded = b"".join(decoder.decode(compressed)) + b"".join(decoder.flush())
@@ -201,18 +202,14 @@ def test_zstandard_decoder():
 
 
 def test_zstandard_decoder_streaming():
-    try:
-        import zstandard
-    except ImportError:
-        pytest.skip("zstandard not installed")
+    zstd = pytest.importorskip(ZSTD_MODULE)
 
     from zapros._decoders import (
         ZStandardDecoder,
     )
 
     original = b"Hello, World! This is a test message for zstd compression."
-    compressor = zstandard.ZstdCompressor()
-    compressed = compressor.compress(original)
+    compressed = zstd.compress(original)
 
     decoder = ZStandardDecoder()
     result = b""
@@ -224,23 +221,63 @@ def test_zstandard_decoder_streaming():
 
 
 def test_zstandard_decoder_bounds_output():
-    try:
-        import zstandard
-    except ImportError:
-        pytest.skip("zstandard not installed")
+    zstd = pytest.importorskip(ZSTD_MODULE)
 
     from zapros._decoders import (
         ZStandardDecoder,
     )
 
     original = b"Z" * 1_000_000
-    compressed = zstandard.ZstdCompressor().compress(original)
+    compressed = zstd.compress(original)
 
     decoder = ZStandardDecoder(chunk_size=4096)
     pieces = list(decoder.decode(compressed)) + list(decoder.flush())
 
     assert b"".join(pieces) == original
     assert max(len(p) for p in pieces) <= 4096
+
+
+def test_zstandard_decoder_decompresses_lazily():
+    zstd = pytest.importorskip(ZSTD_MODULE)
+
+    from zapros._decoders import (
+        ZStandardDecoder,
+    )
+
+    size = 64 * 1024 * 1024
+    compressed = zstd.compress(bytes(size))
+    assert len(compressed) < 64 * 1024  # fits in a single network read
+
+    decoder = ZStandardDecoder(chunk_size=4096)
+    tracemalloc.start()
+    try:
+        pieces = decoder.decode(compressed)
+        first = next(pieces)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert len(first) == 4096
+    assert peak < 1024 * 1024
+    assert len(first) + sum(len(p) for p in pieces) == size
+
+
+def test_zstandard_decoder_multiple_frames():
+    zstd = pytest.importorskip(ZSTD_MODULE)
+
+    from zapros._decoders import (
+        ZStandardDecoder,
+    )
+
+    compressed = zstd.compress(b"first ") + zstd.compress(b"second")
+
+    decoder = ZStandardDecoder()
+    result = b""
+    for i in range(0, len(compressed), 10):
+        result += b"".join(decoder.decode(compressed[i : i + 10]))
+    result += b"".join(decoder.flush())
+
+    assert result == b"first second"
 
 
 def test_multi_decoder():
@@ -322,8 +359,7 @@ def test_brotli_in_registry():
 
 
 def test_zstandard_in_registry():
-    has_zstandard = importlib.util.find_spec("zstandard") is not None
-    if has_zstandard:
+    if _decoders.zstd is not None:
         assert "zstd" in SUPPORTED_DECODERS
     else:
         assert "zstd" not in SUPPORTED_DECODERS

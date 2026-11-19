@@ -1,5 +1,6 @@
 import gzip
 import importlib.util
+import sys
 import zlib
 from typing import (
     AsyncIterator,
@@ -8,13 +9,15 @@ from typing import (
 
 import pytest
 
-from zapros import Headers, Response
+from zapros import Headers, Response, _decoders
 from zapros._decoders import DecodingError
 from zapros._models import (
     MAX_DECODE_LAYERS,
     AsyncClosableStream,
     ClosableStream,
 )
+
+ZSTD_MODULE = "compression.zstd" if sys.version_info >= (3, 14) else "backports.zstd"
 
 
 class StreamWrapper(ClosableStream):
@@ -433,9 +436,8 @@ def test_response_brotli_not_installed():
 
 
 def test_response_zstd_not_installed():
-    has_zstandard = importlib.util.find_spec("zstandard") is not None
-    if has_zstandard:
-        pytest.skip("zstandard is installed")
+    if _decoders.zstd is not None:
+        pytest.skip("zstd is available")
 
     response = Response(
         status=200,
@@ -469,14 +471,10 @@ def test_response_brotli_if_installed():
 
 
 def test_response_zstd_if_installed():
-    try:
-        import zstandard
-    except ImportError:
-        pytest.skip("zstandard not installed")
+    zstd = pytest.importorskip(ZSTD_MODULE)
 
     original = b"Hello, World! This is a test message for zstd compression."
-    compressor = zstandard.ZstdCompressor()
-    compressed = compressor.compress(original)
+    compressed = zstd.compress(original)
 
     response = Response(
         status=200,
