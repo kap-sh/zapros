@@ -41,7 +41,7 @@ brotli = [
     "brotlicffi>=1.2.0",
 ]
 zstd = [
-    "zstandard>=0.18.0",
+    "backports.zstd>=1.0.0; python_version < '3.14'",
 ]
 pyreqwest = [
     "pyreqwest; python_version >= '3.11' and python_version < '3.15'",

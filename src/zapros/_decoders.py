@@ -1,4 +1,5 @@
 import codecs
+import sys
 import zlib
 from typing import (
     TYPE_CHECKING,
@@ -20,13 +21,21 @@ else:
         brotlicffi = None
 
 
+# zstd comes from the standard library on Python 3.14+ and from its backport
+# before that. Both can cap how much one decompress() call produces, which is
+# what keeps a decompression bomb from being inflated into memory.
 if TYPE_CHECKING:
-    import zstandard
+    zstd: Any = None
+elif sys.version_info >= (3, 14):
+    try:
+        from compression import zstd
+    except ImportError:
+        zstd = None
 else:
     try:
-        import zstandard
+        from backports import zstd
     except ImportError:
-        zstandard = None
+        zstd = None
 
 
 class DecodingError(Exception):
@@ -142,49 +151,33 @@ class BrotliDecoder:
         yield from ()
 
 
-class _ByteCollector:
-    """Sink for zstandard's stream_writer that keeps each bounded write separate."""
-
-    def __init__(self) -> None:
-        self._chunks: list[bytes] = []
-
-    def write(self, data: bytes) -> int:
-        self._chunks.append(bytes(data))
-        return len(data)
-
-    def drain(self) -> list[bytes]:
-        chunks = self._chunks
-        self._chunks = []
-        return chunks
-
-
 class ZStandardDecoder:
     def __init__(self, chunk_size: int = CHUNK_SIZE) -> None:
-        if zstandard is None:
-            raise ImportError("ZStandardDecoder requires zstandard. Install with: pip install zapros[zstd]")
-        self._collector = _ByteCollector()
-        # zstandard's stream_writer is a C extension typed for IO[bytes]; our sink
-        # only needs write(). Go through Any so the call isn't spuriously rejected.
-        decompressor: Any = zstandard.ZstdDecompressor()
-        self._writer = decompressor.stream_writer(
-            self._collector,
-            write_size=chunk_size,
-            closefd=False,
-        )
+        if zstd is None:
+            raise ImportError("ZStandardDecoder requires zstd support. Install with: pip install zapros[zstd]")
+        self._chunk_size = chunk_size
+        self._decompressor: Any = zstd.ZstdDecompressor()
 
     def decode(self, data: bytes) -> Iterator[bytes]:
         try:
-            self._writer.write(data)
-        except zstandard.ZstdError as exc:
+            while True:
+                out = self._decompressor.decompress(data, self._chunk_size)
+                data = b""
+                if out:
+                    yield out
+                if self._decompressor.eof:
+                    # A body may hold several frames; the rest starts a new one.
+                    data = self._decompressor.unused_data
+                    self._decompressor = zstd.ZstdDecompressor()
+                    if not data:
+                        break
+                elif self._decompressor.needs_input or not out:
+                    break
+        except zstd.ZstdError as exc:
             raise DecodingError(f"Failed to decode zstd data: {exc}") from exc
-        yield from self._collector.drain()
 
     def flush(self) -> Iterator[bytes]:
-        try:
-            self._writer.flush()
-        except zstandard.ZstdError as exc:
-            raise DecodingError(f"Failed to flush zstd decoder: {exc}") from exc
-        yield from self._collector.drain()
+        yield from ()
 
 
 class MultiDecoder:
@@ -244,7 +237,7 @@ SUPPORTED_DECODERS: dict[str, Callable[[int], ContentDecoder]] = {
 }
 
 _available_encodings: list[str] = []
-if zstandard is not None:
+if zstd is not None:
     _available_encodings.append("zstd")
 if brotlicffi is not None:
     _available_encodings.append("br")
