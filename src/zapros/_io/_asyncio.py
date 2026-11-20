@@ -194,38 +194,26 @@ class AsyncIOTransport(AsyncBaseTransport):
             async with self._lock:
                 self.ssl_context.set_alpn_protocols(alpn_protocols)
 
+        kwargs: dict[str, Any] = {}
+        if not is_uvloop():
+            # uvloop's open_connection doesn't support `happy_eyeballs_delay` and `interleave`
+            kwargs["happy_eyeballs_delay"] = 0.25
+            kwargs["interleave"] = 1
+        if tls and timeout is not None:
+            kwargs["ssl_handshake_timeout"] = timeout
+
         with map_asyncio_connect_exceptions():
+            connecting = asyncio.open_connection(
+                host,
+                port,
+                ssl=self.ssl_context if tls else None,
+                server_hostname=server_hostname if tls else None,
+                **kwargs,
+            )
             if timeout is None:
-                if is_uvloop():
-                    # uvloop's open_connection doesn't support `happy_eyeballs_delay` and `interleave`
-                    reader, writer = await asyncio.open_connection(
-                        host,
-                        port,
-                        ssl=self.ssl_context if tls else None,
-                        server_hostname=server_hostname if tls else None,
-                    )
-                else:
-                    reader, writer = await asyncio.open_connection(
-                        host,
-                        port,
-                        ssl=self.ssl_context if tls else None,
-                        server_hostname=server_hostname if tls else None,
-                        happy_eyeballs_delay=0.25,
-                        interleave=1,
-                    )
+                reader, writer = await connecting
             else:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(
-                        host,
-                        port,
-                        ssl=self.ssl_context if tls else None,
-                        server_hostname=server_hostname if tls else None,
-                        happy_eyeballs_delay=0.25,
-                        interleave=1,
-                        ssl_handshake_timeout=timeout if tls else None,
-                    ),
-                    timeout,
-                )
+                reader, writer = await asyncio.wait_for(connecting, timeout)
 
         return AsyncIOStream(
             reader,
