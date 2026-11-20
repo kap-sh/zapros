@@ -59,8 +59,10 @@ def get_pool_key(request: Request) -> tuple[PoolKey, bool]:
     proxy_port = get_port_or_default(proxy_url)
 
     is_target_https = target_scheme in ("https", "wss")
+    # A SOCKS5 connection is a tunnel to one target as well, whatever the target's scheme.
+    is_tunnel = is_target_https or proxy_scheme in ("socks5", "socks5h")
 
-    if is_target_https:
+    if is_tunnel:
         return ((proxy_scheme, proxy_host, proxy_port, target_scheme, target_host, target_port), False)
     else:
         return ((proxy_scheme, proxy_host, proxy_port), True)
