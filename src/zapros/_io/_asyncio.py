@@ -67,16 +67,34 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         self._upgrade_ssl_context = upgrade_ssl_context or default_ssl_context()
         self._tls_state: _AsyncTLSState | None = None
 
-    async def _flush_outgoing(self, timeout: float | None = None) -> None:
+    def _flush_outgoing(self) -> None:
+        # Hands everything to the transport without waiting for it to be sent, so that a read
+        # never waits on backpressure, and never suspends while holding decrypted data.
         assert self._tls_state is not None
-        pending = self._tls_state.outgoing_bio.read(DEFAULT_READ_SIZE)
+        pending = self._tls_state.outgoing_bio.read()
         if pending:
             with map_asyncio_write_exceptions():
                 self._tls_state.writer.write(pending)
-                if timeout is None:
-                    await self._tls_state.writer.drain()
-                else:
-                    await asyncio.wait_for(self._tls_state.writer.drain(), timeout)
+
+    async def _drain(self, timeout: float | None) -> None:
+        assert self._tls_state is not None
+        with map_asyncio_write_exceptions():
+            if timeout is None:
+                await self._tls_state.writer.drain()
+                return
+
+            # Not `asyncio.wait_for`: before Python 3.12 it swallows a cancellation
+            # that arrives once the awaitable is done, which `drain()` usually is.
+            draining = asyncio.ensure_future(self._tls_state.writer.drain())
+            try:
+                done, _ = await asyncio.wait({draining}, timeout=timeout)
+            except BaseException:
+                draining.cancel()
+                raise
+            if not done:
+                draining.cancel()
+                raise asyncio.TimeoutError
+            draining.result()
 
     async def _pump_incoming(self, timeout: float | None = None) -> None:
         assert self._tls_state is not None
@@ -96,13 +114,13 @@ class AsyncIOStream(AsyncBaseNetworkStream):
         while True:
             try:
                 result = func(*args)
-                await self._flush_outgoing()
+                self._flush_outgoing()
                 return result
             except ssl.SSLWantReadError:
-                await self._flush_outgoing()
+                self._flush_outgoing()
                 await self._pump_incoming(read_timeout)
             except ssl.SSLWantWriteError:
-                await self._flush_outgoing()
+                self._flush_outgoing()
             except (ssl.SSLError, ssl.SSLEOFError) as e:
                 raise ConnectionError(str(e)) from e
 
@@ -118,6 +136,7 @@ class AsyncIOStream(AsyncBaseNetworkStream):
     async def write_all(self, data: bytes, timeout: float | None = None) -> int:
         if self._tls_state is not None:
             await self._call_sslobject_method(self._tls_state.ssl_object.write, data)
+            await self._drain(timeout)
             return len(data)
 
         with map_asyncio_write_exceptions():

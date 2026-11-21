@@ -50,7 +50,8 @@ class SyncStream(BaseNetworkStream):
 
     def _flush_outgoing(self, timeout: float | None = None) -> None:
         assert self._tls_state is not None
-        pending = self._tls_state.outgoing_bio.read(DEFAULT_READ_SIZE)
+        # Everything at once: one TLS write can queue far more than a single read's worth of records.
+        pending = self._tls_state.outgoing_bio.read()
         if pending:
             with map_socket_write_exceptions():
                 self._tls_state.sock.settimeout(timeout)
@@ -66,18 +67,24 @@ class SyncStream(BaseNetworkStream):
             else:
                 self._tls_state.incoming_bio.write_eof()
 
-    def _call_sslobject_method(self, func: Callable[..., T], *args: Any, read_timeout: float | None = None) -> T:
+    def _call_sslobject_method(
+        self,
+        func: Callable[..., T],
+        *args: Any,
+        read_timeout: float | None = None,
+        write_timeout: float | None = None,
+    ) -> T:
         assert self._tls_state is not None
         while True:
             try:
                 result = func(*args)
-                self._flush_outgoing()
+                self._flush_outgoing(write_timeout)
                 return result
             except ssl.SSLWantReadError:
-                self._flush_outgoing()
+                self._flush_outgoing(write_timeout)
                 self._pump_incoming(read_timeout)
             except ssl.SSLWantWriteError:
-                self._flush_outgoing()
+                self._flush_outgoing(write_timeout)
             except (ssl.SSLError, ssl.SSLEOFError) as e:
                 raise ConnectionError(str(e)) from e
 
@@ -91,7 +98,7 @@ class SyncStream(BaseNetworkStream):
 
     def write_all(self, data: bytes, timeout: float | None = None) -> int:
         if self._tls_state is not None:
-            self._call_sslobject_method(self._tls_state.ssl_object.write, data)
+            self._call_sslobject_method(self._tls_state.ssl_object.write, data, write_timeout=timeout)
             return len(data)
 
         with map_socket_write_exceptions():
