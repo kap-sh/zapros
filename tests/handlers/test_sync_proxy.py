@@ -9,6 +9,7 @@ def test_http_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -16,6 +17,7 @@ def test_http_proxy_lowercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -25,6 +27,7 @@ def test_http_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTP_PROXY", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -32,6 +35,7 @@ def test_http_proxy_uppercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -41,6 +45,7 @@ def test_https_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("https_proxy", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -48,6 +53,7 @@ def test_https_proxy_lowercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -57,6 +63,7 @@ def test_https_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -64,6 +71,7 @@ def test_https_proxy_uppercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -73,6 +81,7 @@ def test_all_proxy_uppercase(monkeypatch):
     monkeypatch.setenv("ALL_PROXY", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -80,6 +89,7 @@ def test_all_proxy_uppercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -89,6 +99,7 @@ def test_all_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("all_proxy", "http://proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -96,6 +107,7 @@ def test_all_proxy_lowercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -106,6 +118,7 @@ def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
     monkeypatch.setenv("http_proxy", "http://http-proxy.local:8080")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -113,6 +126,7 @@ def test_scheme_specific_proxy_overrides_all_proxy(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://http-proxy.local:8080/"
@@ -125,6 +139,7 @@ def test_no_proxy_env(monkeypatch):
     monkeypatch.delenv("all_proxy", raising=False)
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -132,6 +147,7 @@ def test_no_proxy_env(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {})
     assert proxy_url == {}
 
@@ -141,6 +157,7 @@ def test_no_proxy_exact_match(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "example.com")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -148,6 +165,7 @@ def test_no_proxy_exact_match(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
 
@@ -157,6 +175,7 @@ def test_no_proxy_lowercase(monkeypatch):
     monkeypatch.setenv("no_proxy", "example.com")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -164,6 +183,7 @@ def test_no_proxy_lowercase(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
 
@@ -173,6 +193,7 @@ def test_no_proxy_wildcard(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "*")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -180,6 +201,7 @@ def test_no_proxy_wildcard(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
 
@@ -189,6 +211,7 @@ def test_no_proxy_subdomain_match(monkeypatch):
     monkeypatch.setenv("NO_PROXY", ".example.com")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -196,6 +219,7 @@ def test_no_proxy_subdomain_match(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
 
@@ -205,6 +229,7 @@ def test_no_proxy_multiple_entries(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1,example.com")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -212,6 +237,7 @@ def test_no_proxy_multiple_entries(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is None
 
@@ -221,6 +247,7 @@ def test_no_proxy_no_match(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "other.com,another.com")
 
     router = MockRouter()
+    mock = ZaprosMock().respond(Response(status=200)).once().mount(router)
     handler = MockMiddleware(router)
     proxy_handler = ProxyMiddleware(handler)
 
@@ -228,6 +255,7 @@ def test_no_proxy_no_match(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert proxy_url is not None
     assert str(proxy_url) == "http://proxy.local:8080/"
@@ -248,6 +276,6 @@ def test_proxy_already_set_in_context(monkeypatch):
     response = proxy_handler.handle(request)
 
     assert response.status == 200
+    mock.verify()
     proxy_url = request.context.get("network", {}).get("proxy", {}).get("url")
     assert str(proxy_url) == "http://custom-proxy.local:9090/"
-    mock.verify()

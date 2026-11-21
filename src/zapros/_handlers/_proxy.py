@@ -50,7 +50,7 @@ class ProxyMiddleware(BaseMiddleware, AsyncBaseMiddleware):
 
         if (proxy_from_env := self._extract_proxy_from_env(request)) is not None:
             request.context.setdefault("network", {}).setdefault("proxy", {})["url"] = proxy_from_env
-        return Response(200)
+        return await ensure_async_handler(self.async_next).ahandle(request)
 
     def handle(self, request: Request) -> Response:  # unasync: generated
         proxy_context = request.context.get("network", {}).get("proxy")
@@ -59,4 +59,4 @@ class ProxyMiddleware(BaseMiddleware, AsyncBaseMiddleware):
 
         if (proxy_from_env := self._extract_proxy_from_env(request)) is not None:
             request.context.setdefault("network", {}).setdefault("proxy", {})["url"] = proxy_from_env
-        return Response(200)
+        return ensure_sync_handler(self.next).handle(request)
