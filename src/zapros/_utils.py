@@ -63,6 +63,21 @@ def get_pool_key(request: Request) -> tuple[PoolKey, bool]:
     is_tunnel = is_target_https or proxy_scheme in ("socks5", "socks5h")
 
     if is_tunnel:
-        return ((proxy_scheme, proxy_host, proxy_port, target_scheme, target_host, target_port), False)
+        # A tunnel is bound to the identity it was opened with: the proxy credentials are
+        # sent once, and the TLS session is verified against one server hostname.
+        return (
+            (
+                proxy_scheme,
+                proxy_host,
+                proxy_port,
+                target_scheme,
+                target_host,
+                target_port,
+                proxy_url.username,
+                proxy_url.password,
+                proxy_context.get("server_hostname") if proxy_context else None,
+            ),
+            False,
+        )
     else:
         return ((proxy_scheme, proxy_host, proxy_port), True)
