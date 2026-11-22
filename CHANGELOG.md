@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.29.0](https://github.com/kap-sh/zapros/compare/v0.28.0...v0.29.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* call the next handler in ProxyMiddleware ([3962d2e](https://github.com/kap-sh/zapros/commit/3962d2e19c9ab43d6b82019226c9b6d80c839275))
+* connect with a timeout under uvloop ([ad01ff5](https://github.com/kap-sh/zapros/commit/ad01ff58bab29e88c71f4847bbd658052ebb703f))
+* map TLS handshake errors of the sync transport ([5ffbef7](https://github.com/kap-sh/zapros/commit/5ffbef767cfd029a4f933767c511d76fff7f4981))
+* **security:** pool proxy tunnels per proxy credentials ([67a5f9c](https://github.com/kap-sh/zapros/commit/67a5f9c1f253942e124f44cdc0d6b76abba0629a))
+* **security:** pool SOCKS5 connections per target ([0eadd93](https://github.com/kap-sh/zapros/commit/0eadd935d7577876378464a627a869c5fef7e69c))
+* send the whole TLS write on upgraded streams ([3be35ce](https://github.com/kap-sh/zapros/commit/3be35ce2eb55e83c8b29f1e19fe8100a27bf57be))
+
 ## [0.28.0](https://github.com/kap-sh/zapros/compare/v0.27.0...v0.28.0) (2026-11-19)
 
 
